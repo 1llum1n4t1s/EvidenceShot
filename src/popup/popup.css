@@ -1,0 +1,248 @@
+:root {
+  color-scheme: light;
+  font-family: "Aptos", "Yu Gothic UI", "Hiragino Sans", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(253, 230, 138, 0.65), transparent 38%),
+    radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.45), transparent 42%),
+    #f4f7fb;
+  color: #172033;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 380px;
+  max-width: 380px;
+  min-height: 620px;
+}
+
+.shell {
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.hero,
+.panel {
+  border-radius: 24px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 36px rgba(24, 39, 75, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.hero {
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(28, 80, 110, 0.92)),
+    rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fde68a;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.lead {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: rgba(248, 250, 252, 0.88);
+}
+
+.panel.accent {
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.95), rgba(224, 242, 254, 0.95)),
+    rgba(255, 255, 255, 0.85);
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.field,
+.toggle {
+  display: grid;
+  gap: 8px;
+}
+
+.field + .field,
+.field + .toggle,
+.toggle + .field,
+.toggle + .toggle,
+.note + .capture {
+  margin-top: 14px;
+}
+
+.field span,
+.toggle strong {
+  font-size: 13px;
+}
+
+.field select,
+.field input,
+.primary,
+.secondary,
+.ghost {
+  border: 0;
+  font: inherit;
+}
+
+.field select,
+.field input {
+  width: 100%;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  outline: none;
+}
+
+.field input::placeholder {
+  color: #64748b;
+}
+
+.toggle {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.toggle small {
+  display: block;
+  margin-top: 4px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.toggle input {
+  width: 46px;
+  height: 26px;
+  accent-color: #ff9f1c;
+  margin-top: 2px;
+}
+
+.folder-box {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.9), rgba(255, 255, 255, 0.9));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.folder-box strong {
+  display: block;
+  font-size: 14px;
+}
+
+.folder-box p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary,
+.secondary,
+.ghost {
+  border-radius: 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.primary:hover,
+.secondary:hover,
+.ghost:hover {
+  transform: translateY(-1px);
+}
+
+.primary:disabled,
+.secondary:disabled,
+.ghost:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+
+.primary {
+  width: 100%;
+  background: linear-gradient(135deg, #ffb703, #fb8500);
+  color: #1f2937;
+  font-weight: 800;
+  box-shadow: 0 16px 24px rgba(251, 146, 60, 0.22);
+}
+
+.secondary {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ghost {
+  background: rgba(255, 255, 255, 0.62);
+  color: #475569;
+}
+
+.capture {
+  margin-top: 10px;
+}
+
+.note,
+.status {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.status[data-tone="success"] {
+  color: #166534;
+}
+
+.status[data-tone="error"] {
+  color: #b91c1c;
+}

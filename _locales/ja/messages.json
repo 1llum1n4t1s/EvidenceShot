@@ -1,0 +1,244 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "Webテスト向けに、表示領域やスクロール連結のスクリーンショットを日時入りで保存できるChrome拡張機能です。"
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupSectionCaptureNow": {
+    "message": "今すぐ撮影"
+  },
+  "popupCaptureNowButton": {
+    "message": "このタブを撮影する"
+  },
+  "popupStatusReady": {
+    "message": "準備OK。撮影できます。"
+  },
+  "popupSectionSave": {
+    "message": "保存"
+  },
+  "popupLabelFormat": {
+    "message": "保存形式"
+  },
+  "popupNoteDownloadLocation": {
+    "message": "保存先は Chrome の既定のダウンロードフォルダです。"
+  },
+  "popupSectionOptions": {
+    "message": "撮影オプション"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "日付を入れる"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "右下に昔のフィルムカメラ風の日時を焼き込みます。"
+  },
+  "popupLabelTimestampStyle": {
+    "message": "日付デザイン"
+  },
+  "popupLabelTimestampSize": {
+    "message": "日付サイズ"
+  },
+  "popupLabelFooterText": {
+    "message": "左下固定テキスト"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "例: © Example Inc. / 社外秘"
+  },
+  "popupNoteFooterLinked": {
+    "message": "左下の文字は、日付デザインと日付サイズに連動します。"
+  },
+  "popupLabelCaptureMode": {
+    "message": "撮影範囲"
+  },
+  "popupNoteCaptureModeDiff": {
+    "message": "「ページ全体（レイアウト込み）」は左右カラムを含む画面全体を連結します。「中央本文のみ（主カラム）」は中央の投稿・記事エリアを優先して連結します。"
+  },
+  "popupStatusInitFailed": {
+    "message": "初期化に失敗しました。"
+  },
+  "popupStatusCapturing": {
+    "message": "撮影を開始しています…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "撮影に失敗しました。"
+  },
+  "popupStatusSaved": {
+    "message": "保存しました: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleJapanese": {
+    "message": "業務: 和風標準"
+  },
+  "optionTimestampStyleAudit": {
+    "message": "業務: 監査プレート"
+  },
+  "optionTimestampStyleDocument": {
+    "message": "業務: ドキュメント札"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "業務: 台帳ライン"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "業務: ブループリント"
+  },
+  "optionTimestampStyleMonochrome": {
+    "message": "業務: モノクロ帯"
+  },
+  "optionTimestampStyleCompact": {
+    "message": "業務: コンパクト票"
+  },
+  "optionTimestampStyleFilm": {
+    "message": "私用: フィルム橙"
+  },
+  "optionTimestampStyleMinimal": {
+    "message": "私用: ミニマルバッジ"
+  },
+  "optionTimestampStylePolaroid": {
+    "message": "私用: ポラロイド"
+  },
+  "optionTimestampStyleDiary": {
+    "message": "私用: ダイアリー"
+  },
+  "optionTimestampStylePastel": {
+    "message": "私用: パステルラベル"
+  },
+  "optionTimestampStyleNight": {
+    "message": "私用: ナイトグロー"
+  },
+  "optionTimestampSizeXs": {
+    "message": "極小"
+  },
+  "optionTimestampSizeSm": {
+    "message": "小"
+  },
+  "optionTimestampSizeMd": {
+    "message": "標準"
+  },
+  "optionTimestampSizeLg": {
+    "message": "大"
+  },
+  "optionTimestampSizeXl": {
+    "message": "特大"
+  },
+  "optionCaptureModeViewport": {
+    "message": "表示中のみ（1画面）"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "ページ全体（レイアウト込み）"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "中央本文のみ（主カラム）"
+  },
+  "errTargetTabNotFound": {
+    "message": "撮影対象のタブを見つけられませんでした。"
+  },
+  "errPageNotCapturable": {
+    "message": "このページでは撮影できません。http / https のページで試してください。"
+  },
+  "errTabAlreadyCapturing": {
+    "message": "このページではすでに撮影中です。完了してからもう一度お試しください。"
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "このウィンドウでは別の撮影が進行中です。完了してからもう一度お試しください。"
+  },
+  "errCapturePrepareFailed": {
+    "message": "撮影の準備に失敗しました。"
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "スクロール位置の調整に失敗しました。"
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "撮影データの受け渡しに失敗しました。"
+  },
+  "errCaptureFailed": {
+    "message": "撮影に失敗しました。"
+  },
+  "errSavePrepareFailed": {
+    "message": "保存処理の準備に失敗しました。"
+  },
+  "errSaveProcessFailed": {
+    "message": "保存処理に失敗しました。"
+  },
+  "errSaveDataMissing": {
+    "message": "保存データの受け取りに失敗しました。"
+  },
+  "errDownloadStartFailed": {
+    "message": "ダウンロードの開始に失敗しました。"
+  },
+  "errOffscreenNotReady": {
+    "message": "保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。"
+  },
+  "errCaptureTabSwitched": {
+    "message": "撮影中に別タブへ切り替わったため中止しました。対象タブを開いたまま再度お試しください。"
+  },
+  "errDownloadIdMissing": {
+    "message": "ダウンロードIDを取得できませんでした。"
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "撮影セッションIDがありません。"
+  },
+  "errCaptureSessionMismatch": {
+    "message": "撮影セッションが一致しません。"
+  },
+  "errCaptureStepInvalid": {
+    "message": "無効な撮影位置です。"
+  },
+  "errPageTooLongSingleImage": {
+    "message": "ページが長すぎるため、1枚の画像として保存できませんでした。"
+  },
+  "errInvalidCaller": {
+    "message": "不正な呼び出し元です。"
+  },
+  "errCallerNotAllowed": {
+    "message": "この呼び出し元からは実行できません。"
+  },
+  "errInvalidCallerUrl": {
+    "message": "不正な呼び出し元URLです。"
+  },
+  "errChannelTokenMissing": {
+    "message": "認証トークンが不足しています。"
+  },
+  "errChannelTokenMismatch": {
+    "message": "認証トークンが一致しません。"
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "撮影セッション認証が不正です。"
+  },
+  "errCaptureMetaMissing": {
+    "message": "撮影メタデータを受け取れませんでした。"
+  },
+  "errImageSaveFailed": {
+    "message": "画像の保存に失敗しました。"
+  },
+  "errCaptureSessionNotFound": {
+    "message": "撮影セッションが見つかりません。"
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "撮影セッション認証に失敗しました。"
+  },
+  "errCaptureDataInvalid": {
+    "message": "撮影データが不正です。"
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "撮影メタデータを取得できませんでした。"
+  },
+  "errImageConvertFailed": {
+    "message": "画像の変換に失敗しました。"
+  },
+  "errBlobReadFailed": {
+    "message": "Blob を読み込めませんでした。"
+  },
+  "errSaveDataBuildFailed": {
+    "message": "保存用データの生成に失敗しました。"
+  }
+}

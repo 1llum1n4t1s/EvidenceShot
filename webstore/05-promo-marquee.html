@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1400px; height: 560px;
+    overflow: hidden;
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 22%),
+      radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.20), transparent 26%),
+      linear-gradient(135deg, #eff6ff 0%, #f8fafc 52%, #eef2ff 100%);
+    color: #0f172a;
+  }
+  .wrap {
+    width: 1310px;
+    height: 100%;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 520px;
+    gap: 34px;
+    align-items: center;
+  }
+  .left {
+    display: grid;
+    gap: 18px;
+  }
+  .eyebrow {
+    font-size: 18px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #0f766e;
+    font-weight: 800;
+  }
+  h1 {
+    font-size: 66px;
+    line-height: 1.08;
+    font-weight: 900;
+  }
+  p {
+    font-size: 27px;
+    line-height: 1.6;
+    color: #475569;
+  }
+  .chips {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 12px 16px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .panel {
+    border-radius: 28px;
+    padding: 22px;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(255,255,255,0.85);
+    box-shadow: 0 22px 40px rgba(15, 23, 42, 0.1);
+    display: grid;
+    gap: 14px;
+  }
+  .button {
+    padding: 16px;
+    border-radius: 18px;
+    text-align: center;
+    background: linear-gradient(135deg, #ffb703, #fb8500);
+    font-size: 23px;
+    font-weight: 900;
+    color: #172033;
+  }
+  .field {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.04);
+  }
+  .field strong {
+    display: block;
+    font-size: 16px;
+    color: #334155;
+  }
+  .field span {
+    display: block;
+    margin-top: 8px;
+    font-size: 20px;
+    color: #0f172a;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="left">
+      <div class="eyebrow">EvidenceShot 1.0.0</div>
+      <h1>ポップアップ起点で、<br>証跡向けスクリーンショットを整える。</h1>
+      <p>表示領域も連結撮影も、業務向け・私用向けの豊富なタイムスタンプテーマとサイズ設定つきで保存できます。</p>
+      <div class="chips">
+        <div class="chip">13 種類のテーマ</div>
+        <div class="chip">5 段階のサイズ</div>
+        <div class="chip">スクロール連結</div>
+        <div class="chip">PNG / JPG / WEBP</div>
+      </div>
+    </section>
+    <aside class="panel">
+      <div class="button">このタブを撮影する</div>
+      <div class="field">
+        <strong>日付デザイン</strong>
+        <span>業務: 監査プレート</span>
+      </div>
+      <div class="field">
+        <strong>日付サイズ</strong>
+        <span>標準</span>
+      </div>
+      <div class="field">
+        <strong>スクロール連結撮影</strong>
+        <span>現在のスクロール範囲の末尾までを 1 枚に保存</span>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>

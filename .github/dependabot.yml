@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # GitHub Actions を SHA 固定で自動更新（サプライチェーン攻撃対策）
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+
+  # npm の devDependencies を自動更新
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore

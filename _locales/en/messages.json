@@ -1,0 +1,244 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "Chrome extension for web testing that captures viewport or stitched screenshots and saves them with timestamps."
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupSectionCaptureNow": {
+    "message": "Capture Now"
+  },
+  "popupCaptureNowButton": {
+    "message": "Capture This Tab"
+  },
+  "popupStatusReady": {
+    "message": "Ready to capture."
+  },
+  "popupSectionSave": {
+    "message": "Save"
+  },
+  "popupLabelFormat": {
+    "message": "File Format"
+  },
+  "popupNoteDownloadLocation": {
+    "message": "Files are saved to Chrome's default download folder."
+  },
+  "popupSectionOptions": {
+    "message": "Capture Options"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "Add Timestamp"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "Burns a film-style date/time label into the bottom-right corner."
+  },
+  "popupLabelTimestampStyle": {
+    "message": "Timestamp Style"
+  },
+  "popupLabelTimestampSize": {
+    "message": "Timestamp Size"
+  },
+  "popupLabelFooterText": {
+    "message": "Fixed Bottom-Left Text"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "e.g. © Example Inc. / Confidential"
+  },
+  "popupNoteFooterLinked": {
+    "message": "Bottom-left text follows the same style and size as the timestamp."
+  },
+  "popupLabelCaptureMode": {
+    "message": "Capture Area"
+  },
+  "popupNoteCaptureModeDiff": {
+    "message": "\"Full page (with layout)\" stitches the entire viewport including side columns. \"Main content only\" prioritizes the center feed/article area."
+  },
+  "popupStatusInitFailed": {
+    "message": "Initialization failed."
+  },
+  "popupStatusCapturing": {
+    "message": "Starting capture..."
+  },
+  "popupStatusCaptureFailed": {
+    "message": "Capture failed."
+  },
+  "popupStatusSaved": {
+    "message": "Saved: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleJapanese": {
+    "message": "Business: Japanese Standard"
+  },
+  "optionTimestampStyleAudit": {
+    "message": "Business: Audit Plate"
+  },
+  "optionTimestampStyleDocument": {
+    "message": "Business: Document Tag"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "Business: Ledger Line"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "Business: Blueprint"
+  },
+  "optionTimestampStyleMonochrome": {
+    "message": "Business: Monochrome Band"
+  },
+  "optionTimestampStyleCompact": {
+    "message": "Business: Compact Label"
+  },
+  "optionTimestampStyleFilm": {
+    "message": "Personal: Film Orange"
+  },
+  "optionTimestampStyleMinimal": {
+    "message": "Personal: Minimal Badge"
+  },
+  "optionTimestampStylePolaroid": {
+    "message": "Personal: Polaroid"
+  },
+  "optionTimestampStyleDiary": {
+    "message": "Personal: Diary"
+  },
+  "optionTimestampStylePastel": {
+    "message": "Personal: Pastel Label"
+  },
+  "optionTimestampStyleNight": {
+    "message": "Personal: Night Glow"
+  },
+  "optionTimestampSizeXs": {
+    "message": "Extra Small"
+  },
+  "optionTimestampSizeSm": {
+    "message": "Small"
+  },
+  "optionTimestampSizeMd": {
+    "message": "Medium"
+  },
+  "optionTimestampSizeLg": {
+    "message": "Large"
+  },
+  "optionTimestampSizeXl": {
+    "message": "Extra Large"
+  },
+  "optionCaptureModeViewport": {
+    "message": "Visible area only (1 screen)"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "Full page (with layout)"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "Main content only"
+  },
+  "errTargetTabNotFound": {
+    "message": "Could not find the target tab."
+  },
+  "errPageNotCapturable": {
+    "message": "This page cannot be captured. Please try on an http/https page."
+  },
+  "errTabAlreadyCapturing": {
+    "message": "Capture is already in progress on this page. Please try again after it finishes."
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "Another capture is already running in this window. Please try again after it finishes."
+  },
+  "errCapturePrepareFailed": {
+    "message": "Failed to prepare capture."
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "Failed to adjust scroll position."
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "Failed to transfer captured slice data."
+  },
+  "errCaptureFailed": {
+    "message": "Capture failed."
+  },
+  "errSavePrepareFailed": {
+    "message": "Failed to prepare save processing."
+  },
+  "errSaveProcessFailed": {
+    "message": "Save processing failed."
+  },
+  "errSaveDataMissing": {
+    "message": "Failed to receive save data."
+  },
+  "errDownloadStartFailed": {
+    "message": "Failed to start download."
+  },
+  "errOffscreenNotReady": {
+    "message": "Failed to prepare save processing. Offscreen startup did not complete."
+  },
+  "errCaptureTabSwitched": {
+    "message": "Capture stopped because you switched tabs. Keep the target tab active and try again."
+  },
+  "errDownloadIdMissing": {
+    "message": "Could not obtain a download ID."
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "Capture session ID is missing."
+  },
+  "errCaptureSessionMismatch": {
+    "message": "Capture session mismatch."
+  },
+  "errCaptureStepInvalid": {
+    "message": "Invalid capture position."
+  },
+  "errPageTooLongSingleImage": {
+    "message": "The page is too long to save as a single image."
+  },
+  "errInvalidCaller": {
+    "message": "Invalid caller."
+  },
+  "errCallerNotAllowed": {
+    "message": "This caller is not allowed to execute this action."
+  },
+  "errInvalidCallerUrl": {
+    "message": "Invalid caller URL."
+  },
+  "errChannelTokenMissing": {
+    "message": "Channel token is missing."
+  },
+  "errChannelTokenMismatch": {
+    "message": "Channel token does not match."
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "Capture session authentication is invalid."
+  },
+  "errCaptureMetaMissing": {
+    "message": "Capture metadata was not received."
+  },
+  "errImageSaveFailed": {
+    "message": "Failed to save image."
+  },
+  "errCaptureSessionNotFound": {
+    "message": "Capture session not found."
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "Capture session authentication failed."
+  },
+  "errCaptureDataInvalid": {
+    "message": "Captured data is invalid."
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "Failed to load capture metadata."
+  },
+  "errImageConvertFailed": {
+    "message": "Image conversion failed."
+  },
+  "errBlobReadFailed": {
+    "message": "Failed to read blob."
+  },
+  "errSaveDataBuildFailed": {
+    "message": "Failed to build download data."
+  }
+}

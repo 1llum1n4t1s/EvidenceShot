@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1280px; height: 800px;
+    overflow: hidden;
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(253, 230, 138, 0.85), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(96, 165, 250, 0.5), transparent 34%),
+      linear-gradient(135deg, #eef4ff 0%, #f8fafc 50%, #fff7ed 100%);
+    color: #172033;
+  }
+  .frame {
+    width: 1180px;
+    margin: 40px auto;
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 26px;
+  }
+  .hero, .panel, .theme-card {
+    background: rgba(255,255,255,0.84);
+    border: 1px solid rgba(255,255,255,0.82);
+    border-radius: 32px;
+    box-shadow: 0 22px 40px rgba(15, 23, 42, 0.10);
+    backdrop-filter: blur(12px);
+  }
+  .hero {
+    padding: 34px;
+    display: grid;
+    gap: 24px;
+  }
+  .eyebrow {
+    font-size: 18px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #0f766e;
+    font-weight: 800;
+  }
+  h1 {
+    font-size: 60px;
+    line-height: 1.18;
+    color: #0f172a;
+  }
+  .lead {
+    font-size: 25px;
+    line-height: 1.6;
+    color: #475569;
+  }
+  .feature-row {
+    display: flex;
+    gap: 16px;
+  }
+  .feature-chip {
+    flex: 1;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: rgba(15, 23, 42, 0.05);
+  }
+  .feature-chip strong {
+    display: block;
+    font-size: 22px;
+    color: #0f172a;
+  }
+  .feature-chip span {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: #475569;
+  }
+  .right {
+    display: grid;
+    gap: 18px;
+  }
+  .panel {
+    padding: 24px;
+  }
+  .panel h2 {
+    font-size: 24px;
+    color: #0f172a;
+  }
+  .mock-popup {
+    margin-top: 18px;
+    border-radius: 28px;
+    padding: 20px;
+    background:
+      radial-gradient(circle at top left, rgba(253, 230, 138, 0.55), transparent 36%),
+      radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.36), transparent 40%),
+      #f4f7fb;
+  }
+  .button {
+    width: 100%;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffb703, #fb8500);
+    color: #172033;
+    font-size: 24px;
+    font-weight: 900;
+    text-align: center;
+    box-shadow: 0 16px 24px rgba(251, 146, 60, 0.22);
+  }
+  .field {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.74);
+  }
+  .field label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #334155;
+  }
+  .select {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.06);
+    font-size: 18px;
+    color: #0f172a;
+  }
+  .theme-card {
+    padding: 24px;
+    display: grid;
+    gap: 14px;
+  }
+  .theme-card h3 {
+    font-size: 24px;
+    color: #0f172a;
+  }
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .theme-pill {
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+  }
+  .t1 { background: linear-gradient(135deg, #111827, #334155); color: #fef3c7; }
+  .t2 { background: linear-gradient(135deg, #082f49, #0ea5e9); color: #bae6fd; }
+  .t3 { background: linear-gradient(135deg, #ffffff, #f8fafc); color: #111827; border: 1px solid #cbd5e1; }
+  .t4 { background: linear-gradient(135deg, #4c0519, #fb7185); }
+  .t5 { background: linear-gradient(135deg, #1f2937, #0f172a); }
+  .t6 { background: linear-gradient(135deg, #fbcfe8, #bfdbfe); color: #3f3f46; }
+  .theme-note {
+    font-size: 18px;
+    line-height: 1.65;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <section class="hero">
+      <div class="eyebrow">EvidenceShot 1.0.0</div>
+      <h1>証跡に強い<br>スクリーンショット拡張</h1>
+      <div class="lead">
+        ポップアップからすぐ撮影。表示領域も、開始時点のスクロール末尾までの連結も、
+        タイムスタンプ付きで迷わず残せます。
+      </div>
+      <div class="feature-row">
+        <div class="feature-chip">
+          <strong>13テーマ</strong>
+          <span>業務向けと私用向けをまとめて選べます。</span>
+        </div>
+        <div class="feature-chip">
+          <strong>5サイズ</strong>
+          <span>極小から特大まで、見やすさに合わせて調整。</span>
+        </div>
+        <div class="feature-chip">
+          <strong>連結撮影</strong>
+          <span>現在のスクロール範囲の末尾までを 1 枚に。</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="right">
+      <section class="panel">
+        <h2>ポップアップから撮影</h2>
+        <div class="mock-popup">
+          <div class="button">このタブを撮影する</div>
+          <div class="field">
+            <label>保存形式</label>
+            <div class="select">PNG / JPG / WEBP</div>
+          </div>
+          <div class="field">
+            <label>日付デザイン</label>
+            <div class="select">業務: 監査プレート / 私用: パステルラベル ほか</div>
+          </div>
+          <div class="field">
+            <label>日付サイズ</label>
+            <div class="select">極小 / 小 / 標準 / 大 / 特大</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="theme-card">
+        <h3>タイムスタンプテーマ例</h3>
+        <div class="theme-grid">
+          <div class="theme-pill t1">業務: 和風標準</div>
+          <div class="theme-pill t2">業務: ブループリント</div>
+          <div class="theme-pill t3">業務: ドキュメント札</div>
+          <div class="theme-pill t4">私用: フィルム橙</div>
+          <div class="theme-pill t5">私用: ナイトグロー</div>
+          <div class="theme-pill t6">私用: パステルラベル</div>
+        </div>
+        <div class="theme-note">
+          ビジネス用途では読みやすく控えめなテーマを、私的な利用では少し表情のあるテーマを選べます。
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

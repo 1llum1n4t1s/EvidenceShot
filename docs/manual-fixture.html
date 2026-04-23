@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EvidenceShot Manual Fixture</title>
+    <style>
+      :root {
+        font-family: "Aptos", "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        color: #0f172a;
+        background:
+          radial-gradient(circle at top right, rgba(251, 191, 36, 0.24), transparent 28%),
+          linear-gradient(180deg, #fff7ed 0%, #ffffff 24%, #f8fafc 100%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 28px;
+        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.82);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .fixed-panel {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        width: 180px;
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.92);
+        color: #f8fafc;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
+      }
+
+      main {
+        width: min(1080px, calc(100% - 36px));
+        margin: 0 auto;
+        padding: 30px 0 120px;
+        display: grid;
+        gap: 24px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+        padding: 34px;
+        border-radius: 28px;
+        color: white;
+        background:
+          linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(14, 116, 144, 0.9)),
+          rgba(15, 23, 42, 0.94);
+      }
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .card {
+        padding: 22px;
+        border-radius: 24px;
+        background: white;
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+      }
+
+      .animated {
+        background:
+          linear-gradient(120deg, rgba(251, 191, 36, 0.14), rgba(59, 130, 246, 0.08)),
+          white;
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+
+      .long-list {
+        display: grid;
+        gap: 16px;
+      }
+
+      .list-row {
+        display: grid;
+        grid-template-columns: 140px 1fr auto;
+        gap: 16px;
+        align-items: center;
+        padding: 18px 20px;
+        border-radius: 22px;
+        background: white;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: translateY(0); box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08); }
+        50% { transform: translateY(-6px); box-shadow: 0 20px 44px rgba(251, 146, 60, 0.16); }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>EvidenceShot Manual Fixture</strong>
+      <span>sticky header / fixed panel / animation / long page</span>
+    </header>
+
+    <aside class="fixed-panel">
+      <strong>固定パネル</strong>
+      <p>フルページ撮影で多重化しないか確認してください。</p>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <p>このページは EvidenceShot の目視確認用です。</p>
+        <h1>長いページを撮って、縫い目や sticky / fixed の重複を見ます。</h1>
+        <p>フローティングボタン、日時焼き込み、フルページ結合の確認にも使えます。</p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>表示領域テスト</h2>
+          <p>今見えている範囲だけを保存し、日時の焼き込み位置や保存形式を確認します。</p>
+        </article>
+        <article class="card animated">
+          <h2>アニメーション要素</h2>
+          <p>撮影中にアニメーションが止まり、大きくブレないかを確認します。</p>
+        </article>
+        <article class="card">
+          <h2>縫い目確認</h2>
+          <p>縦に長いレイアウトのため、フルページ保存後に継ぎ目が不自然でないか確認できます。</p>
+        </article>
+      </section>
+
+      <section class="long-list" id="rows"></section>
+    </main>
+
+    <script>
+      const rows = document.getElementById('rows');
+      for (let index = 1; index <= 24; index += 1) {
+        const row = document.createElement('article');
+        row.className = 'list-row';
+        row.innerHTML = `
+          <span class="pill">Section ${String(index).padStart(2, '0')}</span>
+          <div>
+            <strong>スクロール結合テスト ${index}</strong>
+            <p>背景色や高さを少しずつ変えているので、フルページ保存後にズレが見つけやすくなっています。</p>
+          </div>
+          <span>${1200 + index * 37}px</span>
+        `;
+        row.style.minHeight = `${180 + (index % 4) * 20}px`;
+        row.style.background = index % 2 === 0
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(240,249,255,0.95))'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,247,237,0.95))';
+        rows.appendChild(row);
+      }
+    </script>
+  </body>
+</html>

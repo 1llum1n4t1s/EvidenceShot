@@ -1,0 +1,24 @@
+{
+  "name": "evidence-shot",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "EvidenceShot: Web テスト時の証跡用に、ポップアップから表示領域やスクロール連結撮影を行い、多彩なタイムスタンプ付きで保存できる Chrome スクリーンショット拡張機能",
+  "scripts": {
+    "generate-icons": "node scripts/generate-icons.js",
+    "generate-screenshots": "node webstore/generate-screenshots.js",
+    "build": "npm run generate-icons && npm run generate-screenshots"
+  },
+  "devDependencies": {
+    "chrome-webstore-upload-cli": "^3.3.0",
+    "puppeteer": "^24.37.5",
+    "sharp": "^0.33.0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "screenshot",
+    "full-page",
+    "web-testing"
+  ],
+  "author": "",
+  "license": "MIT"
+}

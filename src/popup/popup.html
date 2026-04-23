@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="popupDocumentTitle">EvidenceShot</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div class="section-head">
+          <h2 data-i18n="popupSectionCaptureNow">今すぐ撮影</h2>
+        </div>
+        <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">このタブを撮影する</button>
+        <p class="status" id="status-text" data-i18n="popupStatusReady">準備OK。撮影できます。</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2 data-i18n="popupSectionSave">保存</h2>
+        </div>
+
+        <label class="field">
+          <span data-i18n="popupLabelFormat">保存形式</span>
+          <select id="format">
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+            <option value="webp">WEBP</option>
+          </select>
+        </label>
+
+        <p class="note" data-i18n="popupNoteDownloadLocation">保存先は Chrome の既定のダウンロードフォルダです。</p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2 data-i18n="popupSectionOptions">撮影オプション</h2>
+        </div>
+
+        <label class="toggle">
+          <span>
+            <strong data-i18n="popupLabelTimestampEnabled">日付を入れる</strong>
+            <small data-i18n="popupNoteTimestampEnabled">右下に昔のフィルムカメラ風の日時を焼き込みます。</small>
+          </span>
+          <input id="timestamp-enabled" type="checkbox" />
+        </label>
+
+        <label class="field">
+          <span data-i18n="popupLabelTimestampStyle">日付デザイン</span>
+          <select id="timestamp-style"></select>
+        </label>
+
+        <label class="field">
+          <span data-i18n="popupLabelTimestampSize">日付サイズ</span>
+          <select id="timestamp-size"></select>
+        </label>
+
+        <label class="field">
+          <span data-i18n="popupLabelFooterText">左下固定テキスト</span>
+          <input
+            id="footer-text"
+            type="text"
+            maxlength="80"
+            data-i18n-placeholder="popupPlaceholderFooterText"
+            placeholder="例: © Example Inc. / 社外秘"
+          />
+        </label>
+        <p class="note" data-i18n="popupNoteFooterLinked">左下の文字は、日付デザインと日付サイズに連動します。</p>
+
+        <label class="field">
+          <span data-i18n="popupLabelCaptureMode">撮影範囲</span>
+          <select id="capture-mode"></select>
+        </label>
+        <p class="note" data-i18n="popupNoteCaptureModeDiff">`ページ全体（レイアウト込み）` は左右カラムを含む画面全体を連結します。`中央本文のみ（主カラム）` は中央の投稿・記事エリアを優先して連結します。</p>
+      </section>
+
+    </main>
+
+    <script src="../shared/constants.js"></script>
+    <script src="../shared/utils.js"></script>
+    <script src="./popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 440px; height: 280px;
+    overflow: hidden;
+    font-family: "Segoe UI", "Yu Gothic UI", "Meiryo", sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+    color: white;
+    position: relative;
+  }
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .bubble.a { width: 180px; height: 180px; top: -60px; right: -30px; }
+  .bubble.b { width: 120px; height: 120px; bottom: -30px; left: -20px; }
+  .wrap {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 28px;
+    display: grid;
+    align-content: center;
+    gap: 14px;
+  }
+  h1 {
+    font-size: 40px;
+    line-height: 1.08;
+    font-weight: 900;
+  }
+  p {
+    font-size: 18px;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.9);
+  }
+  .badge {
+    display: inline-flex;
+    width: fit-content;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 15px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+  <div class="bubble a"></div>
+  <div class="bubble b"></div>
+  <div class="wrap">
+    <div class="badge">EvidenceShot 1.0.0</div>
+    <h1>証跡に強い<br>スクショ拡張</h1>
+    <p>13 テーマのタイムスタンプとサイズ指定で、使い方に合わせて残せます。</p>
+  </div>
+</body>
+</html>

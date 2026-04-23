@@ -1,0 +1,80 @@
+name: Publish to Chrome Web Store
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Chrome Web Store 公開
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: manifest のバージョン取得
+        id: version
+        run: |
+          version=$(grep -oP '(?<="version": ")[^"]+' manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "公開対象バージョン: $version"
+
+      - name: ブランチ名と manifest バージョンを検証
+        env:
+          BRANCH_VERSION: ${{ github.ref_name }}
+          MANIFEST_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          expected="release/${MANIFEST_VERSION}"
+          if [ "$BRANCH_VERSION" != "$expected" ]; then
+            echo "::error::ブランチ名 ($BRANCH_VERSION) と manifest.json のバージョン ($MANIFEST_VERSION) が一致しません。期待値: $expected"
+            exit 1
+          fi
+
+      - name: Node をセットアップ
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 依存関係をインストール
+        run: npm ci
+
+      - name: package.json と manifest.json のバージョンを検証
+        env:
+          MANIFEST_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          pkg_ver=$(node -p "require('./package.json').version")
+          if [ "$pkg_ver" != "$MANIFEST_VERSION" ]; then
+            echo "::error::package.json ($pkg_ver) と manifest.json ($MANIFEST_VERSION) が一致しません"
+            exit 1
+          fi
+
+      - name: アイコンを生成
+        run: node scripts/generate-icons.js
+
+      - name: ZIP パッケージを作成
+        run: |
+          zip -r evidence-shot.zip manifest.json _locales icons src \
+            -x "*.DS_Store" "*.swp" "*~"
+          ls -lh evidence-shot.zip
+
+      - name: Chrome Web Store へアップロードして公開
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          npx chrome-webstore-upload-cli upload \
+            --source evidence-shot.zip \
+            --extension-id "$CWS_EXTENSION_ID" \
+            --client-id "$CWS_CLIENT_ID" \
+            --client-secret "$CWS_CLIENT_SECRET" \
+            --refresh-token "$CWS_REFRESH_TOKEN" \
+            --auto-publish
