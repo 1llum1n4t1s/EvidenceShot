@@ -99,6 +99,24 @@
       return { ok: false, error: t('errCaptureSessionMismatch', '撮影セッションが一致しません。') };
     }
 
+    // DPR が撮影計画時と変わっていないか確認（マルチモニタ間ウィンドウ移動検知）。
+    // プラン固定の devicePixelRatio で cropX/cropY を device pixel 換算しているため、
+    // 途中で DPR が変わると合成画像が左右/上下にズレる。
+    const planDpr = state.captureSession.plan?.devicePixelRatio;
+    const currentDpr = window.devicePixelRatio || 1;
+    if (
+      typeof planDpr === 'number' &&
+      Math.abs(planDpr - currentDpr) > 0.01
+    ) {
+      return {
+        ok: false,
+        error: t(
+          'errDevicePixelRatioChanged',
+          'ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。'
+        ),
+      };
+    }
+
     const targetY = state.captureSession.positions[index];
     if (typeof targetY !== 'number') {
       return { ok: false, error: t('errCaptureStepInvalid', '無効な撮影位置です。') };

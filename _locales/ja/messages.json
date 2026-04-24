@@ -243,5 +243,8 @@
   },
   "errImageConvertFailed": {
     "message": "画像の変換に失敗しました。"
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。"
   }
 }
