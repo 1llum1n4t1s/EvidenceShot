@@ -22,7 +22,7 @@
     },
     CAPTURE_INTERVAL_MS: 650,
     CAPTURE_SETTLE_MS: 180,
-    MAX_CANVAS_EDGE: 32760,
+    MAX_CANVAS_EDGE: 65535,
     TIMESTAMP_STYLES: [
       { value: 'japanese', labelKey: 'optionTimestampStyleJapanese', label: '業務: 和風標準' },
       { value: 'audit', labelKey: 'optionTimestampStyleAudit', label: '業務: 監査プレート' },
