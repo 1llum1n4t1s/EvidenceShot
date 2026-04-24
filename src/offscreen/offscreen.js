@@ -74,8 +74,10 @@
       return { ok: false, error: t('errChannelTokenMissing', '認証トークンが不足しています。') };
     }
 
-    if (expectedChannelToken !== channelToken) {
+    if (!expectedChannelToken) {
       expectedChannelToken = channelToken;
+    } else if (expectedChannelToken !== channelToken) {
+      return { ok: false, error: t('errCaptureSessionAuthInvalid', '撮影セッション認証が不正です。') };
     }
 
     return { ok: true };
