@@ -11,7 +11,7 @@
       'src/content/capture.js',
     ],
     OFFSCREEN_DOCUMENT_PATH: 'src/offscreen/offscreen.html',
-    OFFSCREEN_INTERFACE_VERSION: 10,
+    OFFSCREEN_INTERFACE_VERSION: 11,
     DEFAULT_SETTINGS: {
       format: 'png',
       timestampEnabled: true,
@@ -19,6 +19,7 @@
       timestampSize: 'md',
       footerText: '',
       captureMode: 'fullPage',
+      fileNamePrefix: '',
     },
     CAPTURE_INTERVAL_MS: 650,
     CAPTURE_SETTLE_MS: 180,

@@ -26,6 +26,15 @@
   "popupLabelFormat": {
     "message": "保存形式"
   },
+  "popupLabelFileNamePrefix": {
+    "message": "ファイル名の先頭"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "例: audit-2026（空欄でサイト名を自動）"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。"
+  },
   "popupNoteDownloadLocation": {
     "message": "保存先は Chrome の既定のダウンロードフォルダです。"
   },

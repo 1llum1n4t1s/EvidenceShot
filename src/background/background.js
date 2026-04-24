@@ -597,5 +597,6 @@ function normalizeCaptureSettings(partialSettings = {}) {
     captureMode: validCaptureModes.has(partialSettings.captureMode)
       ? partialSettings.captureMode
       : legacyCaptureMode || DEFAULT_SETTINGS.captureMode,
+    fileNamePrefix: Shared.sanitizeFileNamePrefix(partialSettings.fileNamePrefix),
   };
 }

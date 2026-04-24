@@ -26,6 +26,15 @@
   "popupLabelFormat": {
     "message": "File Format"
   },
+  "popupLabelFileNamePrefix": {
+    "message": "Filename Prefix"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "e.g. audit-2026 (blank = site name)"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "When blank, `screenshot-{domain}` is used. Date and extension are appended automatically."
+  },
   "popupNoteDownloadLocation": {
     "message": "Files are saved to Chrome's default download folder."
   },

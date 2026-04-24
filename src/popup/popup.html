@@ -30,6 +30,18 @@
           </select>
         </label>
 
+        <label class="field">
+          <span data-i18n="popupLabelFileNamePrefix">ファイル名の先頭</span>
+          <input
+            id="file-name-prefix"
+            type="text"
+            maxlength="60"
+            data-i18n-placeholder="popupPlaceholderFileNamePrefix"
+            placeholder="例: audit-2026（空欄でサイト名を自動）"
+          />
+        </label>
+        <p class="note" data-i18n="popupNoteFileNamePrefix">空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。</p>
+
         <p class="note" data-i18n="popupNoteDownloadLocation">保存先は Chrome の既定のダウンロードフォルダです。</p>
       </section>
 

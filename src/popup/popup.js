@@ -13,6 +13,7 @@
 
   const elements = {
     format: document.getElementById('format'),
+    fileNamePrefix: document.getElementById('file-name-prefix'),
     timestampEnabled: document.getElementById('timestamp-enabled'),
     timestampStyle: document.getElementById('timestamp-style'),
     timestampSize: document.getElementById('timestamp-size'),
@@ -44,6 +45,10 @@
 
   function bindEvents() {
     elements.format.addEventListener('change', async () => {
+      settings = await persistPopupSettings();
+    });
+
+    elements.fileNamePrefix.addEventListener('change', async () => {
       settings = await persistPopupSettings();
     });
 
@@ -80,6 +85,7 @@
     }
 
     elements.format.value = settings.format;
+    elements.fileNamePrefix.value = settings.fileNamePrefix;
     elements.timestampEnabled.checked = settings.timestampEnabled;
     elements.timestampStyle.value = settings.timestampStyle;
     elements.timestampSize.value = settings.timestampSize;
@@ -130,6 +136,7 @@
   function collectSettingsFromForm() {
     return {
       format: elements.format.value,
+      fileNamePrefix: elements.fileNamePrefix.value,
       timestampEnabled: elements.timestampEnabled.checked,
       timestampStyle: elements.timestampStyle.value,
       timestampSize: elements.timestampSize.value,
@@ -186,6 +193,7 @@
       captureMode: validCaptureModes.has(partialSettings.captureMode)
         ? partialSettings.captureMode
         : legacyCaptureMode || DEFAULT_SETTINGS.captureMode,
+      fileNamePrefix: Shared.sanitizeFileNamePrefix(partialSettings.fileNamePrefix),
     };
   }
 

@@ -46,7 +46,18 @@
       captureMode: validCaptureModes.has(candidate.captureMode)
         ? candidate.captureMode
         : legacyCaptureMode || base.captureMode,
+      fileNamePrefix: sanitizeFileNamePrefix(candidate.fileNamePrefix),
     };
+  }
+
+  function sanitizeFileNamePrefix(raw) {
+    if (typeof raw !== 'string') {
+      return '';
+    }
+    return raw
+      .replace(/[\x00-\x1f\\\/:*?"<>|]/g, '')
+      .trim()
+      .slice(0, 60);
   }
 
   async function loadSettings() {
@@ -121,15 +132,16 @@
     };
   }
 
-  function buildFileName(rawUrl, format, date = new Date(), part = null) {
+  function buildFileName(rawUrl, format, date = new Date(), part = null, fileNamePrefix = '') {
     const stamp = buildTimestamp(date);
-    const host = sanitizeHost(rawUrl);
     const extension = format === 'jpg' ? 'jpg' : format;
+    const customPrefix = sanitizeFileNamePrefix(fileNamePrefix);
+    const baseName = customPrefix || `screenshot-${sanitizeHost(rawUrl)}`;
     const partSuffix =
       part && Number.isFinite(part.count) && part.count > 1
         ? `-part${Number(part.index) + 1}-of${part.count}`
         : '';
-    return `screenshot-${host}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
+    return `${baseName}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
   }
 
   function buildTimestampText(style, date = new Date()) {
@@ -225,6 +237,7 @@
     sleep,
     clampNumber,
     sanitizeHost,
+    sanitizeFileNamePrefix,
     buildTimestamp,
     buildTimestampText,
     buildFileName,
