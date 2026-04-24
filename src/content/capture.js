@@ -154,13 +154,34 @@
     state.captureSession = null;
   }
 
+  // body または html が overflow: hidden/clip になっているとウィンドウスクロールが
+  // 効かず、スクロール連結撮影が同一位置の繰り返し撮影になる（モーダル開放中の
+  // Gmail / Linear 等で発生）。ここで検知し、scrollingMode を viewport にフォールバック。
+  function isDocumentScrollLocked() {
+    const root = document.documentElement;
+    const body = document.body;
+    if (!root || !body) {
+      return false;
+    }
+    const rootStyle = window.getComputedStyle(root);
+    const bodyStyle = window.getComputedStyle(body);
+    const lockedValues = new Set(['hidden', 'clip']);
+    const rootY = rootStyle.overflowY || rootStyle.overflow;
+    const bodyY = bodyStyle.overflowY || bodyStyle.overflow;
+    return lockedValues.has(rootY) || lockedValues.has(bodyY);
+  }
+
   function buildCapturePlan(captureMode) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const pageHeight = getDocumentHeight();
     const maxScrollY = Math.max(0, pageHeight - viewportHeight);
     const dpr = window.devicePixelRatio || 1;
-    const scrollingMode = captureMode !== 'viewport';
+    let scrollingMode = captureMode !== 'viewport';
+    // スクロールロック中は自前で viewport に降格（重複撮影と無限ループを防ぐ）。
+    if (scrollingMode && isDocumentScrollLocked()) {
+      scrollingMode = false;
+    }
     const overlap = scrollingMode ? Math.min(200, Math.max(96, Math.round(viewportHeight * 0.12))) : 0;
     const stride = Math.max(1, viewportHeight - overlap);
     const maxCanvasCssEdge = Math.max(1, Math.floor(Constants.MAX_CANVAS_EDGE / Math.max(dpr, 1)));
@@ -392,7 +413,11 @@
 
     while (currentNode && scannedNodes < MAX_FIXED_SCAN_NODES && fixedElements.length < MAX_FIXED_ELEMENTS) {
       const style = window.getComputedStyle(currentNode);
-      if (style && (style.position === 'fixed' || style.position === 'sticky')) {
+      // `position: fixed` のみ非表示対象とする。sticky はスクロール位置に応じて
+      // 自然な場所に現れるべきなので、一律に隠すと Notion / GitHub の sticky
+      // テーブルヘッダー等が全スライスで消える事故になる（証跡用途で致命的）。
+      // トップナビ等の「画面全体で固定」は fixed で実装されるため実害は少ない。
+      if (style && style.position === 'fixed') {
         const rect = currentNode.getBoundingClientRect();
         if (
           rect.width > 0 &&
