@@ -375,8 +375,162 @@
     });
   }
 
-  function drawTimestamp(context, canvas, style, size = 'md') {
-    const timestamp = Shared.buildTimestampText(resolveTimestampTextStyle(style), new Date());
+  // スタンプスタイル定義を一元管理。
+  // rounded スタイルは drawRoundedStamp に渡す options を返す。
+  // 'film' / 'polaroid' / 'pastel' / 'night' のみ専用描画関数を使う。
+  function resolveStampDescriptor(style, baseFontSize) {
+    switch (style) {
+      case 'audit':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
+            textColor: '#f8fafc',
+            background: 'rgba(15, 23, 42, 0.9)',
+            borderColor: 'rgba(245, 158, 11, 0.7)',
+            borderWidth: 2,
+            accentColor: '#f59e0b',
+            accentHeight: 6,
+            radius: 18,
+            paddingX: 0.95,
+            paddingY: 0.68,
+          },
+        };
+      case 'document':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
+            textColor: '#0f172a',
+            background: 'rgba(255, 255, 255, 0.94)',
+            borderColor: 'rgba(148, 163, 184, 0.55)',
+            borderWidth: 2,
+            shadowColor: 'rgba(15, 23, 42, 0.16)',
+            shadowBlur: 18,
+            shadowOffsetY: 8,
+            radius: 16,
+            paddingX: 0.9,
+            paddingY: 0.62,
+          },
+        };
+      case 'ledger':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.88)}px "Aptos Mono", "Consolas", monospace`,
+            textColor: '#ecfdf5',
+            background: 'rgba(6, 78, 59, 0.88)',
+            borderColor: 'rgba(167, 243, 208, 0.4)',
+            borderWidth: 1.5,
+            accentColor: 'rgba(167, 243, 208, 0.95)',
+            accentHeight: 3,
+            radius: 12,
+            paddingX: 0.88,
+            paddingY: 0.56,
+          },
+        };
+      case 'blueprint':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
+            textColor: '#bae6fd',
+            background: 'rgba(8, 47, 73, 0.88)',
+            borderColor: 'rgba(125, 211, 252, 0.85)',
+            borderWidth: 2,
+            shadowColor: 'rgba(14, 165, 233, 0.25)',
+            shadowBlur: 14,
+            radius: 14,
+            paddingX: 0.92,
+            paddingY: 0.62,
+          },
+        };
+      case 'monochrome':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
+            textColor: '#f8fafc',
+            background: 'rgba(15, 15, 15, 0.86)',
+            borderColor: 'rgba(255, 255, 255, 0.22)',
+            borderWidth: 1,
+            radius: 999,
+            paddingX: 0.9,
+            paddingY: 0.55,
+          },
+        };
+      case 'compact':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.74)}px "Aptos Mono", "Consolas", monospace`,
+            textColor: '#0f172a',
+            background: 'rgba(255, 255, 255, 0.9)',
+            borderColor: 'rgba(148, 163, 184, 0.38)',
+            borderWidth: 1,
+            radius: 10,
+            paddingX: 0.65,
+            paddingY: 0.42,
+          },
+        };
+      case 'minimal':
+        return {
+          type: 'rounded',
+          options: {
+            font: `600 ${Math.round(baseFontSize * 0.92)}px "Aptos", "Yu Gothic UI", sans-serif`,
+            textColor: '#f8fafc',
+            background: 'rgba(15, 23, 42, 0.82)',
+            radius: 999,
+            paddingX: 0.82,
+            paddingY: 0.5,
+          },
+        };
+      case 'diary':
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${Math.round(baseFontSize * 0.88)}px "Georgia", "Yu Mincho", serif`,
+            textColor: '#5b4636',
+            background: 'rgba(255, 248, 235, 0.96)',
+            borderColor: 'rgba(180, 138, 92, 0.45)',
+            borderWidth: 1.5,
+            shadowColor: 'rgba(120, 53, 15, 0.12)',
+            shadowBlur: 16,
+            shadowOffsetY: 8,
+            radius: 18,
+            paddingX: 0.92,
+            paddingY: 0.62,
+          },
+        };
+      case 'film':
+        return { type: 'special', render: drawFilmStamp };
+      case 'polaroid':
+        return { type: 'special', render: drawPolaroidStamp };
+      case 'pastel':
+        return { type: 'special', render: drawPastelStamp };
+      case 'night':
+        return { type: 'special', render: drawNightStamp };
+      case 'japanese':
+      default:
+        return {
+          type: 'rounded',
+          options: {
+            font: `700 ${baseFontSize}px "Aptos", "Yu Gothic UI", sans-serif`,
+            textColor: '#fef3c7',
+            background: 'rgba(15, 23, 42, 0.7)',
+            radius: 18,
+            paddingX: 0.9,
+            paddingY: 0.58,
+          },
+        };
+    }
+  }
+
+  // timestamp と footer label の共通描画本体。position だけ差し替えて同一スタイルを再利用。
+  function drawStampOverlay(context, canvas, text, style, size, position) {
+    if (!text) {
+      return;
+    }
     const scale = getTimestampSizeScale(size);
     const baseFontSize = Math.max(18, Math.round(canvas.width * 0.017 * scale));
     const margin = Math.max(20, Math.round(canvas.width * 0.02 * Math.min(scale, 1.26)));
@@ -384,316 +538,24 @@
     context.save();
     context.textBaseline = 'middle';
 
-    switch (style) {
-      case 'audit':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 23, 42, 0.9)',
-          borderColor: 'rgba(245, 158, 11, 0.7)',
-          borderWidth: 2,
-          accentColor: '#f59e0b',
-          accentHeight: 6,
-          radius: 18,
-          paddingX: 0.95,
-          paddingY: 0.68,
-        });
-        break;
-      case 'document':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#0f172a',
-          background: 'rgba(255, 255, 255, 0.94)',
-          borderColor: 'rgba(148, 163, 184, 0.55)',
-          borderWidth: 2,
-          shadowColor: 'rgba(15, 23, 42, 0.16)',
-          shadowBlur: 18,
-          shadowOffsetY: 8,
-          radius: 16,
-          paddingX: 0.9,
-          paddingY: 0.62,
-        });
-        break;
-      case 'ledger':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.88)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#ecfdf5',
-          background: 'rgba(6, 78, 59, 0.88)',
-          borderColor: 'rgba(167, 243, 208, 0.4)',
-          borderWidth: 1.5,
-          accentColor: 'rgba(167, 243, 208, 0.95)',
-          accentHeight: 3,
-          radius: 12,
-          paddingX: 0.88,
-          paddingY: 0.56,
-        });
-        break;
-      case 'blueprint':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#bae6fd',
-          background: 'rgba(8, 47, 73, 0.88)',
-          borderColor: 'rgba(125, 211, 252, 0.85)',
-          borderWidth: 2,
-          shadowColor: 'rgba(14, 165, 233, 0.25)',
-          shadowBlur: 14,
-          radius: 14,
-          paddingX: 0.92,
-          paddingY: 0.62,
-        });
-        break;
-      case 'monochrome':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 15, 15, 0.86)',
-          borderColor: 'rgba(255, 255, 255, 0.22)',
-          borderWidth: 1,
-          radius: 999,
-          paddingX: 0.9,
-          paddingY: 0.55,
-        });
-        break;
-      case 'compact':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.74)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#0f172a',
-          background: 'rgba(255, 255, 255, 0.9)',
-          borderColor: 'rgba(148, 163, 184, 0.38)',
-          borderWidth: 1,
-          radius: 10,
-          paddingX: 0.65,
-          paddingY: 0.42,
-        });
-        break;
-      case 'film':
-        drawFilmStamp(context, canvas, timestamp, baseFontSize, margin);
-        break;
-      case 'minimal': {
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `600 ${Math.round(baseFontSize * 0.92)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 23, 42, 0.82)',
-          radius: 999,
-          paddingX: 0.82,
-          paddingY: 0.5,
-        });
-        break;
-      }
-      case 'polaroid':
-        drawPolaroidStamp(context, canvas, timestamp, baseFontSize, margin);
-        break;
-      case 'diary':
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${Math.round(baseFontSize * 0.88)}px "Georgia", "Yu Mincho", serif`,
-          textColor: '#5b4636',
-          background: 'rgba(255, 248, 235, 0.96)',
-          borderColor: 'rgba(180, 138, 92, 0.45)',
-          borderWidth: 1.5,
-          shadowColor: 'rgba(120, 53, 15, 0.12)',
-          shadowBlur: 16,
-          shadowOffsetY: 8,
-          radius: 18,
-          paddingX: 0.92,
-          paddingY: 0.62,
-        });
-        break;
-      case 'pastel':
-        drawPastelStamp(context, canvas, timestamp, baseFontSize, margin);
-        break;
-      case 'night':
-        drawNightStamp(context, canvas, timestamp, baseFontSize, margin);
-        break;
-      case 'japanese':
-      default: {
-        drawRoundedStamp(context, canvas, timestamp, {
-          margin,
-          font: `700 ${baseFontSize}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#fef3c7',
-          background: 'rgba(15, 23, 42, 0.7)',
-          radius: 18,
-          paddingX: 0.9,
-          paddingY: 0.58,
-        });
-        break;
-      }
+    const descriptor = resolveStampDescriptor(style, baseFontSize);
+    if (descriptor.type === 'rounded') {
+      drawRoundedStamp(context, canvas, text, { ...descriptor.options, margin, position });
+    } else {
+      descriptor.render(context, canvas, text, baseFontSize, margin, position);
     }
 
     context.restore();
   }
 
+  function drawTimestamp(context, canvas, style, size = 'md') {
+    const timestamp = Shared.buildTimestampText(resolveTimestampTextStyle(style), new Date());
+    drawStampOverlay(context, canvas, timestamp, style, size, 'right');
+  }
+
   function drawFooterLabel(context, canvas, footerText, style, size = 'md') {
-    const scale = getTimestampSizeScale(size);
-    const baseFontSize = Math.max(18, Math.round(canvas.width * 0.017 * scale));
-    const margin = Math.max(20, Math.round(canvas.width * 0.02 * Math.min(scale, 1.26)));
     const safeText = String(footerText).trim().slice(0, 80);
-
-    if (!safeText) {
-      return;
-    }
-
-    context.save();
-    context.textBaseline = 'middle';
-
-    switch (style) {
-      case 'audit':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 23, 42, 0.9)',
-          borderColor: 'rgba(245, 158, 11, 0.7)',
-          borderWidth: 2,
-          accentColor: '#f59e0b',
-          accentHeight: 6,
-          radius: 18,
-          paddingX: 0.95,
-          paddingY: 0.68,
-        });
-        break;
-      case 'document':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#0f172a',
-          background: 'rgba(255, 255, 255, 0.94)',
-          borderColor: 'rgba(148, 163, 184, 0.55)',
-          borderWidth: 2,
-          shadowColor: 'rgba(15, 23, 42, 0.16)',
-          shadowBlur: 18,
-          shadowOffsetY: 8,
-          radius: 16,
-          paddingX: 0.9,
-          paddingY: 0.62,
-        });
-        break;
-      case 'ledger':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.88)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#ecfdf5',
-          background: 'rgba(6, 78, 59, 0.88)',
-          borderColor: 'rgba(167, 243, 208, 0.4)',
-          borderWidth: 1.5,
-          accentColor: 'rgba(167, 243, 208, 0.95)',
-          accentHeight: 3,
-          radius: 12,
-          paddingX: 0.88,
-          paddingY: 0.56,
-        });
-        break;
-      case 'blueprint':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#bae6fd',
-          background: 'rgba(8, 47, 73, 0.88)',
-          borderColor: 'rgba(125, 211, 252, 0.85)',
-          borderWidth: 2,
-          shadowColor: 'rgba(14, 165, 233, 0.25)',
-          shadowBlur: 14,
-          radius: 14,
-          paddingX: 0.92,
-          paddingY: 0.62,
-        });
-        break;
-      case 'monochrome':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.9)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 15, 15, 0.86)',
-          borderColor: 'rgba(255, 255, 255, 0.22)',
-          borderWidth: 1,
-          radius: 999,
-          paddingX: 0.9,
-          paddingY: 0.55,
-        });
-        break;
-      case 'compact':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.74)}px "Aptos Mono", "Consolas", monospace`,
-          textColor: '#0f172a',
-          background: 'rgba(255, 255, 255, 0.9)',
-          borderColor: 'rgba(148, 163, 184, 0.38)',
-          borderWidth: 1,
-          radius: 10,
-          paddingX: 0.65,
-          paddingY: 0.42,
-        });
-        break;
-      case 'film':
-        drawFilmStamp(context, canvas, safeText, baseFontSize, margin, 'left');
-        break;
-      case 'minimal':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `600 ${Math.round(baseFontSize * 0.92)}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#f8fafc',
-          background: 'rgba(15, 23, 42, 0.82)',
-          radius: 999,
-          paddingX: 0.82,
-          paddingY: 0.5,
-        });
-        break;
-      case 'polaroid':
-        drawPolaroidStamp(context, canvas, safeText, baseFontSize, margin, 'left');
-        break;
-      case 'diary':
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${Math.round(baseFontSize * 0.88)}px "Georgia", "Yu Mincho", serif`,
-          textColor: '#5b4636',
-          background: 'rgba(255, 248, 235, 0.96)',
-          borderColor: 'rgba(180, 138, 92, 0.45)',
-          borderWidth: 1.5,
-          shadowColor: 'rgba(120, 53, 15, 0.12)',
-          shadowBlur: 16,
-          shadowOffsetY: 8,
-          radius: 18,
-          paddingX: 0.92,
-          paddingY: 0.62,
-        });
-        break;
-      case 'pastel':
-        drawPastelStamp(context, canvas, safeText, baseFontSize, margin, 'left');
-        break;
-      case 'night':
-        drawNightStamp(context, canvas, safeText, baseFontSize, margin, 'left');
-        break;
-      case 'japanese':
-      default:
-        drawRoundedStamp(context, canvas, safeText, {
-          margin,
-          position: 'left',
-          font: `700 ${baseFontSize}px "Aptos", "Yu Gothic UI", sans-serif`,
-          textColor: '#fef3c7',
-          background: 'rgba(15, 23, 42, 0.7)',
-          radius: 18,
-          paddingX: 0.9,
-          paddingY: 0.58,
-        });
-        break;
-    }
-
-    context.restore();
+    drawStampOverlay(context, canvas, safeText, style, size, 'left');
   }
 
   function resolveTimestampTextStyle(style) {
