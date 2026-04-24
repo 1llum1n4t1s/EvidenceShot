@@ -83,6 +83,26 @@
     return { ok: true };
   }
 
+  // Canvas の GPU バッファを即時解放する（width=height=1 にして内部バッファを縮小）。
+  // 参照を消しても GC タイミング次第で解放が遅延するため、明示的にサイズ縮小する。
+  function releaseCanvas(canvas) {
+    if (!canvas) return;
+    try {
+      canvas.width = 1;
+      canvas.height = 1;
+    } catch {
+      // no-op
+    }
+  }
+
+  // 新セッション開始時に残留セッション（SW 再起動で abort が届かなかったもの等）を掃除。
+  function purgeAllSessions() {
+    for (const [, session] of captureSessions) {
+      releaseCanvas(session?.canvas);
+    }
+    captureSessions.clear();
+  }
+
   function beginCaptureSession(sessionId, sessionSecret, meta) {
     if (!sessionId) {
       return { ok: false, error: t('errCaptureSessionIdMissing', '撮影セッションIDがありません。') };
@@ -92,6 +112,12 @@
     }
     if (!meta?.plan || !meta?.settings) {
       return { ok: false, error: t('errCaptureMetaMissing', '撮影メタデータを受け取れませんでした。') };
+    }
+
+    // 孤児セッション掃除: SW が途中で落ちると abort が届かず、古い巨大 Canvas が残り続ける。
+    // 新セッション開始＝前セッションは確実に意味を失っているので、ここで一掃する。
+    if (captureSessions.size > 0) {
+      purgeAllSessions();
     }
 
     const canvasWidth = Math.round(meta.plan.canvasWidth * meta.plan.devicePixelRatio);
@@ -222,6 +248,9 @@
           trimmedCanvas.height
         );
 
+        // 元 Canvas は drawImage でコピー済み → 以後不要。GPU バッファを即時解放して
+        // トリミング中の RAM ピークを 2 倍→1 倍に抑える。
+        releaseCanvas(session.canvas);
         canvas = trimmedCanvas;
         context = trimmedContext;
       }
@@ -235,6 +264,10 @@
       }
 
       const { blob, savedAsFormat } = await buildOutputBlob(canvas, settings.format);
+      // Blob 抽出後は Canvas は不要。dataURL 変換の前に GPU バッファを解放し
+      // 「canvas + blob + dataURL」の 3 重メモリピークを「blob + dataURL」に抑える。
+      releaseCanvas(canvas);
+
       const fileName = Shared.buildFileName({
         url: meta.url,
         format: savedAsFormat,
@@ -272,6 +305,7 @@
       return { ok: false, error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。') };
     }
 
+    releaseCanvas(session.canvas);
     captureSessions.delete(sessionId);
     return { ok: true };
   }
