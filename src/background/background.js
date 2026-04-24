@@ -463,15 +463,24 @@ async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
   })).catch(() => undefined);
 }
 
+// offscreen のドキュメント URL に channelToken をクエリで埋め込み、
+// offscreen 側は URL から直接 expectedChannelToken を読む（TOFU 廃止）。
+function buildOffscreenDocumentUrl() {
+  return `${OFFSCREEN_DOCUMENT_PATH}?token=${OFFSCREEN_CHANNEL_TOKEN}`;
+}
+
+function buildFullOffscreenDocumentUrl() {
+  return chrome.runtime.getURL(buildOffscreenDocumentUrl());
+}
+
 async function ensureOffscreenDocument() {
-  const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
-  if (await isOffscreenDocumentCompatible(offscreenUrl)) {
+  if (await isOffscreenDocumentCompatible()) {
     return;
   }
 
   if (!creatingOffscreenDocumentPromise) {
     creatingOffscreenDocumentPromise = (async () => {
-      if (await isOffscreenDocumentCompatible(offscreenUrl)) {
+      if (await isOffscreenDocumentCompatible()) {
         return;
       }
 
@@ -485,7 +494,7 @@ async function ensureOffscreenDocument() {
         }
       }
 
-      await createOffscreenDocument(offscreenUrl);
+      await createOffscreenDocument();
     })();
   }
 
@@ -496,11 +505,14 @@ async function ensureOffscreenDocument() {
   }
 }
 
-async function isOffscreenDocumentCompatible(offscreenUrl) {
+async function isOffscreenDocumentCompatible() {
+  const fullUrl = buildFullOffscreenDocumentUrl();
   if ('getContexts' in chrome.runtime) {
+    // documentUrls フィルタは完全一致なので、違うトークンで立ち上がった古い
+    // offscreen は match しない → false → 作り直しに進む。
     const contexts = await chrome.runtime.getContexts({
       contextTypes: ['OFFSCREEN_DOCUMENT'],
-      documentUrls: [offscreenUrl],
+      documentUrls: [fullUrl],
     });
 
     if (contexts.length === 0) {
@@ -508,7 +520,7 @@ async function isOffscreenDocumentCompatible(offscreenUrl) {
     }
   } else {
     const clientsList = await clients.matchAll();
-    const hasDocument = clientsList.some((client) => client.url === offscreenUrl);
+    const hasDocument = clientsList.some((client) => client.url === fullUrl);
     if (!hasDocument) {
       return false;
     }
@@ -518,8 +530,6 @@ async function isOffscreenDocumentCompatible(offscreenUrl) {
 }
 
 async function recreateOffscreenDocument() {
-  const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
-
   if (!creatingOffscreenDocumentPromise) {
     creatingOffscreenDocumentPromise = (async () => {
       if ('closeDocument' in chrome.offscreen) {
@@ -532,7 +542,7 @@ async function recreateOffscreenDocument() {
         }
       }
 
-      await createOffscreenDocument(offscreenUrl);
+      await createOffscreenDocument();
     })();
   }
 
@@ -543,19 +553,19 @@ async function recreateOffscreenDocument() {
   }
 }
 
-async function createOffscreenDocument(offscreenUrl) {
+async function createOffscreenDocument() {
   await chrome.offscreen.createDocument({
-    url: OFFSCREEN_DOCUMENT_PATH,
+    url: buildOffscreenDocumentUrl(),
     reasons: ['BLOBS'],
     justification: 'スクリーンショット画像を合成して既定ダウンロード先へ保存するため',
   });
 
-  await waitForOffscreenDocumentReady(offscreenUrl);
+  await waitForOffscreenDocumentReady();
 }
 
-async function waitForOffscreenDocumentReady(offscreenUrl) {
+async function waitForOffscreenDocumentReady() {
   for (let attempt = 0; attempt < OFFSCREEN_READY_RETRY_COUNT; attempt += 1) {
-    if (await isOffscreenDocumentCompatible(offscreenUrl)) {
+    if (await isOffscreenDocumentCompatible()) {
       return;
     }
 

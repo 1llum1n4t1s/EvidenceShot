@@ -4,8 +4,24 @@
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION } = globalThis.WebTestShotConstants;
   const captureSessions = new Map();
-  let expectedChannelToken = null;
   const MIN_TOKEN_LENGTH = 24;
+  // Chrome 拡張機能の SW (background) が offscreen を createDocument する際、
+  // URL クエリ `?token=...` で channelToken を埋め込む。offscreen は起動直後に
+  // URL から token を読み取り、以降の sendMessage は URL の token と完全一致
+  // した場合のみ受け付ける。
+  // これで SW 再起動直後の「初回メッセージを TOFU で受け入れる」設計を廃止し、
+  // 偽トークンによる先取り・DoS の経路を閉じる。
+  const expectedChannelToken = (() => {
+    try {
+      const token = new URLSearchParams(globalThis.location?.search || '').get('token');
+      if (typeof token === 'string' && token.length >= MIN_TOKEN_LENGTH) {
+        return token;
+      }
+    } catch {
+      // no-op
+    }
+    return null;
+  })();
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.target !== 'offscreen') {
@@ -74,9 +90,9 @@
       return { ok: false, error: t('errChannelTokenMissing', '認証トークンが不足しています。') };
     }
 
-    if (!expectedChannelToken) {
-      expectedChannelToken = channelToken;
-    } else if (expectedChannelToken !== channelToken) {
+    // URL クエリから取得した正規トークンと完全一致する場合のみ受け入れる。
+    // token が URL に無い場合（設計ミスで起動された場合）はすべて拒否。
+    if (!expectedChannelToken || expectedChannelToken !== channelToken) {
       return { ok: false, error: t('errCaptureSessionAuthInvalid', '撮影セッション認証が不正です。') };
     }
 
