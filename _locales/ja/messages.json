@@ -243,11 +243,5 @@
   },
   "errImageConvertFailed": {
     "message": "画像の変換に失敗しました。"
-  },
-  "errBlobReadFailed": {
-    "message": "Blob を読み込めませんでした。"
-  },
-  "errSaveDataBuildFailed": {
-    "message": "保存用データの生成に失敗しました。"
   }
 }

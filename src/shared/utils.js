@@ -175,15 +175,6 @@
     }
   }
 
-  function toDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error || new Error(t('errBlobReadFailed', 'Blob を読み込めませんでした。')));
-      reader.readAsDataURL(blob);
-    });
-  }
-
   function t(key, fallback = '', substitutions = undefined) {
     try {
       const message = chrome.i18n.getMessage(key, substitutions);
@@ -247,7 +238,6 @@
     buildTimestampText,
     buildFileName,
     isCapturableUrl,
-    toDataUrl,
     t,
     normalizeUserMessage,
   };

@@ -243,11 +243,5 @@
   },
   "errImageConvertFailed": {
     "message": "Image conversion failed."
-  },
-  "errBlobReadFailed": {
-    "message": "Failed to read blob."
-  },
-  "errSaveDataBuildFailed": {
-    "message": "Failed to build download data."
   }
 }

@@ -334,20 +334,12 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
     };
   }
 
-  const hasDownloadUrl = typeof result.downloadUrl === 'string' && result.downloadUrl.length > 0;
-  const hasBlob = result.blob instanceof Blob;
-  if ((!hasDownloadUrl && !hasBlob) || !result.fileName) {
+  const downloadUrl = result.downloadUrl;
+  if (typeof downloadUrl !== 'string' || downloadUrl.length === 0 || !result.fileName) {
     return {
       ok: false,
       error: t('errSaveDataMissing', '保存データの受け取りに失敗しました。'),
     };
-  }
-
-  let downloadUrl = result.downloadUrl;
-  let createdObjectUrl = false;
-  if (!downloadUrl && hasBlob) {
-    downloadUrl = URL.createObjectURL(result.blob);
-    createdObjectUrl = true;
   }
 
   try {
@@ -366,17 +358,8 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
         'ダウンロードの開始に失敗しました。'
       ),
     };
-  } finally {
-    if (createdObjectUrl) {
-      setTimeout(() => {
-        try {
-          URL.revokeObjectURL(downloadUrl);
-        } catch {
-          // no-op
-        }
-      }, 60_000);
-    }
   }
+  // Blob URL の revoke は offscreen 側が 60 秒タイマーで自己管理する。
 }
 
 async function abortOffscreenCaptureSession(sessionId, sessionSecret) {

@@ -264,8 +264,7 @@
       }
 
       const { blob, savedAsFormat } = await buildOutputBlob(canvas, settings.format);
-      // Blob 抽出後は Canvas は不要。dataURL 変換の前に GPU バッファを解放し
-      // 「canvas + blob + dataURL」の 3 重メモリピークを「blob + dataURL」に抑える。
+      // Blob 抽出後は Canvas は不要。Object URL 生成の前に GPU バッファを解放。
       releaseCanvas(canvas);
 
       const fileName = Shared.buildFileName({
@@ -274,7 +273,23 @@
         part: meta.part,
         prefix: settings.fileNamePrefix,
       });
-      const downloadUrl = await blobToDataUrl(blob);
+
+      // ---- Blob URL 経由で background に受け渡す ----
+      // 旧実装は FileReader で dataURL (Base64) に変換し sendMessage で転送していた。
+      // 長いページで 50MB+ の画像を Base64 化 (~1.37 倍) すると IPC ペイロードと
+      // メモリピークが爆発するため、同一拡張機能内で共有できる Object URL に切替。
+      // offscreen は chrome-extension:// オリジンで SW と同一パーティションのため、
+      // SW 側の chrome.downloads.download({url: blobUrl}) からも解決できる。
+      const downloadUrl = URL.createObjectURL(blob);
+      // 60 秒後に自動 revoke（offscreen と SW は同一拡張機能のため 60s あれば
+      // Chrome のダウンロードマネージャは Blob を取得済み）。
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(downloadUrl);
+        } catch {
+          // no-op
+        }
+      }, 60_000);
 
       return {
         ok: true,
@@ -357,23 +372,6 @@
         mimeType,
         quality
       );
-    });
-  }
-
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => {
-        reject(new Error(t('errSaveDataBuildFailed', '保存用データの生成に失敗しました。')));
-      };
-      reader.onload = () => {
-        if (typeof reader.result !== 'string' || !reader.result) {
-          reject(new Error(t('errSaveDataBuildFailed', '保存用データの生成に失敗しました。')));
-          return;
-        }
-        resolve(reader.result);
-      };
-      reader.readAsDataURL(blob);
     });
   }
 
