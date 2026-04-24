@@ -65,16 +65,15 @@ jobs:
           ls -lh evidence-shot.zip
 
       - name: Chrome Web Store へアップロードして公開
+        # Secrets は env 経由で chrome-webstore-upload-cli に渡す。
+        # CLI 引数だと `ps` / /proc/<pid>/cmdline から見える可能性があるため、
+        # 環境変数方式を優先する。
         env:
-          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
-          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
         run: |
           npx chrome-webstore-upload-cli upload \
             --source evidence-shot.zip \
-            --extension-id "$CWS_EXTENSION_ID" \
-            --client-id "$CWS_CLIENT_ID" \
-            --client-secret "$CWS_CLIENT_SECRET" \
-            --refresh-token "$CWS_REFRESH_TOKEN" \
             --auto-publish

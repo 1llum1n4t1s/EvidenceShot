@@ -137,7 +137,8 @@ async function runCaptureWorkflow(tabId) {
   activeCaptureWindows.add(tab.windowId);
 
   const settings = await Shared.loadSettings();
-  const sessionId = `capture-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  // sessionId の予測可能性を避けるため Math.random ではなく CSPRNG を用いる。
+  const sessionId = `capture-${Date.now()}-${generateSecureToken(8)}`;
   const sessionSecret = generateSecureToken();
   let offscreenSessionStarted = false;
 
@@ -251,7 +252,7 @@ async function runCaptureWorkflow(tabId) {
           lastCapture = activeCapture;
         }
 
-        const pushResult = await chrome.runtime.sendMessage(buildOffscreenMessage({
+        const pushResult = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
           type: 'WTS_ADD_CAPTURE_SLICE',
           sessionId,
           sessionSecret,
@@ -339,10 +340,10 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
     },
   });
 
-  let result = await chrome.runtime.sendMessage(request).catch(() => undefined);
+  let result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
   if (!result?.ok) {
     await recreateOffscreenDocument();
-    result = await chrome.runtime.sendMessage(request).catch(() => undefined);
+    result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
   }
 
   return result?.ok
@@ -358,7 +359,7 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
 }
 
 async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
-  const result = await chrome.runtime.sendMessage(buildOffscreenMessage({
+  const result = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
     type: 'WTS_FINALIZE_CAPTURE_SESSION',
     sessionId,
     sessionSecret,
@@ -404,13 +405,11 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
 }
 
 async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
-  await chrome.runtime
-    .sendMessage(buildOffscreenMessage({
-      type: 'WTS_ABORT_CAPTURE_SESSION',
-      sessionId,
-      sessionSecret,
-    }))
-    .catch(() => undefined);
+  await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+    type: 'WTS_ABORT_CAPTURE_SESSION',
+    sessionId,
+    sessionSecret,
+  })).catch(() => undefined);
 }
 
 async function ensureOffscreenDocument() {
@@ -519,9 +518,10 @@ async function waitForOffscreenDocumentReady(offscreenUrl) {
 
 async function isCurrentOffscreenCompatible() {
   try {
-    const response = await chrome.runtime.sendMessage(buildOffscreenMessage({
+    // PING は応答が早い想定なので短めのタイムアウトで判定（ハング検出）。
+    const response = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
       type: 'WTS_OFFSCREEN_PING',
-    }));
+    }), 3_000);
 
     return response?.ok && response.interfaceVersion === OFFSCREEN_INTERFACE_VERSION;
   } catch (error) {
@@ -535,6 +535,25 @@ function buildOffscreenMessage(payload) {
     target: 'offscreen',
     channelToken: OFFSCREEN_CHANNEL_TOKEN,
   };
+}
+
+const OFFSCREEN_MESSAGE_TIMEOUT_MS = 30_000;
+
+// offscreen が応答しないケース（ハング）での無限 await を防ぐためのタイムアウトラッパ。
+// 呼び出し元は従来通り `.catch(() => undefined)` を付ければ同じ挙動になる。
+function sendOffscreenMessageWithTimeout(payload, timeoutMs = OFFSCREEN_MESSAGE_TIMEOUT_MS) {
+  let timeoutHandle;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')));
+    }, timeoutMs);
+  });
+  return Promise.race([
+    chrome.runtime.sendMessage(payload),
+    timeoutPromise,
+  ]).finally(() => {
+    clearTimeout(timeoutHandle);
+  });
 }
 
 function generateSecureToken(byteLength = 16) {

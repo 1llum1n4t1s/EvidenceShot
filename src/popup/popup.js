@@ -99,9 +99,17 @@
         currentWindow: true,
       });
 
+      if (!tab?.id) {
+        // DevTools ウィンドウや新規ウィンドウで active タブが取れないケース。
+        // background に undefined を丸投げすると診断情報が乏しくなるので、
+        // popup の文脈でエラーを出す。
+        setStatus(t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。'), 'error');
+        return;
+      }
+
       const result = await chrome.runtime.sendMessage({
         type: 'WTS_CAPTURE_FROM_POPUP',
-        tabId: tab?.id,
+        tabId: tab.id,
       });
 
       if (!result?.ok) {

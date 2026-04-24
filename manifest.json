@@ -28,5 +28,8 @@
     "scripting",
     "offscreen",
     "downloads"
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  }
 }
