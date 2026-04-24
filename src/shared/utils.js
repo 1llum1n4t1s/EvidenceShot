@@ -54,10 +54,15 @@
     if (typeof raw !== 'string') {
       return '';
     }
-    return raw
+    const stripped = raw
       .replace(/[\x00-\x1f\\\/:*?"<>|]/g, '')
       .trim()
+      .replace(/[.\s]+$/, '')
       .slice(0, 60);
+    if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..+)?$/i.test(stripped)) {
+      return `_${stripped}`;
+    }
+    return stripped;
   }
 
   async function loadSettings() {
@@ -132,14 +137,18 @@
     };
   }
 
-  function buildFileName(rawUrl, format, date = new Date(), part = null, fileNamePrefix = '') {
+  function buildFileName({ url, format, date = new Date(), part = null, prefix = '' } = {}) {
     const stamp = buildTimestamp(date);
     const extension = format === 'jpg' ? 'jpg' : format;
-    const customPrefix = sanitizeFileNamePrefix(fileNamePrefix);
-    const baseName = customPrefix || `screenshot-${sanitizeHost(rawUrl)}`;
+    const customPrefix = sanitizeFileNamePrefix(prefix);
+    const baseName = customPrefix || `screenshot-${sanitizeHost(url)}`;
     const partSuffix =
-      part && Number.isFinite(part.count) && part.count > 1
-        ? `-part${Number(part.index) + 1}-of${part.count}`
+      part &&
+      Number.isInteger(part.count) &&
+      part.count > 1 &&
+      Number.isInteger(part.index) &&
+      part.index >= 0
+        ? `-part${part.index + 1}-of${part.count}`
         : '';
     return `${baseName}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
   }

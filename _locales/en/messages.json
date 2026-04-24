@@ -202,8 +202,8 @@
   "errCaptureStepInvalid": {
     "message": "Invalid capture position."
   },
-  "errPageTooLongSingleImage": {
-    "message": "The page is too long to save as a single image."
+  "errCaptureCanvasTooLarge": {
+    "message": "The capture canvas is larger than expected. Please update to the latest version and try again."
   },
   "errViewportTooTall": {
     "message": "The viewport is too tall to capture. Please shrink the window and try again."
@@ -219,9 +219,6 @@
   },
   "errChannelTokenMissing": {
     "message": "Channel token is missing."
-  },
-  "errChannelTokenMismatch": {
-    "message": "Channel token does not match."
   },
   "errCaptureSessionAuthInvalid": {
     "message": "Capture session authentication is invalid."

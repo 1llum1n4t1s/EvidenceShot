@@ -4,12 +4,6 @@ importScripts(
 );
 
 const {
-  SETTINGS_KEY,
-  DEFAULT_SETTINGS,
-  FORMAT_OPTIONS,
-  TIMESTAMP_STYLES,
-  TIMESTAMP_SIZE_OPTIONS,
-  CAPTURE_MODE_OPTIONS,
   CONTENT_SCRIPT_FILES,
   OFFSCREEN_DOCUMENT_PATH,
   OFFSCREEN_INTERFACE_VERSION,
@@ -80,7 +74,7 @@ async function runCaptureWorkflow(tabId) {
   activeCaptureTabs.add(tabId);
   activeCaptureWindows.add(tab.windowId);
 
-  const settings = await loadCaptureSettings();
+  const settings = await Shared.loadSettings();
   const sessionId = `capture-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const sessionSecret = generateSecureToken();
   let offscreenSessionStarted = false;
@@ -391,7 +385,7 @@ async function ensureOffscreenDocument() {
           await chrome.offscreen.closeDocument();
         } catch (error) {
           if (!String(error?.message || '').includes('No document')) {
-            console.warn('EvidenceShot: offscreen ドキュメントの終了で警告:', error.message);
+            console.warn('EvidenceShot: failed to close offscreen document:', error.message);
           }
         }
       }
@@ -438,7 +432,7 @@ async function recreateOffscreenDocument() {
           await chrome.offscreen.closeDocument();
         } catch (error) {
           if (!String(error?.message || '').includes('No document')) {
-            console.warn('EvidenceShot: offscreen ドキュメントの再作成で警告:', error.message);
+            console.warn('EvidenceShot: failed to recreate offscreen document:', error.message);
           }
         }
       }
@@ -561,42 +555,3 @@ function downloadCapture(downloadUrl, fileName) {
   });
 }
 
-async function loadCaptureSettings() {
-  const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  return normalizeCaptureSettings(stored?.[SETTINGS_KEY] || {});
-}
-
-function normalizeCaptureSettings(partialSettings = {}) {
-  const validTimestampStyles = new Set(TIMESTAMP_STYLES.map(({ value }) => value));
-  const validTimestampSizes = new Set(TIMESTAMP_SIZE_OPTIONS.map(({ value }) => value));
-  const validCaptureModes = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
-  const legacyCaptureMode =
-    typeof partialSettings.fullPage === 'boolean'
-      ? (partialSettings.fullPage ? 'fullPage' : 'viewport')
-      : null;
-
-  return {
-    ...DEFAULT_SETTINGS,
-    format: FORMAT_OPTIONS.includes(partialSettings.format)
-      ? partialSettings.format
-      : DEFAULT_SETTINGS.format,
-    timestampEnabled:
-      typeof partialSettings.timestampEnabled === 'boolean'
-        ? partialSettings.timestampEnabled
-        : DEFAULT_SETTINGS.timestampEnabled,
-    timestampStyle: validTimestampStyles.has(partialSettings.timestampStyle)
-      ? partialSettings.timestampStyle
-      : DEFAULT_SETTINGS.timestampStyle,
-    timestampSize: validTimestampSizes.has(partialSettings.timestampSize)
-      ? partialSettings.timestampSize
-      : DEFAULT_SETTINGS.timestampSize,
-    footerText:
-      typeof partialSettings.footerText === 'string'
-        ? partialSettings.footerText.trim().slice(0, 80)
-        : DEFAULT_SETTINGS.footerText,
-    captureMode: validCaptureModes.has(partialSettings.captureMode)
-      ? partialSettings.captureMode
-      : legacyCaptureMode || DEFAULT_SETTINGS.captureMode,
-    fileNamePrefix: Shared.sanitizeFileNamePrefix(partialSettings.fileNamePrefix),
-  };
-}

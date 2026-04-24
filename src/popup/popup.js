@@ -1,8 +1,5 @@
 (function initializePopup() {
   const {
-    SETTINGS_KEY,
-    DEFAULT_SETTINGS,
-    FORMAT_OPTIONS,
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
@@ -23,7 +20,7 @@
     statusText: document.getElementById('status-text'),
   };
 
-  let settings = normalizePopupSettings(DEFAULT_SETTINGS);
+  let settings = Shared.cloneDefaultSettings();
 
   bootstrap().catch((error) => {
     setStatus(
@@ -37,7 +34,7 @@
     populateSelectOptions(elements.timestampStyle, TIMESTAMP_STYLES);
     populateSelectOptions(elements.timestampSize, TIMESTAMP_SIZE_OPTIONS);
     populateSelectOptions(elements.captureMode, CAPTURE_MODE_OPTIONS);
-    settings = await loadPopupSettings();
+    settings = await Shared.loadSettings();
     bindEvents();
     render();
     setStatus(t('popupStatusReady', '準備OK。撮影できます。'));
@@ -80,10 +77,6 @@
   }
 
   function render() {
-    if (!['png', 'jpg', 'webp'].includes(settings.format)) {
-      settings.format = 'png';
-    }
-
     elements.format.value = settings.format;
     elements.fileNamePrefix.value = settings.fileNamePrefix;
     elements.timestampEnabled.checked = settings.timestampEnabled;
@@ -146,55 +139,11 @@
   }
 
   async function persistPopupSettings({ renderAfterSave = true } = {}) {
-    const normalizedSettings = normalizePopupSettings(collectSettingsFromForm());
-    await chrome.storage.local.set({
-      [SETTINGS_KEY]: normalizedSettings,
-    });
-    settings = normalizedSettings;
+    settings = await Shared.saveSettings(collectSettingsFromForm());
     if (renderAfterSave) {
       render();
     }
     return settings;
-  }
-
-  async function loadPopupSettings() {
-    const stored = await chrome.storage.local.get(SETTINGS_KEY);
-    return normalizePopupSettings(stored?.[SETTINGS_KEY] || {});
-  }
-
-  function normalizePopupSettings(partialSettings = {}) {
-    const validTimestampStyles = new Set(TIMESTAMP_STYLES.map(({ value }) => value));
-    const validTimestampSizes = new Set(TIMESTAMP_SIZE_OPTIONS.map(({ value }) => value));
-    const validCaptureModes = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
-    const legacyCaptureMode =
-      typeof partialSettings.fullPage === 'boolean'
-        ? (partialSettings.fullPage ? 'fullPage' : 'viewport')
-        : null;
-
-    return {
-      ...DEFAULT_SETTINGS,
-      format: FORMAT_OPTIONS.includes(partialSettings.format)
-        ? partialSettings.format
-        : DEFAULT_SETTINGS.format,
-      timestampEnabled:
-        typeof partialSettings.timestampEnabled === 'boolean'
-          ? partialSettings.timestampEnabled
-          : DEFAULT_SETTINGS.timestampEnabled,
-      timestampStyle: validTimestampStyles.has(partialSettings.timestampStyle)
-        ? partialSettings.timestampStyle
-        : DEFAULT_SETTINGS.timestampStyle,
-      timestampSize: validTimestampSizes.has(partialSettings.timestampSize)
-        ? partialSettings.timestampSize
-        : DEFAULT_SETTINGS.timestampSize,
-      footerText:
-        typeof partialSettings.footerText === 'string'
-          ? partialSettings.footerText.trim().slice(0, 80)
-          : DEFAULT_SETTINGS.footerText,
-      captureMode: validCaptureModes.has(partialSettings.captureMode)
-        ? partialSettings.captureMode
-        : legacyCaptureMode || DEFAULT_SETTINGS.captureMode,
-      fileNamePrefix: Shared.sanitizeFileNamePrefix(partialSettings.fileNamePrefix),
-    };
   }
 
   function updateLinkedControlAvailability() {
@@ -233,6 +182,7 @@
   }
 
   function setStatus(message, tone = 'neutral') {
+    // Keep textContent here: message may embed user-supplied fileNamePrefix.
     elements.statusText.textContent = message;
     elements.statusText.dataset.tone = tone;
   }

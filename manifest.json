@@ -3,7 +3,7 @@
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
   "version": "1.0.0",
-  "minimum_chrome_version": "109",
+  "minimum_chrome_version": "117",
   "default_locale": "ja",
   "action": {
     "default_popup": "src/popup/popup.html",

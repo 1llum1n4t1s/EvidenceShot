@@ -202,8 +202,8 @@
   "errCaptureStepInvalid": {
     "message": "無効な撮影位置です。"
   },
-  "errPageTooLongSingleImage": {
-    "message": "ページが長すぎるため、1枚の画像として保存できませんでした。"
+  "errCaptureCanvasTooLarge": {
+    "message": "撮影キャンバスの想定サイズが大きすぎます。拡張機能を最新版に更新して再度お試しください。"
   },
   "errViewportTooTall": {
     "message": "ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。"
@@ -219,9 +219,6 @@
   },
   "errChannelTokenMissing": {
     "message": "認証トークンが不足しています。"
-  },
-  "errChannelTokenMismatch": {
-    "message": "認証トークンが一致しません。"
   },
   "errCaptureSessionAuthInvalid": {
     "message": "撮影セッション認証が不正です。"
