@@ -12,8 +12,6 @@ const {
 const Shared = globalThis.WebTestShotShared;
 const t = Shared.t;
 const normalizeUserMessage = Shared.normalizeUserMessage;
-const activeCaptureTabs = new Set();
-const activeCaptureWindows = new Set();
 let creatingOffscreenDocumentPromise = null;
 const OFFSCREEN_READY_RETRY_COUNT = 20;
 const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
@@ -21,6 +19,63 @@ const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 
 const CAPTURE_HISTORY_KEY = 'captureHistory';
 const CAPTURE_HISTORY_MAX = 50;
+// 撮影中ロックは chrome.storage.session に置いて SW 再起動後も残るようにする。
+// これで長時間撮影中に SW が idle timeout で落ちても、再起動後の初回 acquire で
+// 二重撮影を弾ける。SW ロード時（最上位の初期化コード）に一度だけクリアし、
+// 「前セッションで未解放の幽霊ロック」を取り除く。
+const CAPTURE_LOCK_KEY = 'activeCaptureLocks';
+
+chrome.storage.session
+  .remove(CAPTURE_LOCK_KEY)
+  .catch(() => undefined);
+
+// storage の read-modify-write の排他のため、直列キューを持つ。
+let captureLockChain = Promise.resolve();
+function sequenceLockOp(operation) {
+  const next = captureLockChain.then(operation, operation);
+  captureLockChain = next.then(() => undefined, () => undefined);
+  return next;
+}
+
+async function readCaptureLocks() {
+  const stored = await chrome.storage.session.get(CAPTURE_LOCK_KEY);
+  const raw = stored[CAPTURE_LOCK_KEY] || {};
+  return {
+    tabs: Array.isArray(raw.tabs) ? raw.tabs.slice() : [],
+    windows: Array.isArray(raw.windows) ? raw.windows.slice() : [],
+  };
+}
+
+async function writeCaptureLocks(locks) {
+  await chrome.storage.session.set({ [CAPTURE_LOCK_KEY]: locks });
+}
+
+// 新しいロックを取れれば { ok: true }、既存ロックとぶつかったら
+// { ok: false, conflict: 'tab' | 'window' } を返す。
+async function tryAcquireCaptureSlot(tabId, windowId) {
+  return sequenceLockOp(async () => {
+    const locks = await readCaptureLocks();
+    if (locks.tabs.includes(tabId)) {
+      return { ok: false, conflict: 'tab' };
+    }
+    if (locks.windows.includes(windowId)) {
+      return { ok: false, conflict: 'window' };
+    }
+    locks.tabs.push(tabId);
+    locks.windows.push(windowId);
+    await writeCaptureLocks(locks);
+    return { ok: true };
+  });
+}
+
+async function releaseCaptureSlot(tabId, windowId) {
+  return sequenceLockOp(async () => {
+    const locks = await readCaptureLocks();
+    const tabs = locks.tabs.filter((id) => id !== tabId);
+    const windows = locks.windows.filter((id) => id !== windowId);
+    await writeCaptureLocks({ tabs, windows });
+  });
+}
 
 const POPUP_PAGE_URL = chrome.runtime.getURL('src/popup/popup.html');
 
@@ -116,14 +171,14 @@ async function runCaptureWorkflow(tabId) {
     };
   }
 
-  if (activeCaptureTabs.has(tabId)) {
-    return {
-      ok: false,
-      error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。'),
-    };
-  }
-
-  if (activeCaptureWindows.has(tab.windowId)) {
+  const acquireResult = await tryAcquireCaptureSlot(tabId, tab.windowId);
+  if (!acquireResult.ok) {
+    if (acquireResult.conflict === 'tab') {
+      return {
+        ok: false,
+        error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。'),
+      };
+    }
     return {
       ok: false,
       error: t(
@@ -132,9 +187,6 @@ async function runCaptureWorkflow(tabId) {
       ),
     };
   }
-
-  activeCaptureTabs.add(tabId);
-  activeCaptureWindows.add(tab.windowId);
 
   const settings = await Shared.loadSettings();
   // sessionId の予測可能性を避けるため Math.random ではなく CSPRNG を用いる。
@@ -319,8 +371,7 @@ async function runCaptureWorkflow(tabId) {
       })
       .catch(() => undefined);
 
-    activeCaptureTabs.delete(tabId);
-    activeCaptureWindows.delete(tab.windowId);
+    await releaseCaptureSlot(tabId, tab.windowId).catch(() => undefined);
   }
 }
 
