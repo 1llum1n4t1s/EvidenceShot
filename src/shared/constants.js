@@ -50,6 +50,6 @@
       { value: 'fullPage', labelKey: 'optionCaptureModeFullPage', label: 'ページ全体（レイアウト込み）' },
       { value: 'mainColumn', labelKey: 'optionCaptureModeMainColumn', label: '中央本文のみ（主カラム）' },
     ],
-    FORMAT_OPTIONS: ['png', 'jpg', 'webp'],
+    FORMAT_OPTIONS: ['png', 'jpg', 'webp', 'pdf'],
   });
 })();

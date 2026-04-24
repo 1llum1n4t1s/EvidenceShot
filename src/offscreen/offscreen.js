@@ -298,6 +298,11 @@
           blob: await canvasToBlob(canvas, 'image/webp', 0.96),
           savedAsFormat: 'webp',
         };
+      case 'pdf':
+        return {
+          blob: await buildPdfBlobFromCanvas(canvas),
+          savedAsFormat: 'pdf',
+        };
       case 'png':
       default:
         return {
@@ -305,6 +310,73 @@
           savedAsFormat: 'png',
         };
     }
+  }
+
+  async function buildPdfBlobFromCanvas(canvas) {
+    const jpegBlob = await canvasToBlob(canvas, 'image/jpeg', 0.94);
+    const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+    return buildPdfWithJpegImage(jpegBytes, canvas.width, canvas.height);
+  }
+
+  function buildPdfWithJpegImage(jpegBytes, width, height) {
+    const encoder = new TextEncoder();
+    const parts = [];
+    const xrefOffsets = new Array(6);
+    let offset = 0;
+
+    function write(data) {
+      const bytes = typeof data === 'string' ? encoder.encode(data) : data;
+      parts.push(bytes);
+      offset += bytes.byteLength;
+    }
+
+    write('%PDF-1.4\n');
+    write(new Uint8Array([0x25, 0xff, 0xff, 0xff, 0xff, 0x0a]));
+
+    xrefOffsets[1] = offset;
+    write('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+    xrefOffsets[2] = offset;
+    write('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+
+    xrefOffsets[3] = offset;
+    write(
+      `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] ` +
+        `/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`
+    );
+
+    xrefOffsets[4] = offset;
+    write(
+      `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} ` +
+        `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode ` +
+        `/Length ${jpegBytes.byteLength} >>\nstream\n`
+    );
+    write(jpegBytes);
+    write('\nendstream\nendobj\n');
+
+    const contentStream = `q\n${width} 0 0 ${height} 0 0 cm\n/Im0 Do\nQ\n`;
+    const contentBytes = encoder.encode(contentStream);
+    xrefOffsets[5] = offset;
+    write(`5 0 obj\n<< /Length ${contentBytes.byteLength} >>\nstream\n`);
+    write(contentBytes);
+    write('endstream\nendobj\n');
+
+    const xrefStart = offset;
+    write('xref\n0 6\n0000000000 65535 f \n');
+    for (let i = 1; i <= 5; i += 1) {
+      write(`${String(xrefOffsets[i]).padStart(10, '0')} 00000 n \n`);
+    }
+
+    write(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`);
+
+    const total = parts.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+    const buffer = new Uint8Array(total);
+    let cursor = 0;
+    for (const chunk of parts) {
+      buffer.set(chunk, cursor);
+      cursor += chunk.byteLength;
+    }
+    return new Blob([buffer], { type: 'application/pdf' });
   }
 
   function canvasToBlob(canvas, mimeType, quality) {
