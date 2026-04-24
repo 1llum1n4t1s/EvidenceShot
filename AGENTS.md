@@ -29,7 +29,8 @@ EvidenceShot/
 │   │   └── capture.js
 │   ├── offscreen/
 │   │   ├── offscreen.html
-│   │   └── offscreen.js
+│   │   ├── offscreen.js
+│   │   └── stamp-renderer.js
 │   ├── popup/
 │   │   ├── popup.html
 │   │   ├── popup.css
@@ -59,8 +60,10 @@ EvidenceShot/
   - 固定要素の退避 / 復元
 - `src/offscreen/offscreen.js`
   - セッション単位の canvas 合成
-  - タイムスタンプ描画
   - 合成結果を background に返却（実際のダウンロードは background 側）
+- `src/offscreen/stamp-renderer.js`
+  - タイムスタンプ／フッターラベルのスタイル定義と描画本体
+  - `globalThis.WebTestShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
 
 ## 権限
 
