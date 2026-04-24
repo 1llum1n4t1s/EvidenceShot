@@ -19,6 +19,9 @@ const OFFSCREEN_READY_RETRY_COUNT = 20;
 const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
 const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 
+const CAPTURE_HISTORY_KEY = 'captureHistory';
+const CAPTURE_HISTORY_MAX = 50;
+
 const POPUP_PAGE_URL = chrome.runtime.getURL('src/popup/popup.html');
 
 function isTrustedPopupSender(sender) {
@@ -47,11 +50,49 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 
   switch (message.type) {
     case 'WTS_CAPTURE_FROM_POPUP':
-      return runCaptureWorkflow(message.tabId);
+      return runCaptureWorkflowWithHistory(message.tabId);
     default:
       return undefined;
   }
 });
+
+// 証跡ツールなので「撮影が失敗した事実」も永続ログに残す。
+// popup を閉じるとエラーメッセージが失われる問題を補完し、後から監査できるようにする。
+async function runCaptureWorkflowWithHistory(tabId) {
+  const startedAt = Date.now();
+  let result;
+  try {
+    result = await runCaptureWorkflow(tabId);
+  } catch (error) {
+    result = {
+      ok: false,
+      error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
+    };
+  }
+  try {
+    await appendCaptureHistory({
+      at: startedAt,
+      ok: Boolean(result?.ok),
+      fileName: result?.fileName || null,
+      savedAsFormat: result?.savedAsFormat || null,
+      partCount: result?.partCount || null,
+      error: result?.ok ? null : String(result?.error || ''),
+    });
+  } catch {
+    // ログの書き込み失敗は撮影結果に影響させない
+  }
+  return result;
+}
+
+async function appendCaptureHistory(entry) {
+  const stored = await chrome.storage.local.get(CAPTURE_HISTORY_KEY);
+  const history = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY].slice() : [];
+  history.push(entry);
+  if (history.length > CAPTURE_HISTORY_MAX) {
+    history.splice(0, history.length - CAPTURE_HISTORY_MAX);
+  }
+  await chrome.storage.local.set({ [CAPTURE_HISTORY_KEY]: history });
+}
 
 async function runCaptureWorkflow(tabId) {
   if (!tabId) {
@@ -525,6 +566,8 @@ async function ensureTargetTabStillActive(tabId, windowId) {
   }
 }
 
+const DOWNLOAD_COMPLETION_TIMEOUT_MS = 5 * 60 * 1000;
+
 function downloadCapture(downloadUrl, fileName) {
   return new Promise((resolve, reject) => {
     chrome.downloads.download(
@@ -553,7 +596,42 @@ function downloadCapture(downloadUrl, fileName) {
           return;
         }
 
-        resolve(downloadId);
+        // ダウンロード開始だけでなく「ファイル書き込み完了」まで待つ。
+        // ディスク満杯・権限拒否などで interrupted になるケースを検知できる。
+        let settled = false;
+        const cleanup = () => {
+          if (settled) return;
+          settled = true;
+          chrome.downloads.onChanged.removeListener(listener);
+          clearTimeout(timeoutHandle);
+        };
+        const listener = (delta) => {
+          if (delta.id !== downloadId || !delta.state) {
+            return;
+          }
+          if (delta.state.current === 'complete') {
+            cleanup();
+            resolve(downloadId);
+          } else if (delta.state.current === 'interrupted') {
+            cleanup();
+            const reason = delta.error?.current || '';
+            reject(new Error(
+              normalizeUserMessage(
+                reason,
+                'errDownloadStartFailed',
+                'ダウンロードの開始に失敗しました。'
+              )
+            ));
+          }
+        };
+        const timeoutHandle = setTimeout(() => {
+          cleanup();
+          // タイムアウト時は成功扱いでログに残す（Chrome のダウンロードマネージャが
+          // バックグラウンドで継続する可能性もあるため）。ただし確証はないので警告ログを残す。
+          console.warn('EvidenceShot: download completion check timed out', { downloadId, fileName });
+          resolve(downloadId);
+        }, DOWNLOAD_COMPLETION_TIMEOUT_MS);
+        chrome.downloads.onChanged.addListener(listener);
       }
     );
   });
