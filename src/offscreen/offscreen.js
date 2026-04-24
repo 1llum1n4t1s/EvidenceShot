@@ -2,7 +2,7 @@
   const Shared = globalThis.WebTestShotShared;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const { MAX_CANVAS_EDGE, OFFSCREEN_INTERFACE_VERSION } = globalThis.WebTestShotConstants;
+  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION } = globalThis.WebTestShotConstants;
   const captureSessions = new Map();
   let expectedChannelToken = null;
   const MIN_TOKEN_LENGTH = 24;
@@ -101,7 +101,8 @@
       canvasWidth < 1 ||
       canvasHeight < 1 ||
       canvasWidth > MAX_CANVAS_EDGE ||
-      canvasHeight > MAX_CANVAS_EDGE
+      canvasHeight > MAX_CANVAS_EDGE ||
+      canvasWidth * canvasHeight > MAX_CANVAS_AREA
     ) {
       return {
         ok: false,

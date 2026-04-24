@@ -57,8 +57,8 @@
     const stripped = raw
       .replace(/[\x00-\x1f\\\/:*?"<>|]/g, '')
       .trim()
-      .replace(/[.\s]+$/, '')
-      .slice(0, 60);
+      .slice(0, 60)
+      .replace(/[.\s]+$/, '');
     if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..+)?$/i.test(stripped)) {
       return `_${stripped}`;
     }

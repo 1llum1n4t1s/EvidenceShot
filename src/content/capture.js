@@ -167,9 +167,15 @@
           height: viewportHeight,
           resolvedMode: captureMode,
         };
+    const cropWidthDevice = Math.max(1, Math.round(cropRect.width * dpr));
+    const maxCanvasCssHeightByArea = Math.max(
+      1,
+      Math.floor(Constants.MAX_CANVAS_AREA / cropWidthDevice / Math.max(dpr, 1))
+    );
+    const maxTileCssHeight = Math.min(maxCanvasCssEdge, maxCanvasCssHeightByArea);
     const positions = [];
 
-    if (scrollingMode && viewportHeight > maxCanvasCssEdge) {
+    if (scrollingMode && viewportHeight > maxTileCssHeight) {
       throw new Error(t('errViewportTooTall', 'ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。'));
     }
 
@@ -190,7 +196,7 @@
     );
 
     const tiles = scrollingMode
-      ? buildTilePartition(uniquePositions, stride, viewportHeight, pageHeight, maxCanvasCssEdge)
+      ? buildTilePartition(uniquePositions, stride, viewportHeight, pageHeight, maxTileCssHeight)
       : [{ index: 0, startIndex: 0, endIndex: 0, startY: 0, cssHeight: cropRect.height }];
 
     return {
