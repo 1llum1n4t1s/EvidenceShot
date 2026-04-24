@@ -169,8 +169,8 @@
         };
     const positions = [];
 
-    if (scrollingMode && pageHeight > maxCanvasCssEdge) {
-      throw new Error(t('errPageTooLongSingleImage', 'ページが長すぎるため、1枚の画像として保存できませんでした。'));
+    if (scrollingMode && viewportHeight > maxCanvasCssEdge) {
+      throw new Error(t('errViewportTooTall', 'ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。'));
     }
 
     if (scrollingMode) {
@@ -189,10 +189,15 @@
       (value, positionIndex) => positionIndex === 0 || value !== positions[positionIndex - 1]
     );
 
+    const tiles = scrollingMode
+      ? buildTilePartition(uniquePositions, stride, viewportHeight, pageHeight, maxCanvasCssEdge)
+      : [{ index: 0, startIndex: 0, endIndex: 0, startY: 0, cssHeight: cropRect.height }];
+
     return {
       captureMode: cropRect.resolvedMode,
       scrollingMode,
       positions: uniquePositions,
+      tiles,
       viewportWidth,
       viewportHeight,
       canvasWidth: cropRect.width,
@@ -206,6 +211,42 @@
       url: location.href,
       title: document.title,
     };
+  }
+
+  function buildTilePartition(positions, stride, viewportHeight, pageHeight, maxTileCssHeight) {
+    if (positions.length === 0) {
+      return [];
+    }
+
+    const maxPositionsPerTile = Math.max(
+      2,
+      Math.floor((maxTileCssHeight - viewportHeight) / stride) + 1
+    );
+
+    const tiles = [];
+    let startIndex = 0;
+
+    while (startIndex < positions.length) {
+      const endIndex = Math.min(positions.length - 1, startIndex + maxPositionsPerTile - 1);
+      const startY = positions[startIndex];
+      const lastPositionY = positions[endIndex];
+      const cssHeight = Math.min(pageHeight - startY, lastPositionY + viewportHeight - startY);
+
+      tiles.push({
+        index: tiles.length,
+        startIndex,
+        endIndex,
+        startY,
+        cssHeight,
+      });
+
+      if (endIndex >= positions.length - 1) {
+        break;
+      }
+      startIndex = endIndex;
+    }
+
+    return tiles;
   }
 
   function detectMainColumnCropRect(viewportWidth, viewportHeight) {

@@ -121,11 +121,15 @@
     };
   }
 
-  function buildFileName(rawUrl, format, date = new Date()) {
+  function buildFileName(rawUrl, format, date = new Date(), part = null) {
     const stamp = buildTimestamp(date);
     const host = sanitizeHost(rawUrl);
     const extension = format === 'jpg' ? 'jpg' : format;
-    return `screenshot-${host}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}.${extension}`;
+    const partSuffix =
+      part && Number.isFinite(part.count) && part.count > 1
+        ? `-part${Number(part.index) + 1}-of${part.count}`
+        : '';
+    return `screenshot-${host}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
   }
 
   function buildTimestampText(style, date = new Date()) {

@@ -11,7 +11,7 @@
       'src/content/capture.js',
     ],
     OFFSCREEN_DOCUMENT_PATH: 'src/offscreen/offscreen.html',
-    OFFSCREEN_INTERFACE_VERSION: 9,
+    OFFSCREEN_INTERFACE_VERSION: 10,
     DEFAULT_SETTINGS: {
       format: 'png',
       timestampEnabled: true,

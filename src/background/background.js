@@ -107,79 +107,144 @@ async function runCaptureWorkflow(tabId) {
       };
     }
 
-    const beginResult = await beginOffscreenCaptureSession(
-      sessionId,
-      sessionSecret,
-      prepareResult.plan,
-      tab,
-      settings
-    );
-    if (!beginResult.ok) {
-      return beginResult;
-    }
-    offscreenSessionStarted = true;
+    const plan = prepareResult.plan;
+    const tiles = Array.isArray(plan.tiles) && plan.tiles.length > 0
+      ? plan.tiles
+      : [{ index: 0, startIndex: 0, endIndex: plan.positions.length - 1, startY: 0, cssHeight: plan.canvasHeight }];
 
+    const downloadedFiles = [];
     let lastCapturedAt = 0;
+    let lastCapture = null;
+    let captureDone = false;
 
-    for (let index = 0; index < prepareResult.plan.positions.length; index += 1) {
-      const stepResult = await chrome.tabs.sendMessage(tabId, {
-        type: 'WTS_CAPTURE_STEP_V2',
-        payload: { sessionId, index },
-      });
-
-      if (!stepResult?.ok) {
-        throw new Error(
-          normalizeUserMessage(
-            stepResult?.error,
-            'errCaptureStepAdjustFailed',
-            'スクロール位置の調整に失敗しました。'
-          )
-        );
-      }
-
-      if (stepResult.done) {
+    for (const tile of tiles) {
+      if (captureDone && (!lastCapture || lastCapture.index !== tile.startIndex)) {
         break;
       }
 
-      await ensureTargetTabStillActive(tabId, tab.windowId);
-
-      const waitForRateLimit = lastCapturedAt
-        ? Math.max(0, CAPTURE_INTERVAL_MS - (Date.now() - lastCapturedAt))
-        : 0;
-
-      if (waitForRateLimit > 0) {
-        await Shared.sleep(waitForRateLimit);
-      }
-
-      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-        format: 'png',
-      });
-      lastCapturedAt = Date.now();
-      await ensureTargetTabStillActive(tabId, tab.windowId);
-
-      const pushResult = await chrome.runtime.sendMessage(buildOffscreenMessage({
-        type: 'WTS_ADD_CAPTURE_SLICE',
+      const tilePlan = {
+        ...plan,
+        canvasHeight: tile.cssHeight,
+        pageHeight: tile.cssHeight,
+      };
+      const beginResult = await beginOffscreenCaptureSession(
         sessionId,
         sessionSecret,
-        capture: {
-          index,
-          scrollY: stepResult.scrollY,
-          dataUrl,
-        },
-      }));
-
-      if (!pushResult?.ok) {
-        throw new Error(
-          normalizeUserMessage(
-            pushResult?.error,
-            'errCaptureSliceTransferFailed',
-            '撮影データの受け渡しに失敗しました。'
-          )
-        );
+        tilePlan,
+        tab,
+        settings,
+        { index: tile.index, count: tiles.length }
+      );
+      if (!beginResult.ok) {
+        return beginResult;
       }
+      offscreenSessionStarted = true;
+
+      let slicesAdded = 0;
+
+      for (let idx = tile.startIndex; idx <= tile.endIndex; idx += 1) {
+        let activeCapture;
+
+        if (lastCapture && lastCapture.index === idx) {
+          activeCapture = lastCapture;
+        } else {
+          if (captureDone) {
+            break;
+          }
+
+          const stepResult = await chrome.tabs.sendMessage(tabId, {
+            type: 'WTS_CAPTURE_STEP_V2',
+            payload: { sessionId, index: idx },
+          });
+
+          if (!stepResult?.ok) {
+            throw new Error(
+              normalizeUserMessage(
+                stepResult?.error,
+                'errCaptureStepAdjustFailed',
+                'スクロール位置の調整に失敗しました。'
+              )
+            );
+          }
+
+          if (stepResult.done) {
+            captureDone = true;
+            break;
+          }
+
+          await ensureTargetTabStillActive(tabId, tab.windowId);
+
+          const waitForRateLimit = lastCapturedAt
+            ? Math.max(0, CAPTURE_INTERVAL_MS - (Date.now() - lastCapturedAt))
+            : 0;
+          if (waitForRateLimit > 0) {
+            await Shared.sleep(waitForRateLimit);
+          }
+
+          const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+            format: 'png',
+          });
+          lastCapturedAt = Date.now();
+          await ensureTargetTabStillActive(tabId, tab.windowId);
+
+          activeCapture = {
+            index: idx,
+            scrollY: stepResult.scrollY,
+            dataUrl,
+          };
+          lastCapture = activeCapture;
+        }
+
+        const pushResult = await chrome.runtime.sendMessage(buildOffscreenMessage({
+          type: 'WTS_ADD_CAPTURE_SLICE',
+          sessionId,
+          sessionSecret,
+          capture: {
+            index: idx,
+            scrollY: activeCapture.scrollY - tile.startY,
+            dataUrl: activeCapture.dataUrl,
+          },
+        }));
+
+        if (!pushResult?.ok) {
+          throw new Error(
+            normalizeUserMessage(
+              pushResult?.error,
+              'errCaptureSliceTransferFailed',
+              '撮影データの受け渡しに失敗しました。'
+            )
+          );
+        }
+        slicesAdded += 1;
+      }
+
+      if (slicesAdded === 0) {
+        await abortOffscreenCaptureSession(sessionId, sessionSecret);
+        offscreenSessionStarted = false;
+        continue;
+      }
+
+      const finalizeResult = await finalizeOffscreenCaptureSession(sessionId, sessionSecret);
+      offscreenSessionStarted = false;
+      if (!finalizeResult.ok) {
+        return finalizeResult;
+      }
+      downloadedFiles.push(finalizeResult.fileName);
     }
 
-    return finalizeOffscreenCaptureSession(sessionId, sessionSecret);
+    if (downloadedFiles.length === 0) {
+      return {
+        ok: false,
+        error: t('errCaptureFailed', '撮影に失敗しました。'),
+      };
+    }
+
+    return {
+      ok: true,
+      fileName: downloadedFiles[0],
+      savedAsFormat: settings.format,
+      partCount: downloadedFiles.length,
+    };
   } catch (error) {
     return {
       ok: false,
@@ -202,7 +267,7 @@ async function runCaptureWorkflow(tabId) {
   }
 }
 
-async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab, settings) {
+async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab, settings, part) {
   await ensureOffscreenDocument();
 
   const request = buildOffscreenMessage({
@@ -214,6 +279,7 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
       settings,
       url: tab.url,
       title: tab.title || '',
+      part: part || null,
     },
   });
 

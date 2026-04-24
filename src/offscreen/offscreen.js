@@ -237,7 +237,7 @@
       }
 
       const { blob, savedAsFormat } = await buildOutputBlob(canvas, settings.format);
-      const fileName = Shared.buildFileName(meta.url, savedAsFormat);
+      const fileName = Shared.buildFileName(meta.url, savedAsFormat, new Date(), meta.part);
       const downloadUrl = await blobToDataUrl(blob);
 
       return {

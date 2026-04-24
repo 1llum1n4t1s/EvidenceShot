@@ -196,6 +196,9 @@
   "errPageTooLongSingleImage": {
     "message": "ページが長すぎるため、1枚の画像として保存できませんでした。"
   },
+  "errViewportTooTall": {
+    "message": "ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。"
+  },
   "errInvalidCaller": {
     "message": "不正な呼び出し元です。"
   },

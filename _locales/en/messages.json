@@ -196,6 +196,9 @@
   "errPageTooLongSingleImage": {
     "message": "The page is too long to save as a single image."
   },
+  "errViewportTooTall": {
+    "message": "The viewport is too tall to capture. Please shrink the window and try again."
+  },
   "errInvalidCaller": {
     "message": "Invalid caller."
   },
