@@ -340,7 +340,15 @@
     };
 
     function getBestCandidate() {
-      return candidates.sort((left, right) => right.score - left.score)[0];
+      // 最高スコアの 1 件だけ必要。破壊的 sort (O(n log n)) ではなく
+      // reduce で線形 (O(n)) に探す。
+      let best = null;
+      for (const candidate of candidates) {
+        if (!best || candidate.score > best.score) {
+          best = candidate;
+        }
+      }
+      return best;
     }
 
     function pushCandidate(element) {

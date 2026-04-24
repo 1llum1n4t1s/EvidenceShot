@@ -13,15 +13,17 @@
   } = globalThis.WebTestShotConstants;
   let saveSettingsChain = Promise.resolve();
 
+  // 定数由来なので呼び出しごとに再構築する必要なし。初期化時に 1 回だけ生成。
+  const VALID_TIMESTAMP_STYLES = new Set(TIMESTAMP_STYLES.map(({ value }) => value));
+  const VALID_TIMESTAMP_SIZES = new Set(TIMESTAMP_SIZE_OPTIONS.map(({ value }) => value));
+  const VALID_CAPTURE_MODES = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
+
   function cloneDefaultSettings() {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   }
 
   function normalizeSettings(candidate = {}) {
     const base = cloneDefaultSettings();
-    const validTimestampStyles = new Set(TIMESTAMP_STYLES.map(({ value }) => value));
-    const validTimestampSizes = new Set(TIMESTAMP_SIZE_OPTIONS.map(({ value }) => value));
-    const validCaptureModes = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
     const legacyCaptureMode =
       typeof candidate.fullPage === 'boolean'
         ? (candidate.fullPage ? 'fullPage' : 'viewport')
@@ -33,17 +35,17 @@
         typeof candidate.timestampEnabled === 'boolean'
           ? candidate.timestampEnabled
           : base.timestampEnabled,
-      timestampStyle: validTimestampStyles.has(candidate.timestampStyle)
+      timestampStyle: VALID_TIMESTAMP_STYLES.has(candidate.timestampStyle)
         ? candidate.timestampStyle
         : base.timestampStyle,
-      timestampSize: validTimestampSizes.has(candidate.timestampSize)
+      timestampSize: VALID_TIMESTAMP_SIZES.has(candidate.timestampSize)
         ? candidate.timestampSize
         : base.timestampSize,
       footerText:
         typeof candidate.footerText === 'string'
           ? candidate.footerText.trim().slice(0, 80)
           : base.footerText,
-      captureMode: validCaptureModes.has(candidate.captureMode)
+      captureMode: VALID_CAPTURE_MODES.has(candidate.captureMode)
         ? candidate.captureMode
         : legacyCaptureMode || base.captureMode,
       fileNamePrefix: sanitizeFileNamePrefix(candidate.fileNamePrefix),
