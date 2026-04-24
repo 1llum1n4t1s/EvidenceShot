@@ -108,10 +108,6 @@
     return Math.min(max, Math.max(min, numeric));
   }
 
-  function clampInteger(value, min, max, fallback) {
-    return Math.round(clampNumber(value, min, max, fallback));
-  }
-
   function sanitizeHost(rawUrl) {
     try {
       const parsed = new URL(rawUrl);
@@ -139,7 +135,7 @@
 
   function buildFileName({ url, format, date = new Date(), part = null, prefix = '' } = {}) {
     const stamp = buildTimestamp(date);
-    const extension = format === 'jpg' ? 'jpg' : format;
+    const extension = format;
     const customPrefix = sanitizeFileNamePrefix(prefix);
     const baseName = customPrefix || `screenshot-${sanitizeHost(url)}`;
     const partSuffix =

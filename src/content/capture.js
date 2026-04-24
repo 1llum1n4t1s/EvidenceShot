@@ -20,8 +20,14 @@
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
 
-  const messageHandler = (message) => {
+  const messageHandler = (message, sender) => {
     if (!message?.type) {
+      return undefined;
+    }
+
+    // 正当な送信元は background SW のみ（sender.id は同一拡張機能、sender.tab は無い）。
+    // 他の content script（XSS されたページ等）からの runtime.sendMessage は拒否。
+    if (!sender || sender.id !== chrome.runtime.id || sender.tab) {
       return undefined;
     }
 
@@ -54,7 +60,7 @@
     }
 
     if (state.captureSession) {
-      return { ok: false, error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。') };
+      return { ok: false, error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。') };
     }
 
     const normalizedSettings = Shared.normalizeSettings(settings || {});

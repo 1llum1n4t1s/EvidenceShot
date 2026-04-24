@@ -32,6 +32,7 @@ EvidenceShot/
 │   │   └── offscreen.js
 │   ├── popup/
 │   │   ├── popup.html
+│   │   ├── popup.css
 │   │   └── popup.js
 │   └── shared/
 │       ├── constants.js
@@ -51,6 +52,7 @@ EvidenceShot/
   - content script 注入
   - 各 slice の取得
   - offscreen への逐次転送
+  - `chrome.downloads.download()` による保存
 - `src/content/capture.js`
   - キャプチャ計画の生成
   - スクロール位置制御
@@ -58,7 +60,7 @@ EvidenceShot/
 - `src/offscreen/offscreen.js`
   - セッション単位の canvas 合成
   - タイムスタンプ描画
-  - `chrome.downloads.download()` による保存
+  - 合成結果を background に返却（実際のダウンロードは background 側）
 
 ## 権限
 

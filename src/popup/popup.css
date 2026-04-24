@@ -25,7 +25,6 @@ body {
   gap: 14px;
 }
 
-.hero,
 .panel {
   border-radius: 24px;
   padding: 18px;
@@ -33,40 +32,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow: 0 18px 36px rgba(24, 39, 75, 0.08);
   backdrop-filter: blur(12px);
-}
-
-.hero {
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(28, 80, 110, 0.92)),
-    rgba(15, 23, 42, 0.95);
-  color: #f8fafc;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #fde68a;
-}
-
-.hero h1 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.35;
-}
-
-.lead {
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.65;
-  color: rgba(248, 250, 252, 0.88);
-}
-
-.panel.accent {
-  background:
-    linear-gradient(135deg, rgba(255, 247, 237, 0.95), rgba(224, 242, 254, 0.95)),
-    rgba(255, 255, 255, 0.85);
 }
 
 .section-head {
@@ -80,19 +45,6 @@ body {
 .section-head h2 {
   margin: 0;
   font-size: 15px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .field,
@@ -116,9 +68,7 @@ body {
 
 .field select,
 .field input,
-.primary,
-.secondary,
-.ghost {
+.primary {
   border: 0;
   font: inherit;
 }
@@ -160,55 +110,11 @@ body {
   margin-top: 2px;
 }
 
-.folder-box {
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.9), rgba(255, 255, 255, 0.9));
-  border: 1px solid rgba(251, 191, 36, 0.2);
-}
-
-.folder-box strong {
-  display: block;
-  font-size: 14px;
-}
-
-.folder-box p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.55;
-  color: #64748b;
-}
-
-.row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.primary,
-.secondary,
-.ghost {
+.primary {
   border-radius: 16px;
   padding: 12px 14px;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
-}
-
-.primary:hover,
-.secondary:hover,
-.ghost:hover {
-  transform: translateY(-1px);
-}
-
-.primary:disabled,
-.secondary:disabled,
-.ghost:disabled {
-  opacity: 0.55;
-  cursor: wait;
-  transform: none;
-}
-
-.primary {
   width: 100%;
   background: linear-gradient(135deg, #ffb703, #fb8500);
   color: #1f2937;
@@ -216,15 +122,14 @@ body {
   box-shadow: 0 16px 24px rgba(251, 146, 60, 0.22);
 }
 
-.secondary {
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
-  font-weight: 700;
+.primary:hover {
+  transform: translateY(-1px);
 }
 
-.ghost {
-  background: rgba(255, 255, 255, 0.62);
-  color: #475569;
+.primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
 }
 
 .capture {

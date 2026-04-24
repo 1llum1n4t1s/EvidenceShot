@@ -19,8 +19,29 @@ const OFFSCREEN_READY_RETRY_COUNT = 20;
 const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
 const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 
-chrome.runtime.onMessage.addListener((message) => {
+const POPUP_PAGE_URL = chrome.runtime.getURL('src/popup/popup.html');
+
+function isTrustedPopupSender(sender) {
+  // popup (chrome-extension://{id}/src/popup/popup.html) のみ許可。
+  // content script (sender.tab あり) や外部拡張機能 (sender.id 不一致) は拒否。
+  if (!sender || sender.id !== chrome.runtime.id) {
+    return false;
+  }
+  if (sender.tab) {
+    return false;
+  }
+  if (typeof sender.url !== 'string' || !sender.url.startsWith(POPUP_PAGE_URL)) {
+    return false;
+  }
+  return true;
+}
+
+chrome.runtime.onMessage.addListener((message, sender) => {
   if (!message?.type) {
+    return undefined;
+  }
+
+  if (!isTrustedPopupSender(sender)) {
     return undefined;
   }
 
@@ -57,7 +78,7 @@ async function runCaptureWorkflow(tabId) {
   if (activeCaptureTabs.has(tabId)) {
     return {
       ok: false,
-      error: t('errTabAlreadyCapturing', 'このタブではすでに撮影中です。完了してからもう一度お試しください。'),
+      error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。'),
     };
   }
 
