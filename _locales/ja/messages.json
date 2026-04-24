@@ -26,6 +26,15 @@
   "popupLabelFormat": {
     "message": "保存形式"
   },
+  "popupLabelFileNamePrefix": {
+    "message": "ファイル名の先頭"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "例: audit-2026（空欄でサイト名を自動）"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。"
+  },
   "popupNoteDownloadLocation": {
     "message": "保存先は Chrome の既定のダウンロードフォルダです。"
   },
@@ -193,8 +202,11 @@
   "errCaptureStepInvalid": {
     "message": "無効な撮影位置です。"
   },
-  "errPageTooLongSingleImage": {
-    "message": "ページが長すぎるため、1枚の画像として保存できませんでした。"
+  "errCaptureCanvasTooLarge": {
+    "message": "撮影キャンバスの想定サイズが大きすぎます。拡張機能を最新版に更新して再度お試しください。"
+  },
+  "errViewportTooTall": {
+    "message": "ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。"
   },
   "errInvalidCaller": {
     "message": "不正な呼び出し元です。"
@@ -207,9 +219,6 @@
   },
   "errChannelTokenMissing": {
     "message": "認証トークンが不足しています。"
-  },
-  "errChannelTokenMismatch": {
-    "message": "認証トークンが一致しません。"
   },
   "errCaptureSessionAuthInvalid": {
     "message": "撮影セッション認証が不正です。"

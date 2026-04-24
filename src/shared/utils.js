@@ -46,7 +46,23 @@
       captureMode: validCaptureModes.has(candidate.captureMode)
         ? candidate.captureMode
         : legacyCaptureMode || base.captureMode,
+      fileNamePrefix: sanitizeFileNamePrefix(candidate.fileNamePrefix),
     };
+  }
+
+  function sanitizeFileNamePrefix(raw) {
+    if (typeof raw !== 'string') {
+      return '';
+    }
+    const stripped = raw
+      .replace(/[\x00-\x1f\\\/:*?"<>|]/g, '')
+      .trim()
+      .replace(/[.\s]+$/, '')
+      .slice(0, 60);
+    if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..+)?$/i.test(stripped)) {
+      return `_${stripped}`;
+    }
+    return stripped;
   }
 
   async function loadSettings() {
@@ -121,11 +137,20 @@
     };
   }
 
-  function buildFileName(rawUrl, format, date = new Date()) {
+  function buildFileName({ url, format, date = new Date(), part = null, prefix = '' } = {}) {
     const stamp = buildTimestamp(date);
-    const host = sanitizeHost(rawUrl);
     const extension = format === 'jpg' ? 'jpg' : format;
-    return `screenshot-${host}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}.${extension}`;
+    const customPrefix = sanitizeFileNamePrefix(prefix);
+    const baseName = customPrefix || `screenshot-${sanitizeHost(url)}`;
+    const partSuffix =
+      part &&
+      Number.isInteger(part.count) &&
+      part.count > 1 &&
+      Number.isInteger(part.index) &&
+      part.index >= 0
+        ? `-part${part.index + 1}-of${part.count}`
+        : '';
+    return `${baseName}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
   }
 
   function buildTimestampText(style, date = new Date()) {
@@ -221,6 +246,7 @@
     sleep,
     clampNumber,
     sanitizeHost,
+    sanitizeFileNamePrefix,
     buildTimestamp,
     buildTimestampText,
     buildFileName,

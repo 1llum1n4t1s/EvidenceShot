@@ -76,11 +76,8 @@
 
     if (!expectedChannelToken) {
       expectedChannelToken = channelToken;
-      return { ok: true };
-    }
-
-    if (expectedChannelToken !== channelToken) {
-      return { ok: false, error: t('errChannelTokenMismatch', '認証トークンが一致しません。') };
+    } else if (expectedChannelToken !== channelToken) {
+      return { ok: false, error: t('errCaptureSessionAuthInvalid', '撮影セッション認証が不正です。') };
     }
 
     return { ok: true };
@@ -108,7 +105,7 @@
     ) {
       return {
         ok: false,
-        error: t('errPageTooLongSingleImage', 'ページが長すぎるため、1枚の画像として保存できませんでした。'),
+        error: t('errCaptureCanvasTooLarge', '撮影キャンバスの想定サイズが大きすぎます。'),
       };
     }
 
@@ -237,7 +234,12 @@
       }
 
       const { blob, savedAsFormat } = await buildOutputBlob(canvas, settings.format);
-      const fileName = Shared.buildFileName(meta.url, savedAsFormat);
+      const fileName = Shared.buildFileName({
+        url: meta.url,
+        format: savedAsFormat,
+        part: meta.part,
+        prefix: settings.fileNamePrefix,
+      });
       const downloadUrl = await blobToDataUrl(blob);
 
       return {
