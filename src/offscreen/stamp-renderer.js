@@ -206,16 +206,16 @@
   function getTimestampSizeScale(size) {
     switch (size) {
       case 'xs':
-        return 0.72;
+        return 0.52;
       case 'sm':
-        return 0.86;
+        return 0.62;
       case 'lg':
-        return 1.18;
+        return 0.86;
       case 'xl':
-        return 1.36;
+        return 1;
       case 'md':
       default:
-        return 1;
+        return 0.72;
     }
   }
 

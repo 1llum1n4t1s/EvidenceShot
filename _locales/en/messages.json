@@ -51,7 +51,7 @@
     "message": "Timestamp Style"
   },
   "popupLabelTimestampSize": {
-    "message": "Timestamp Size"
+    "message": "Text Size"
   },
   "popupLabelFooterText": {
     "message": "Fixed Bottom-Left Text"
@@ -60,7 +60,7 @@
     "message": "e.g. © Example Inc. / Confidential"
   },
   "popupNoteFooterLinked": {
-    "message": "Bottom-left text follows the same style and size as the timestamp."
+    "message": "Bottom-left text follows the timestamp style and text size."
   },
   "popupLabelCaptureMode": {
     "message": "Capture Area"

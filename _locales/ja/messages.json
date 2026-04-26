@@ -51,7 +51,7 @@
     "message": "日付デザイン"
   },
   "popupLabelTimestampSize": {
-    "message": "日付サイズ"
+    "message": "文字サイズ"
   },
   "popupLabelFooterText": {
     "message": "左下固定テキスト"
@@ -60,7 +60,7 @@
     "message": "例: © Example Inc. / 社外秘"
   },
   "popupNoteFooterLinked": {
-    "message": "左下の文字は、日付デザインと日付サイズに連動します。"
+    "message": "左下の文字は、日付デザインと文字サイズに連動します。"
   },
   "popupLabelCaptureMode": {
     "message": "撮影範囲"
