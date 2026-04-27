@@ -1,22 +1,26 @@
 EvidenceShot is a Chrome extension for quickly saving evidence screenshots while testing web pages.
 
 Features
-- Capture instantly from the popup
-- Capture visible area only
+- Capture instantly from the popup or keyboard shortcut
+- Capture visible area, full page, or the main content column
 - Stitch vertical screenshots up to the current scroll range end
 - Save as PNG / JPEG / WEBP
-- Optional timestamp overlay
+- Optional timestamp and fixed bottom-left text overlays
+- Shows the most recent mouse cursor position once when it can be captured
+- Copies the captured image to the clipboard for pasting into Excel or other apps
+- Popup automatically follows the browser light / dark theme
 - Save to Chrome's default download folder
 
 How to use
 1. Click the extension icon
 2. Review options in the popup
-3. Click Capture This Tab
+3. Click Capture This Tab or use the keyboard shortcut
 
 Notes
 - Scroll-stitch mode captures up to the scroll range end at the moment capture starts
 - Content loaded later during capture is excluded
 - This behavior is designed for stable output on infinite-scroll pages
+- Check the popup or Chrome extension shortcut settings for the actual shortcut assignment
 
 Permissions
 - No always-on broad site access

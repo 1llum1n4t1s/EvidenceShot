@@ -16,6 +16,8 @@
   --focus: #2f8f83;
   --success-bg: #e8f7ed;
   --success-text: #166534;
+  --warning-bg: #fff7df;
+  --warning-text: #92400e;
   --error-bg: #fdecec;
   --error-text: #b42318;
   --field-bg: #f4f7fa;
@@ -45,6 +47,8 @@
     --focus: #55c3b0;
     --success-bg: #143326;
     --success-text: #a7f3d0;
+    --warning-bg: #3f3218;
+    --warning-text: #fde68a;
     --error-bg: #421f1f;
     --error-text: #fecaca;
     --field-bg: #1b1916;
@@ -297,6 +301,12 @@ select {
   border-color: transparent;
   background: var(--error-bg);
   color: var(--error-text);
+}
+
+.status[data-tone="warning"] {
+  border-color: transparent;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 @media (prefers-reduced-motion: reduce) {

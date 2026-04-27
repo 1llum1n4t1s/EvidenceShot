@@ -8,6 +8,9 @@
   "extActionTitle": {
     "message": "EvidenceShot"
   },
+  "commandCaptureActiveTab": {
+    "message": "Capture current tab"
+  },
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
@@ -35,6 +38,12 @@
   "popupNoteFileNamePrefix": {
     "message": "When blank, `screenshot-{domain}` is used. Date and extension are appended automatically."
   },
+  "popupLabelCopyToClipboard": {
+    "message": "Copy to Clipboard"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "After capture, also places the image on the clipboard as PNG so you can paste into Excel."
+  },
   "popupNoteDownloadLocation": {
     "message": "Files are saved to Chrome's default download folder."
   },
@@ -46,6 +55,29 @@
   },
   "popupNoteTimestampEnabled": {
     "message": "Burns a film-style date/time label into the bottom-right corner."
+  },
+  "popupLabelIncludeCursor": {
+    "message": "Include Mouse Cursor"
+  },
+  "popupNoteIncludeCursor": {
+    "message": "Draws the most recent cursor position when it can be captured. Scrolling captures show it only once."
+  },
+  "popupNoteShortcutChecking": {
+    "message": "Checking shortcut assignment."
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "Shortcut: $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "No shortcut is assigned. You can assign one in Chrome extension shortcuts."
+  },
+  "popupNoteShortcutDefault": {
+    "message": "Suggested shortcut: Ctrl+Shift+Y"
   },
   "popupLabelTimestampStyle": {
     "message": "Timestamp Style"
@@ -78,7 +110,31 @@
     "message": "Capture failed."
   },
   "popupStatusSaved": {
-    "message": "Saved: $FILENAME$",
+    "message": "Download started: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "Download started and copied to clipboard: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "Download started, but clipboard copy failed: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "Download started. Clipboard copy was skipped because the image was split into parts: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -158,7 +214,7 @@
     "message": "Capture is already in progress on this page. Please try again after it finishes."
   },
   "errWindowAlreadyCapturing": {
-    "message": "Another capture is already running in this window. Please try again after it finishes."
+    "message": "Another capture is already running. Please try again after it finishes."
   },
   "errCapturePrepareFailed": {
     "message": "Failed to prepare capture."

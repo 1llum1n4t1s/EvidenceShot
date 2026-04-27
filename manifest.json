@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDescription__",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minimum_chrome_version": "117",
   "default_locale": "ja",
   "action": {
@@ -22,12 +22,22 @@
   "background": {
     "service_worker": "src/background/background.js"
   },
+  "commands": {
+    "capture-active-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "__MSG_commandCaptureActiveTab__"
+    }
+  },
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
     "offscreen",
-    "downloads"
+    "downloads",
+    "clipboardWrite"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none';"

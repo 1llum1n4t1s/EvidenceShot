@@ -1,6 +1,6 @@
 (function initializeCaptureController() {
   const CONTROLLER_KEY = '__evidenceShotCaptureControllerV2';
-  const CONTROLLER_VERSION = 2;
+  const CONTROLLER_VERSION = 3;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -19,8 +19,12 @@
   const MAX_MAIN_COLUMN_SCAN_NODES = 1800;
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
+  const CAPTURE_SESSION_TTL_MS = 10 * 60 * 1000;
+  const POINTER_POSITION_MAX_AGE_MS = 30_000;
+  const pointerPositionEvents = ['pointermove', 'pointerdown', 'mousemove', 'mousedown'];
+  let lastPointerPosition = null;
 
-  const messageHandler = (message, sender) => {
+  const messageHandler = (message, sender, sendResponse) => {
     if (!message?.type) {
       return undefined;
     }
@@ -33,23 +37,54 @@
 
     switch (message.type) {
       case 'WTS_CAPTURE_PREPARE_V2':
-        return prepareCapture(message.payload?.sessionId, message.payload?.settings);
+        respondAsync(prepareCapture(message.payload?.sessionId, message.payload?.settings), sendResponse);
+        return true;
       case 'WTS_CAPTURE_STEP_V2':
-        return moveToCaptureStep(message.payload?.sessionId, message.payload?.index);
+        respondAsync(moveToCaptureStep(message.payload?.sessionId, message.payload?.index), sendResponse);
+        return true;
       case 'WTS_CAPTURE_RESTORE_V2':
         restoreCaptureState(message.payload?.sessionId);
-        return { ok: true };
+        sendResponse({ ok: true });
+        return undefined;
       default:
         return undefined;
     }
   };
 
+  function respondAsync(promise, sendResponse) {
+    Promise.resolve(promise)
+      .then((response) => {
+        sendResponse(response);
+      })
+      .catch((error) => {
+        sendResponse({
+          ok: false,
+          error: normalizeUserMessage(
+            error?.message,
+            'errCaptureFailed',
+            '撮影に失敗しました。'
+          ),
+        });
+      });
+  }
+
   chrome.runtime.onMessage.addListener(messageHandler);
+  pointerPositionEvents.forEach((eventName) => {
+    document.addEventListener(eventName, updatePointerPosition, {
+      capture: true,
+      passive: true,
+    });
+  });
 
   globalThis[CONTROLLER_KEY] = {
     version: CONTROLLER_VERSION,
     dispose() {
       chrome.runtime.onMessage.removeListener(messageHandler);
+      pointerPositionEvents.forEach((eventName) => {
+        document.removeEventListener(eventName, updatePointerPosition, {
+          capture: true,
+        });
+      });
       restoreCaptureState(state.captureSession?.sessionId);
     },
   };
@@ -57,6 +92,10 @@
   async function prepareCapture(sessionId, settings) {
     if (!sessionId) {
       return { ok: false, error: t('errCaptureSessionIdMissing', '撮影セッションIDがありません。') };
+    }
+
+    if (state.captureSession && Date.now() > state.captureSession.expiresAt) {
+      restoreCaptureState();
     }
 
     if (state.captureSession) {
@@ -67,9 +106,12 @@
 
     try {
       const plan = buildCapturePlan(normalizedSettings.captureMode);
+      plan.cursor = normalizedSettings.includeCursor ? resolveCursorPosition() : null;
       state.captureSession = {
         sessionId,
         settings: normalizedSettings,
+        startedAt: Date.now(),
+        expiresAt: Date.now() + CAPTURE_SESSION_TTL_MS,
         initialScrollX: window.scrollX,
         initialScrollY: window.scrollY,
         plan,
@@ -500,6 +542,53 @@
         delete element.dataset.evidenceShotHideFixed;
       }
     });
+  }
+
+  function updatePointerPosition(event) {
+    const cursor = buildCursorPosition(event.clientX, event.clientY, 'event');
+    if (cursor) {
+      lastPointerPosition = {
+        ...cursor,
+        capturedAt: Date.now(),
+      };
+    }
+  }
+
+  function resolveCursorPosition() {
+    if (
+      !lastPointerPosition ||
+      Date.now() - lastPointerPosition.capturedAt > POINTER_POSITION_MAX_AGE_MS
+    ) {
+      return null;
+    }
+
+    return buildCursorPosition(
+      lastPointerPosition.viewportX,
+      lastPointerPosition.viewportY,
+      lastPointerPosition.source
+    );
+  }
+
+  function buildCursorPosition(clientX, clientY, source) {
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return null;
+    }
+    if (
+      clientX < 0 ||
+      clientY < 0 ||
+      clientX > window.innerWidth ||
+      clientY > window.innerHeight
+    ) {
+      return null;
+    }
+
+    return {
+      viewportX: Math.round(clientX),
+      viewportY: Math.round(clientY),
+      pageX: Math.round(clientX + window.scrollX),
+      pageY: Math.round(clientY + window.scrollY),
+      source,
+    };
   }
 
   function getSemanticBoost(element) {

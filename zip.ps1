@@ -9,8 +9,8 @@ $scriptDir = Split-Path -Parent ($MyInvocation.MyCommand.Path ?? $PSCommandPath 
 if ($scriptDir) { Set-Location $scriptDir }
 
 Write-Host "アイコンを生成しています..." -ForegroundColor Yellow
-npm install --silent
-if ($LASTEXITCODE -ne 0) { throw "npm install に失敗しました" }
+npm ci --silent
+if ($LASTEXITCODE -ne 0) { throw "npm ci に失敗しました" }
 node scripts/generate-icons.js
 if ($LASTEXITCODE -ne 0) { throw "アイコン生成に失敗しました" }
 

@@ -49,6 +49,14 @@
         ? candidate.captureMode
         : legacyCaptureMode || base.captureMode,
       fileNamePrefix: sanitizeFileNamePrefix(candidate.fileNamePrefix),
+      includeCursor:
+        typeof candidate.includeCursor === 'boolean'
+          ? candidate.includeCursor
+          : base.includeCursor,
+      copyToClipboard:
+        typeof candidate.copyToClipboard === 'boolean'
+          ? candidate.copyToClipboard
+          : base.copyToClipboard,
     };
   }
 

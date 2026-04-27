@@ -28,11 +28,16 @@ Used to compose captured slices, apply timestamps, and prepare the final image w
 
 Used to save the generated screenshot file through Chrome's download system.
 
+### clipboardWrite
+
+Used to copy the generated screenshot image to the clipboard when the user enables that option.
+
 ## Data Handling
 
 - Screenshot data is processed locally within the extension runtime
 - Settings are stored locally using Chrome extension storage
 - No screenshot content is uploaded to any remote service
+- Clipboard copy runs locally only, and the extension does not read clipboard contents
 - No analytics, tracking, or advertising SDKs are included
 
 ## Contact

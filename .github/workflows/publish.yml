@@ -47,6 +47,15 @@ jobs:
         # lockfile 整合性を強制するため npm ci のみ。
         run: npm ci
 
+      - name: npm lifecycle 後の公開対象差分を検証
+        run: |
+          dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json package-lock.json _locales src)
+          if [ -n "$dirty" ]; then
+            echo "::error::npm ci 後に公開対象ファイルへ差分が出ました"
+            echo "$dirty"
+            exit 1
+          fi
+
       - name: package.json と manifest.json のバージョンを検証
         env:
           MANIFEST_VERSION: ${{ steps.version.outputs.version }}

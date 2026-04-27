@@ -11,13 +11,16 @@
   const elements = {
     format: document.getElementById('format'),
     fileNamePrefix: document.getElementById('file-name-prefix'),
+    copyToClipboard: document.getElementById('copy-to-clipboard'),
     timestampEnabled: document.getElementById('timestamp-enabled'),
+    includeCursor: document.getElementById('include-cursor'),
     timestampStyle: document.getElementById('timestamp-style'),
     timestampSize: document.getElementById('timestamp-size'),
     footerText: document.getElementById('footer-text'),
     captureMode: document.getElementById('capture-mode'),
     captureNow: document.getElementById('capture-now'),
     statusText: document.getElementById('status-text'),
+    shortcutNote: document.getElementById('shortcut-note'),
   };
 
   let settings = Shared.cloneDefaultSettings();
@@ -37,6 +40,7 @@
     settings = await Shared.loadSettings();
     bindEvents();
     render();
+    await renderShortcutInfo();
     setStatus(t('popupStatusReady', '準備OK。撮影できます。'));
   }
 
@@ -49,7 +53,15 @@
       settings = await persistPopupSettings();
     });
 
+    elements.copyToClipboard.addEventListener('change', async () => {
+      settings = await persistPopupSettings();
+    });
+
     elements.timestampEnabled.addEventListener('change', async () => {
+      settings = await persistPopupSettings();
+    });
+
+    elements.includeCursor.addEventListener('change', async () => {
       settings = await persistPopupSettings();
     });
 
@@ -79,7 +91,9 @@
   function render() {
     elements.format.value = settings.format;
     elements.fileNamePrefix.value = settings.fileNamePrefix;
+    elements.copyToClipboard.checked = settings.copyToClipboard;
     elements.timestampEnabled.checked = settings.timestampEnabled;
+    elements.includeCursor.checked = settings.includeCursor;
     elements.timestampStyle.value = settings.timestampStyle;
     elements.timestampSize.value = settings.timestampSize;
     elements.footerText.value = settings.footerText;
@@ -120,10 +134,8 @@
         return;
       }
 
-      setStatus(
-        t('popupStatusSaved', `保存しました: ${result.fileName}`, [result.fileName]),
-        'success'
-      );
+      const successStatus = buildSuccessStatus(result);
+      setStatus(successStatus.message, successStatus.tone);
     } catch (error) {
       setStatus(
         normalizeUserMessage(error?.message, 'popupStatusCaptureFailed', '撮影に失敗しました。'),
@@ -138,7 +150,9 @@
     return {
       format: elements.format.value,
       fileNamePrefix: elements.fileNamePrefix.value,
+      copyToClipboard: elements.copyToClipboard.checked,
       timestampEnabled: elements.timestampEnabled.checked,
+      includeCursor: elements.includeCursor.checked,
       timestampStyle: elements.timestampStyle.value,
       timestampSize: elements.timestampSize.value,
       footerText: elements.footerText.value,
@@ -159,6 +173,69 @@
     const enableDecorations = elements.timestampEnabled.checked || hasFooterText;
     elements.timestampStyle.disabled = !enableDecorations;
     elements.timestampSize.disabled = !enableDecorations;
+  }
+
+  function buildSuccessStatus(result) {
+    if (result?.clipboardStatus === 'copied') {
+      return {
+        message: t(
+          'popupStatusSavedAndCopied',
+          `保存を開始し、クリップボードにもコピーしました: ${result.fileName}`,
+          [result.fileName]
+        ),
+        tone: 'success',
+      };
+    }
+
+    if (result?.clipboardStatus === 'failed') {
+      return {
+        message: t(
+          'popupStatusSavedCopyFailed',
+          `保存を開始しましたが、クリップボードコピーに失敗しました: ${result.fileName}`,
+          [result.fileName]
+        ),
+        tone: 'warning',
+      };
+    }
+
+    if (result?.clipboardStatus === 'skipped_multipart') {
+      return {
+        message: t(
+          'popupStatusSavedCopySkippedMultipart',
+          `保存を開始しました。画像が分割されたためクリップボードコピーはスキップしました: ${result.fileName}`,
+          [result.fileName]
+        ),
+        tone: 'warning',
+      };
+    }
+
+    return {
+      message: t('popupStatusSaved', `保存を開始しました: ${result.fileName}`, [result.fileName]),
+      tone: 'success',
+    };
+  }
+
+  async function renderShortcutInfo() {
+    if (!elements.shortcutNote || !chrome.commands?.getAll) {
+      return;
+    }
+
+    try {
+      const commands = await chrome.commands.getAll();
+      const captureCommand = commands.find(({ name }) => name === 'capture-active-tab');
+      const shortcut = captureCommand?.shortcut;
+      elements.shortcutNote.textContent = shortcut
+        ? t('popupNoteShortcutCurrent', `ショートカット: ${shortcut}`, [shortcut])
+        : t(
+            'popupNoteShortcutUnassigned',
+            'ショートカットは未設定です。Chrome の拡張機能ショートカット設定で割り当てできます。'
+          );
+    } catch {
+      elements.shortcutNote.textContent = t(
+        'popupNoteShortcutDefault',
+        'ショートカット候補: Ctrl+Shift+Y'
+      );
+    }
   }
 
   function populateSelectOptions(selectElement, options) {

@@ -2,7 +2,7 @@
 
 ## 1. Basic Metadata
 - Extension Name: `EvidenceShot`
-- Version: `1.0.1`
+- Version: `1.0.3`
 - Suggested Category: `Developer Tools` or `Productivity`
 - Store Language: `English (United States)`
 
@@ -34,6 +34,7 @@
 - `scripting`: Inject capture control script into the current tab during capture
 - `offscreen`: Compose and annotate images in a hidden document
 - `downloads`: Save generated screenshots through Chrome downloads
+- `clipboardWrite`: Copy the generated screenshot image to the clipboard when enabled by the user
 
 ## 6. Data Use Draft Answers
 - Personal data collection: `No`

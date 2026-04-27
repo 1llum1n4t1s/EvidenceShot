@@ -14,6 +14,7 @@
         </div>
         <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">このタブを撮影する</button>
         <p class="status" id="status-text" data-i18n="popupStatusReady">準備OK。撮影できます。</p>
+        <p class="note" id="shortcut-note" data-i18n="popupNoteShortcutChecking">ショートカットを確認中です。</p>
       </section>
 
       <section class="panel">
@@ -42,6 +43,14 @@
         </label>
         <p class="note" data-i18n="popupNoteFileNamePrefix">空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。</p>
 
+        <label class="toggle">
+          <span>
+            <strong data-i18n="popupLabelCopyToClipboard">クリップボードにもコピー</strong>
+            <small data-i18n="popupNoteCopyToClipboard">撮影後、保存とは別に画像を PNG としてクリップボードへ入れます。Excel などへそのまま貼り付けできます。</small>
+          </span>
+          <input id="copy-to-clipboard" type="checkbox" />
+        </label>
+
         <p class="note" data-i18n="popupNoteDownloadLocation">保存先は Chrome の既定のダウンロードフォルダです。</p>
       </section>
 
@@ -56,6 +65,14 @@
             <small data-i18n="popupNoteTimestampEnabled">右下に昔のフィルムカメラ風の日時を焼き込みます。</small>
           </span>
           <input id="timestamp-enabled" type="checkbox" />
+        </label>
+
+        <label class="toggle">
+          <span>
+            <strong data-i18n="popupLabelIncludeCursor">マウスカーソルを含める</strong>
+            <small data-i18n="popupNoteIncludeCursor">撮影時の直近カーソル位置を取得できた場合に画像へ描き込みます。スクロール撮影では1回だけ表示します。</small>
+          </span>
+          <input id="include-cursor" type="checkbox" />
         </label>
 
         <label class="field">

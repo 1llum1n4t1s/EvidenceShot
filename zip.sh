@@ -11,7 +11,7 @@ rm -f ./evidence-shot.zip
 
 if [ -f scripts/generate-icons.js ]; then
   echo "アイコンを生成しています..."
-  npm install --silent
+  npm ci --silent
   node scripts/generate-icons.js
 fi
 

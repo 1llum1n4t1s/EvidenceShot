@@ -8,6 +8,9 @@
   "extActionTitle": {
     "message": "EvidenceShot"
   },
+  "commandCaptureActiveTab": {
+    "message": "現在のタブを撮影"
+  },
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
@@ -35,6 +38,12 @@
   "popupNoteFileNamePrefix": {
     "message": "空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。"
   },
+  "popupLabelCopyToClipboard": {
+    "message": "クリップボードにもコピー"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "撮影後、保存とは別に画像を PNG としてクリップボードへ入れます。Excel などへそのまま貼り付けできます。"
+  },
   "popupNoteDownloadLocation": {
     "message": "保存先は Chrome の既定のダウンロードフォルダです。"
   },
@@ -46,6 +55,29 @@
   },
   "popupNoteTimestampEnabled": {
     "message": "右下に昔のフィルムカメラ風の日時を焼き込みます。"
+  },
+  "popupLabelIncludeCursor": {
+    "message": "マウスカーソルを含める"
+  },
+  "popupNoteIncludeCursor": {
+    "message": "撮影時の直近カーソル位置を取得できた場合に画像へ描き込みます。スクロール撮影では1回だけ表示します。"
+  },
+  "popupNoteShortcutChecking": {
+    "message": "ショートカットを確認中です。"
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "ショートカット: $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "ショートカットは未設定です。Chrome の拡張機能ショートカット設定で割り当てできます。"
+  },
+  "popupNoteShortcutDefault": {
+    "message": "ショートカット候補: Ctrl+Shift+Y"
   },
   "popupLabelTimestampStyle": {
     "message": "日付デザイン"
@@ -78,7 +110,31 @@
     "message": "撮影に失敗しました。"
   },
   "popupStatusSaved": {
-    "message": "保存しました: $FILENAME$",
+    "message": "保存を開始しました: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "保存を開始し、クリップボードにもコピーしました: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "保存を開始しましたが、クリップボードコピーに失敗しました: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "保存を開始しました。画像が分割されたためクリップボードコピーはスキップしました: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -158,7 +214,7 @@
     "message": "このページではすでに撮影中です。完了してからもう一度お試しください。"
   },
   "errWindowAlreadyCapturing": {
-    "message": "このウィンドウでは別の撮影が進行中です。完了してからもう一度お試しください。"
+    "message": "別の撮影が進行中です。完了してからもう一度お試しください。"
   },
   "errCapturePrepareFailed": {
     "message": "撮影の準備に失敗しました。"

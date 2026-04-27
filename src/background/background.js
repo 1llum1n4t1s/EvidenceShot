@@ -20,14 +20,21 @@ const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 const CAPTURE_HISTORY_KEY = 'captureHistory';
 const CAPTURE_HISTORY_MAX = 50;
 // 撮影中ロックは chrome.storage.session に置いて SW 再起動後も残るようにする。
-// これで長時間撮影中に SW が idle timeout で落ちても、再起動後の初回 acquire で
-// 二重撮影を弾ける。SW ロード時（最上位の初期化コード）に一度だけクリアし、
-// 「前セッションで未解放の幽霊ロック」を取り除く。
+// SW 再起動後の幽霊ロックは acquire 時に lease と in-memory 状態を見て掃除する。
 const CAPTURE_LOCK_KEY = 'activeCaptureLocks';
+const CAPTURE_LOCK_TTL_MS = 10 * 60 * 1000;
+const activeCaptureTabs = new Set();
+const activeCaptureWindows = new Set();
+const pendingDownloadUrls = new Map();
 
-chrome.storage.session
-  .remove(CAPTURE_LOCK_KEY)
-  .catch(() => undefined);
+chrome.downloads.onChanged.addListener((delta) => {
+  if (!delta?.state) {
+    return;
+  }
+  if (delta.state.current === 'complete' || delta.state.current === 'interrupted') {
+    revokePendingDownloadUrl(delta.id);
+  }
+});
 
 // storage の read-modify-write の排他のため、直列キューを持つ。
 let captureLockChain = Promise.resolve();
@@ -43,27 +50,74 @@ async function readCaptureLocks() {
   return {
     tabs: Array.isArray(raw.tabs) ? raw.tabs.slice() : [],
     windows: Array.isArray(raw.windows) ? raw.windows.slice() : [],
+    startedAt: Number.isFinite(raw.startedAt) ? raw.startedAt : null,
   };
 }
 
 async function writeCaptureLocks(locks) {
-  await chrome.storage.session.set({ [CAPTURE_LOCK_KEY]: locks });
+  await chrome.storage.session.set({
+    [CAPTURE_LOCK_KEY]: {
+      tabs: Array.isArray(locks.tabs) ? locks.tabs : [],
+      windows: Array.isArray(locks.windows) ? locks.windows : [],
+      startedAt: Number.isFinite(locks.startedAt) ? locks.startedAt : null,
+    },
+  });
+}
+
+function hasCaptureLocks(locks) {
+  return locks.tabs.length > 0 || locks.windows.length > 0;
+}
+
+function hasInMemoryCaptureLocks() {
+  return activeCaptureTabs.size > 0 || activeCaptureWindows.size > 0;
+}
+
+function isCaptureLockExpired(locks) {
+  if (!hasCaptureLocks(locks)) {
+    return false;
+  }
+  if (!Number.isFinite(locks.startedAt)) {
+    return true;
+  }
+  return Date.now() - locks.startedAt > CAPTURE_LOCK_TTL_MS;
+}
+
+async function restoreStaleCaptureLocks(locks) {
+  await Promise.all(
+    locks.tabs.map((tabId) => (
+      chrome.tabs
+        .sendMessage(tabId, {
+          type: 'WTS_CAPTURE_RESTORE_V2',
+          payload: {},
+        })
+        .catch(() => undefined)
+    ))
+  );
 }
 
 // 新しいロックを取れれば { ok: true }、既存ロックとぶつかったら
-// { ok: false, conflict: 'tab' | 'window' } を返す。
+// 同一タブまたは拡張機能全体の競合として返す。
 async function tryAcquireCaptureSlot(tabId, windowId) {
   return sequenceLockOp(async () => {
-    const locks = await readCaptureLocks();
+    let locks = await readCaptureLocks();
+    if (hasCaptureLocks(locks) && (isCaptureLockExpired(locks) || !hasInMemoryCaptureLocks())) {
+      await restoreStaleCaptureLocks(locks);
+      locks = { tabs: [], windows: [], startedAt: null };
+      await writeCaptureLocks(locks);
+    }
+
     if (locks.tabs.includes(tabId)) {
       return { ok: false, conflict: 'tab' };
     }
-    if (locks.windows.includes(windowId)) {
+    if (locks.windows.includes(windowId) || hasCaptureLocks(locks)) {
       return { ok: false, conflict: 'window' };
     }
     locks.tabs.push(tabId);
     locks.windows.push(windowId);
+    locks.startedAt = Date.now();
     await writeCaptureLocks(locks);
+    activeCaptureTabs.add(tabId);
+    activeCaptureWindows.add(windowId);
     return { ok: true };
   });
 }
@@ -73,7 +127,13 @@ async function releaseCaptureSlot(tabId, windowId) {
     const locks = await readCaptureLocks();
     const tabs = locks.tabs.filter((id) => id !== tabId);
     const windows = locks.windows.filter((id) => id !== windowId);
-    await writeCaptureLocks({ tabs, windows });
+    activeCaptureTabs.delete(tabId);
+    activeCaptureWindows.delete(windowId);
+    await writeCaptureLocks({
+      tabs,
+      windows,
+      startedAt: tabs.length > 0 || windows.length > 0 ? locks.startedAt : null,
+    });
   });
 }
 
@@ -94,7 +154,7 @@ function isTrustedPopupSender(sender) {
   return true;
 }
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message?.type) {
     return undefined;
   }
@@ -105,11 +165,67 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 
   switch (message.type) {
     case 'WTS_CAPTURE_FROM_POPUP':
-      return runCaptureWorkflowWithHistory(message.tabId);
+      respondAsync(runCaptureWorkflowWithHistory(message.tabId), sendResponse);
+      return true;
     default:
       return undefined;
   }
 });
+
+function respondAsync(promise, sendResponse) {
+  Promise.resolve(promise)
+    .then((response) => {
+      sendResponse(response);
+    })
+    .catch((error) => {
+      sendResponse({
+        ok: false,
+        error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
+      });
+    });
+}
+
+if (chrome.commands?.onCommand) {
+  chrome.commands.onCommand.addListener((command) => {
+    if (command !== 'capture-active-tab') {
+      return;
+    }
+
+    captureActiveTabFromCommand().catch((error) => {
+      console.warn('EvidenceShot: shortcut capture failed', error);
+    });
+  });
+}
+
+async function captureActiveTabFromCommand() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+
+  const result = tab?.id
+    ? await runCaptureWorkflowWithHistory(tab.id)
+    : { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
+
+  await showCommandCaptureBadge(result);
+  if (!result?.ok) {
+    console.warn('EvidenceShot: shortcut capture failed', result?.error);
+  }
+}
+
+async function showCommandCaptureBadge(result) {
+  const ok = Boolean(result?.ok);
+  await chrome.action.setBadgeBackgroundColor({
+    color: ok ? '#166534' : '#b91c1c',
+  });
+  await chrome.action.setBadgeText({
+    text: ok ? 'OK' : 'ERR',
+  });
+
+  setTimeout(() => {
+    chrome.action.setBadgeText({ text: '' }).catch(() => undefined);
+  }, 2500);
+}
 
 // 証跡ツールなので「撮影が失敗した事実」も永続ログに残す。
 // popup を閉じるとエラーメッセージが失われる問題を補完し、後から監査できるようにする。
@@ -131,6 +247,11 @@ async function runCaptureWorkflowWithHistory(tabId) {
       fileName: result?.fileName || null,
       savedAsFormat: result?.savedAsFormat || null,
       partCount: result?.partCount || null,
+      downloadStatus: result?.downloadStatus || null,
+      clipboardStatus: result?.clipboardStatus || null,
+      clipboardError: result?.clipboardError || null,
+      downloadId: result?.downloadId || null,
+      downloadIds: Array.isArray(result?.downloadIds) ? result.downloadIds : [],
       error: result?.ok ? null : String(result?.error || ''),
     });
   } catch {
@@ -183,7 +304,7 @@ async function runCaptureWorkflow(tabId) {
       ok: false,
       error: t(
         'errWindowAlreadyCapturing',
-        'このウィンドウでは別の撮影が進行中です。完了してからもう一度お試しください。'
+        '別の撮影が進行中です。完了してからもう一度お試しください。'
       ),
     };
   }
@@ -222,26 +343,48 @@ async function runCaptureWorkflow(tabId) {
       : [{ index: 0, startIndex: 0, endIndex: plan.positions.length - 1, startY: 0, cssHeight: plan.canvasHeight }];
 
     const downloadedFiles = [];
+    const downloadIds = [];
+    let clipboardStatus = settings.copyToClipboard
+      ? (tiles.length === 1 ? 'pending' : 'skipped_multipart')
+      : 'disabled';
+    let clipboardError = null;
     let lastCapturedAt = 0;
     let lastCapture = null;
     let captureDone = false;
+    let cursorAssignedToTile = false;
 
     for (const tile of tiles) {
       if (captureDone && (!lastCapture || lastCapture.index !== tile.startIndex)) {
         break;
       }
 
+      const tileCursor = resolveCursorForTile(
+        plan.cursor,
+        tile,
+        plan.scrollingMode,
+        cursorAssignedToTile
+      );
+      if (tileCursor) {
+        cursorAssignedToTile = true;
+      }
+
       const tilePlan = {
         ...plan,
         canvasHeight: tile.cssHeight,
         pageHeight: tile.cssHeight,
+        tileStartY: tile.startY,
+        cursor: tileCursor,
+      };
+      const tileSettings = {
+        ...settings,
+        copyToClipboard: Boolean(settings.copyToClipboard && tiles.length === 1),
       };
       const beginResult = await beginOffscreenCaptureSession(
         sessionId,
         sessionSecret,
         tilePlan,
         tab,
-        settings,
+        tileSettings,
         { index: tile.index, count: tiles.length }
       );
       if (!beginResult.ok) {
@@ -339,6 +482,13 @@ async function runCaptureWorkflow(tabId) {
         return finalizeResult;
       }
       downloadedFiles.push(finalizeResult.fileName);
+      if (finalizeResult.clipboardStatus) {
+        clipboardStatus = finalizeResult.clipboardStatus;
+        clipboardError = finalizeResult.clipboardError || null;
+      }
+      if (Number.isInteger(finalizeResult.downloadId)) {
+        downloadIds.push(finalizeResult.downloadId);
+      }
     }
 
     if (downloadedFiles.length === 0) {
@@ -353,6 +503,11 @@ async function runCaptureWorkflow(tabId) {
       fileName: downloadedFiles[0],
       savedAsFormat: settings.format,
       partCount: downloadedFiles.length,
+      downloadStatus: 'started',
+      clipboardStatus,
+      clipboardError,
+      downloadId: downloadIds[0] || null,
+      downloadIds,
     };
   } catch (error) {
     return {
@@ -373,6 +528,23 @@ async function runCaptureWorkflow(tabId) {
 
     await releaseCaptureSlot(tabId, tab.windowId).catch(() => undefined);
   }
+}
+
+function resolveCursorForTile(cursor, tile, scrollingMode, cursorAlreadyAssigned) {
+  if (!cursor || cursorAlreadyAssigned) {
+    return null;
+  }
+  if (!scrollingMode) {
+    return cursor;
+  }
+  if (typeof cursor.pageY !== 'number') {
+    return null;
+  }
+
+  const tileTop = Number(tile.startY) || 0;
+  const tileHeight = Number(tile.cssHeight) || 0;
+  const tileBottom = tileTop + tileHeight;
+  return cursor.pageY >= tileTop && cursor.pageY <= tileBottom ? cursor : null;
 }
 
 async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab, settings, part) {
@@ -436,13 +608,18 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
   }
 
   try {
-    await downloadCapture(downloadUrl, result.fileName);
+    const downloadId = await downloadCapture(downloadUrl, result.fileName);
     return {
       ok: true,
       fileName: result.fileName,
       savedAsFormat: result.savedAsFormat,
+      downloadStatus: 'started',
+      clipboardStatus: result.clipboardStatus || 'disabled',
+      clipboardError: result.clipboardError || null,
+      downloadId,
     };
   } catch (error) {
+    await revokeOffscreenDownloadUrl(downloadUrl).catch(() => undefined);
     return {
       ok: false,
       error: normalizeUserMessage(
@@ -452,7 +629,7 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
       ),
     };
   }
-  // Blob URL の revoke は offscreen 側が 60 秒タイマーで自己管理する。
+  // Blob URL の revoke は downloads.onChanged で早期通知し、offscreen 側の 60 秒 timer を保険にする。
 }
 
 async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
@@ -461,6 +638,16 @@ async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
     sessionId,
     sessionSecret,
   })).catch(() => undefined);
+}
+
+async function revokeOffscreenDownloadUrl(downloadUrl) {
+  if (typeof downloadUrl !== 'string' || !downloadUrl) {
+    return;
+  }
+  await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+    type: 'WTS_REVOKE_DOWNLOAD_URL',
+    downloadUrl,
+  }), 3_000).catch(() => undefined);
 }
 
 // offscreen のドキュメント URL に channelToken をクエリで埋め込み、
@@ -556,8 +743,8 @@ async function recreateOffscreenDocument() {
 async function createOffscreenDocument() {
   await chrome.offscreen.createDocument({
     url: buildOffscreenDocumentUrl(),
-    reasons: ['BLOBS'],
-    justification: 'スクリーンショット画像を合成して既定ダウンロード先へ保存するため',
+    reasons: ['BLOBS', 'CLIPBOARD'],
+    justification: 'スクリーンショット画像を合成し、保存とクリップボードコピーを行うため',
   });
 
   await waitForOffscreenDocumentReady();
@@ -646,8 +833,6 @@ async function ensureTargetTabStillActive(tabId, windowId) {
   }
 }
 
-const DOWNLOAD_COMPLETION_TIMEOUT_MS = 5 * 60 * 1000;
-
 function downloadCapture(downloadUrl, fileName) {
   return new Promise((resolve, reject) => {
     chrome.downloads.download(
@@ -676,44 +861,23 @@ function downloadCapture(downloadUrl, fileName) {
           return;
         }
 
-        // ダウンロード開始だけでなく「ファイル書き込み完了」まで待つ。
-        // ディスク満杯・権限拒否などで interrupted になるケースを検知できる。
-        let settled = false;
-        const cleanup = () => {
-          if (settled) return;
-          settled = true;
-          chrome.downloads.onChanged.removeListener(listener);
-          clearTimeout(timeoutHandle);
-        };
-        const listener = (delta) => {
-          if (delta.id !== downloadId || !delta.state) {
-            return;
-          }
-          if (delta.state.current === 'complete') {
-            cleanup();
-            resolve(downloadId);
-          } else if (delta.state.current === 'interrupted') {
-            cleanup();
-            const reason = delta.error?.current || '';
-            reject(new Error(
-              normalizeUserMessage(
-                reason,
-                'errDownloadStartFailed',
-                'ダウンロードの開始に失敗しました。'
-              )
-            ));
-          }
-        };
-        const timeoutHandle = setTimeout(() => {
-          cleanup();
-          // タイムアウト時は成功扱いでログに残す（Chrome のダウンロードマネージャが
-          // バックグラウンドで継続する可能性もあるため）。ただし確証はないので警告ログを残す。
-          console.warn('EvidenceShot: download completion check timed out', { downloadId, fileName });
-          resolve(downloadId);
-        }, DOWNLOAD_COMPLETION_TIMEOUT_MS);
-        chrome.downloads.onChanged.addListener(listener);
+        trackDownloadUrl(downloadId, downloadUrl);
+        resolve(downloadId);
       }
     );
   });
+}
+
+function trackDownloadUrl(downloadId, downloadUrl) {
+  pendingDownloadUrls.set(downloadId, downloadUrl);
+}
+
+function revokePendingDownloadUrl(downloadId) {
+  const downloadUrl = pendingDownloadUrls.get(downloadId);
+  if (!downloadUrl) {
+    return;
+  }
+  pendingDownloadUrls.delete(downloadId);
+  revokeOffscreenDownloadUrl(downloadUrl).catch(() => undefined);
 }
 

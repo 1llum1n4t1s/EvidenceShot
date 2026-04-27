@@ -5,6 +5,7 @@
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION } = globalThis.WebTestShotConstants;
   const captureSessions = new Map();
+  const downloadUrlRevokeTimers = new Map();
   const MIN_TOKEN_LENGTH = 24;
   // Chrome 拡張機能の SW (background) が offscreen を createDocument する際、
   // URL クエリ `?token=...` で channelToken を埋め込む。offscreen は起動直後に
@@ -64,6 +65,10 @@
     }
     if (message.type === 'WTS_ABORT_CAPTURE_SESSION') {
       return abortCaptureSession(message.sessionId, message.sessionSecret);
+    }
+    if (message.type === 'WTS_REVOKE_DOWNLOAD_URL') {
+      revokeDownloadUrl(message.downloadUrl);
+      return { ok: true };
     }
     if (message.type === 'WTS_OFFSCREEN_PING') {
       return {
@@ -272,6 +277,10 @@
         context = trimmedContext;
       }
 
+      if (settings.includeCursor) {
+        drawMouseCursor(context, canvas, plan);
+      }
+
       if (settings.timestampEnabled) {
         StampRenderer.drawTimestamp(context, canvas, settings.timestampStyle, settings.timestampSize);
       }
@@ -280,7 +289,28 @@
         StampRenderer.drawFooterLabel(context, canvas, settings.footerText, settings.timestampStyle, settings.timestampSize);
       }
 
-      const { blob, savedAsFormat } = await buildOutputBlob(canvas, settings.format);
+      let clipboardBlob = null;
+      let clipboardResult = { status: settings.copyToClipboard ? 'failed' : 'disabled', error: null };
+      if (settings.copyToClipboard) {
+        try {
+          clipboardBlob = await canvasToBlob(canvas, 'image/png');
+          clipboardResult = await copyImageBlobToClipboard(clipboardBlob);
+        } catch (error) {
+          clipboardBlob = null;
+          clipboardResult = {
+            status: 'failed',
+            error: normalizeUserMessage(
+              error?.message,
+              'errClipboardWriteFailed',
+              'クリップボードへのコピーに失敗しました。'
+            ),
+          };
+        }
+      }
+
+      const { blob, savedAsFormat } = settings.format === 'png' && clipboardBlob
+        ? { blob: clipboardBlob, savedAsFormat: 'png' }
+        : await buildOutputBlob(canvas, settings.format);
       // Blob 抽出後は Canvas は不要。Object URL 生成の前に GPU バッファを解放。
       releaseCanvas(canvas);
 
@@ -298,21 +328,17 @@
       // offscreen は chrome-extension:// オリジンで SW と同一パーティションのため、
       // SW 側の chrome.downloads.download({url: blobUrl}) からも解決できる。
       const downloadUrl = URL.createObjectURL(blob);
-      // 60 秒後に自動 revoke（offscreen と SW は同一拡張機能のため 60s あれば
-      // Chrome のダウンロードマネージャは Blob を取得済み）。
-      setTimeout(() => {
-        try {
-          URL.revokeObjectURL(downloadUrl);
-        } catch {
-          // no-op
-        }
-      }, 60_000);
+      // background から完了通知が来れば即 revoke。通知が届かない場合の保険として
+      // 60 秒後にも自動 revoke する。
+      scheduleDownloadUrlRevoke(downloadUrl);
 
       return {
         ok: true,
         fileName,
         downloadUrl,
         savedAsFormat,
+        clipboardStatus: clipboardResult.status,
+        clipboardError: clipboardResult.error,
       };
     } catch (error) {
       return {
@@ -342,6 +368,119 @@
     return { ok: true };
   }
 
+  function scheduleDownloadUrlRevoke(downloadUrl) {
+    const timer = setTimeout(() => {
+      revokeDownloadUrl(downloadUrl);
+    }, 60_000);
+    downloadUrlRevokeTimers.set(downloadUrl, timer);
+  }
+
+  function revokeDownloadUrl(downloadUrl) {
+    if (typeof downloadUrl !== 'string' || !downloadUrl) {
+      return;
+    }
+    const timer = downloadUrlRevokeTimers.get(downloadUrl);
+    if (timer) {
+      clearTimeout(timer);
+      downloadUrlRevokeTimers.delete(downloadUrl);
+    }
+    try {
+      URL.revokeObjectURL(downloadUrl);
+    } catch {
+      // no-op
+    }
+  }
+
+  async function copyImageBlobToClipboard(blob) {
+    let lastError = null;
+
+    if (navigator.clipboard?.write && typeof ClipboardItem === 'function') {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/png': blob,
+          }),
+        ]);
+        return { status: 'copied', error: null };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    try {
+      await copyImageBlobWithExecCommand(blob);
+      return { status: 'copied', error: null };
+    } catch (error) {
+      lastError = error || lastError;
+    }
+
+    return {
+      status: 'failed',
+      error: normalizeUserMessage(
+        lastError?.message,
+        'errClipboardWriteFailed',
+        'クリップボードへのコピーに失敗しました。'
+      ),
+    };
+  }
+
+  async function copyImageBlobWithExecCommand(blob) {
+    if (typeof document.execCommand !== 'function') {
+      throw new Error(t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。'));
+    }
+
+    const dataUrl = await blobToDataUrl(blob);
+    const html = `<img src="${dataUrl}" alt="EvidenceShot screenshot">`;
+    const textElement = document.createElement('textarea');
+    textElement.value = 'EvidenceShot screenshot';
+    textElement.setAttribute('readonly', '');
+    textElement.style.position = 'fixed';
+    textElement.style.top = '-1000px';
+    textElement.style.left = '-1000px';
+
+    let handled = false;
+    let copyError = null;
+    const onCopy = (event) => {
+      try {
+        event.preventDefault();
+        event.clipboardData.setData('text/html', html);
+        event.clipboardData.setData('text/plain', textElement.value);
+        handled = true;
+      } catch (error) {
+        copyError = error;
+      }
+    };
+
+    document.body.appendChild(textElement);
+    document.addEventListener('copy', onCopy, { once: true });
+    try {
+      textElement.select();
+      const copied = document.execCommand('copy');
+      if (copyError) {
+        throw copyError;
+      }
+      if (!copied || !handled) {
+        throw new Error(t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。'));
+      }
+    } finally {
+      document.removeEventListener('copy', onCopy);
+      textElement.remove();
+    }
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        resolve(reader.result);
+      });
+      reader.addEventListener('error', () => {
+        reject(reader.error || new Error(t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。')));
+      });
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function createImageBitmapFromDataUrl(dataUrl) {
     const response = await fetch(dataUrl);
     const blob = await response.blob();
@@ -353,6 +492,78 @@
       return createImageBitmap(capture.blob);
     }
     return createImageBitmapFromDataUrl(capture.dataUrl);
+  }
+
+  function drawMouseCursor(context, canvas, plan) {
+    const position = resolveCursorCanvasPosition(canvas, plan);
+    if (!position) {
+      return;
+    }
+
+    const size = Math.max(18, Math.min(34, Math.round(24 * position.devicePixelRatio)));
+    const scale = size / 24;
+
+    context.save();
+    context.translate(position.x, position.y);
+    context.scale(scale, scale);
+    context.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    context.shadowBlur = 3;
+    context.shadowOffsetX = 1;
+    context.shadowOffsetY = 2;
+    context.beginPath();
+    context.moveTo(1, 1);
+    context.lineTo(1, 20);
+    context.lineTo(6.4, 14.8);
+    context.lineTo(9.9, 22.6);
+    context.lineTo(14.2, 20.7);
+    context.lineTo(10.7, 13);
+    context.lineTo(18.2, 13);
+    context.closePath();
+    context.fillStyle = '#ffffff';
+    context.fill();
+    context.shadowColor = 'transparent';
+    context.lineWidth = 1.6;
+    context.strokeStyle = '#111827';
+    context.stroke();
+    context.restore();
+  }
+
+  function resolveCursorCanvasPosition(canvas, plan) {
+    const cursor = plan?.cursor;
+    if (
+      !cursor ||
+      typeof cursor.viewportX !== 'number' ||
+      typeof cursor.viewportY !== 'number'
+    ) {
+      return null;
+    }
+
+    const devicePixelRatio = Math.max(1, Number(plan.devicePixelRatio) || 1);
+    const cropX = Number(plan.cropX) || 0;
+    const cropY = Number(plan.cropY) || 0;
+    const cropWidth = Number(plan.cropWidth) || Number(plan.viewportWidth) || canvas.width / devicePixelRatio;
+    const canvasHeightCss = Number(plan.canvasHeight) || canvas.height / devicePixelRatio;
+    const xCss = cursor.viewportX - cropX;
+    const yCss = plan.scrollingMode
+      ? Number(cursor.pageY) - (Number(plan.tileStartY) || 0)
+      : cursor.viewportY - cropY;
+
+    if (
+      !Number.isFinite(xCss) ||
+      !Number.isFinite(yCss) ||
+      xCss < 0 ||
+      yCss < 0 ||
+      xCss > cropWidth ||
+      yCss > canvasHeightCss
+    ) {
+      return null;
+    }
+
+    return {
+      x: Math.round(xCss * devicePixelRatio),
+      y: Math.round(yCss * devicePixelRatio),
+      devicePixelRatio,
+    };
   }
 
   async function buildOutputBlob(canvas, requestedFormat) {
