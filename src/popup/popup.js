@@ -3,6 +3,7 @@
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
+    MESSAGE_TYPES,
   } = globalThis.EvidenceShotConstants;
   const Shared = globalThis.EvidenceShotShared;
   const t = Shared.t;

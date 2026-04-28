@@ -471,6 +471,9 @@ async function runCaptureWorkflow(tabId) {
       downloadIds,
     };
   } catch (error) {
+    // 失敗の真因を SW コンソールに必ず残す。normalizeUserMessage が英語エラーを
+    // 「撮影に失敗しました。」へ畳み込むため、ここで握りつぶすと UI から原因追跡できなくなる。
+    console.error('EvidenceShot: capture workflow failed', error);
     return {
       ok: false,
       error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),

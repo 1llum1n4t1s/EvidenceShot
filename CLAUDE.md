@@ -101,6 +101,22 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 CI で必要な GitHub Secrets: `CWS_CLIENT_ID` / `CWS_CLIENT_SECRET` / `CWS_REFRESH_TOKEN` / `CWS_EXTENSION_ID`
 
+## リリース前 smoke test (必須)
+
+`/vava` も CI 自動公開もコードを実機で動かす検証は含まれない。リリースタグを切る前に必ず以下 2 経路で撮影成功を確認:
+
+1. **ポップアップ経由**: アクションアイコン → ポップアップ → 「このタブを撮影する」→ ダウンロード保存を目視
+2. **ショートカット経由**: `Ctrl+Shift+Y` (mac: `Cmd+Shift+Y`) → ダウンロード保存を目視
+
+両方確認する理由: popup.js の `onCaptureNow` は丸ごと `try-catch` で囲まれ、内部の `ReferenceError` 等を fallback 文言「撮影に失敗しました。」に握りつぶす。**ショートカットだけテストすると popup-only バグを必ず見逃す**。実例として v1.0.4〜v1.0.7 まで `MESSAGE_TYPES` の分割代入漏れでポップアップ経由撮影が完全にコケていたが 5 日間検出されなかった。
+
+## デバッグの足場
+
+- **`Shared.normalizeUserMessage` の英語フィルタ**: 日本語 UI で英語のみのエラー (`Could not establish connection.` 等 Chrome ネイティブメッセージ) を fallback 文言「撮影に失敗しました。」に置換する。原文の真因を残すため、`runCaptureWorkflow` の catch では必ず `console.error` で原文も Service Worker コンソールへ出すこと (これを消すと SW コンソールに証拠が残らない)。
+- **`isTrustedPopupSender` の URL 完全一致ゲート**: popup → background のメッセージは `sender.url === POPUP_PAGE_URL` (= `chrome.runtime.getURL('src/popup/popup.html')`) を要求。弾かれると `sendResponse` されず popup 側は `undefined` を受け取り fallback 「撮影に失敗しました」になる。リスナー側で sender を吐くと一発で見える。
+- **撮影履歴ストレージ**: `chrome.storage.local` の `evidenceShotCaptureHistory` に直近 50 件、成功・失敗とも永続化される。SW Console から `chrome.storage.local.get('evidenceShotCaptureHistory', console.log)` で全件読める。失敗エントリの `error` フィールドが UI 表示前の真の文言。
+- **MESSAGE_TYPES 文字列を参照置換するときの定石**: 各コンテキスト (popup / background / content / offscreen) は冒頭で `globalThis.EvidenceShotConstants` から `MESSAGE_TYPES` を分割代入している。リテラル `'WTS_FOO'` を `MESSAGE_TYPES.FOO` に置換するときは **使用箇所だけでなく該当ファイルの分割代入の `{ ... }` にも `MESSAGE_TYPES` を入れる**こと。動的言語のため分割代入漏れは実行時まで気づけない (これが v1.0.4 のバグ)。
+
 ## 補足
 
 - スクロール連結撮影は、**撮影開始時点のスクロール範囲の末尾**までを対象にする (動的ロードでページが伸びても画像には含まれない)
