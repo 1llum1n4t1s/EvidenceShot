@@ -1,9 +1,9 @@
 (function initializeStampRenderer() {
-  if (globalThis.WebTestShotStampRenderer) {
+  if (globalThis.EvidenceShotStampRenderer) {
     return;
   }
 
-  const Shared = globalThis.WebTestShotShared;
+  const Shared = globalThis.EvidenceShotShared;
 
   // スタンプスタイル定義を一元管理。
   // rounded スタイルは drawRoundedStamp に渡す options を返す。
@@ -400,7 +400,7 @@
     context.roundRect(x, y, width, height, radius);
   }
 
-  globalThis.WebTestShotStampRenderer = {
+  globalThis.EvidenceShotStampRenderer = {
     drawTimestamp,
     drawFooterLabel,
   };

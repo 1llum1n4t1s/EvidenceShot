@@ -45,7 +45,7 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
   - 合成結果を background に返却
 - `src/offscreen/stamp-renderer.js`
   - タイムスタンプ / 左下固定テキストのスタイル定義と描画本体
-  - `globalThis.WebTestShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
+  - `globalThis.EvidenceShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
 - `src/shared/constants.js`
   - 既定設定とスタイル / モード / 制限値の一覧
 - `src/shared/utils.js`

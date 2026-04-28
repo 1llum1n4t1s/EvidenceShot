@@ -1,9 +1,9 @@
 (function initializeOffscreenProcessor() {
-  const Shared = globalThis.WebTestShotShared;
-  const StampRenderer = globalThis.WebTestShotStampRenderer;
+  const Shared = globalThis.EvidenceShotShared;
+  const StampRenderer = globalThis.EvidenceShotStampRenderer;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.WebTestShotConstants;
+  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.EvidenceShotConstants;
   const captureSessions = new Map();
   const downloadUrlRevokeTimers = new Map();
   const MIN_TOKEN_LENGTH = 24;
@@ -294,7 +294,9 @@
       let clipboardResult = { status: settings.copyToClipboard ? 'failed' : 'disabled', error: null };
       if (settings.copyToClipboard) {
         try {
-          clipboardBlob = await canvasToBlob(canvas, 'image/png');
+          const rawClip = await canvasToBlob(canvas, 'image/png');
+          // クリップボードに渡す PNG にも改ざん検知メタデータを埋める。
+          clipboardBlob = await embedEvidenceMetadataIntoPng(rawClip, meta);
           clipboardResult = await copyImageBlobToClipboard(clipboardBlob);
         } catch (error) {
           clipboardBlob = null;
@@ -309,9 +311,20 @@
         }
       }
 
-      const { blob, savedAsFormat } = settings.format === 'png' && clipboardBlob
-        ? { blob: clipboardBlob, savedAsFormat: 'png' }
-        : await buildOutputBlob(canvas, settings.format);
+      let blob;
+      let savedAsFormat;
+      if (settings.format === 'png' && clipboardBlob) {
+        // clipboardBlob は既に embed 済み → 再利用。
+        blob = clipboardBlob;
+        savedAsFormat = 'png';
+      } else {
+        const built = await buildOutputBlob(canvas, settings.format);
+        // PNG なら保存ファイル側にも改ざん検知メタデータを埋める。JPEG/WEBP は対象外。
+        blob = built.savedAsFormat === 'png'
+          ? await embedEvidenceMetadataIntoPng(built.blob, meta)
+          : built.blob;
+        savedAsFormat = built.savedAsFormat;
+      }
       // Blob 抽出後は Canvas は不要。Object URL 生成の前に GPU バッファを解放。
       releaseCanvas(canvas);
 
@@ -543,6 +556,145 @@
         quality
       );
     });
+  }
+
+  // ===== 改ざん検知用 PNG メタデータ埋め込み =====
+  // PNG iTXt チャンクとして以下を埋め込む:
+  //   EvidenceShot:Version       拡張機能バージョン
+  //   EvidenceShot:Timestamp     撮影時刻 (ISO 8601, UTC)
+  //   EvidenceShot:URL           ページ URL
+  //   EvidenceShot:Title         ページタイトル
+  //   EvidenceShot:IdatHashSha256  IDAT チャンクの結合バイト列の SHA-256
+  // メタデータは IEND の前に挿入する。IDAT のハッシュを別フィールドに記録するため、
+  // tEXt 追加でハッシュ自体は変動しない (検証スクリプトで再計算可能)。
+  // 完全な改ざん耐性ではないが、Photoshop で再エンコードされれば IDAT が変わり
+  // ハッシュ不一致になるため、素人改変の検知には十分。
+  async function embedEvidenceMetadataIntoPng(blob, meta) {
+    try {
+      const buffer = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+
+      // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+      const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+      if (bytes.length < 8 || sig.some((v, i) => bytes[i] !== v)) {
+        return blob;
+      }
+
+      // チャンク走査: IDAT バイト列の収集 + IEND の位置検出
+      const idatChunks = [];
+      let iendStart = -1;
+      let offset = 8;
+      while (offset + 12 <= bytes.length) {
+        const length =
+          ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+        const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+        if (type === 'IDAT') {
+          idatChunks.push(bytes.subarray(offset + 8, offset + 8 + length));
+        }
+        if (type === 'IEND') {
+          iendStart = offset;
+          break;
+        }
+        offset += 12 + length;
+      }
+      if (iendStart < 0 || idatChunks.length === 0) {
+        return blob;
+      }
+
+      // IDAT 結合 → SHA-256
+      const idatTotalLen = idatChunks.reduce((sum, c) => sum + c.length, 0);
+      const idatConcat = new Uint8Array(idatTotalLen);
+      let writePos = 0;
+      for (const c of idatChunks) {
+        idatConcat.set(c, writePos);
+        writePos += c.length;
+      }
+      const hashBuf = await crypto.subtle.digest('SHA-256', idatConcat);
+      const hashHex = Array.from(new Uint8Array(hashBuf))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      const manifest = chrome.runtime.getManifest();
+      const fields = [
+        ['EvidenceShot:Version', manifest.version || ''],
+        ['EvidenceShot:Timestamp', new Date().toISOString()],
+        ['EvidenceShot:URL', String(meta?.url || '')],
+        ['EvidenceShot:Title', String(meta?.title || '')],
+        ['EvidenceShot:IdatHashSha256', hashHex],
+      ];
+
+      const newChunks = fields.map(([key, value]) => buildPngITextChunk(key, value));
+
+      const before = bytes.subarray(0, iendStart);
+      const iend = bytes.subarray(iendStart);
+      const insertSize = newChunks.reduce((sum, c) => sum + c.length, 0);
+      const result = new Uint8Array(before.length + insertSize + iend.length);
+      result.set(before, 0);
+      let pos = before.length;
+      for (const c of newChunks) {
+        result.set(c, pos);
+        pos += c.length;
+      }
+      result.set(iend, pos);
+
+      return new Blob([result], { type: 'image/png' });
+    } catch (error) {
+      // メタ埋め込みの失敗は撮影成功自体を妨げない (画像はそのまま返す)。
+      console.warn('EvidenceShot: failed to embed PNG metadata', error);
+      return blob;
+    }
+  }
+
+  // PNG iTXt チャンク: keyword \0 [compFlag][compMethod] \0 \0 text(UTF-8)
+  function buildPngITextChunk(keyword, text) {
+    const encoder = new TextEncoder();
+    const keywordBytes = encoder.encode(keyword);
+    const textBytes = encoder.encode(text);
+    const data = new Uint8Array(keywordBytes.length + 5 + textBytes.length);
+    let off = 0;
+    data.set(keywordBytes, off); off += keywordBytes.length;
+    data[off++] = 0; // keyword null separator
+    data[off++] = 0; // compression flag = 0 (uncompressed)
+    data[off++] = 0; // compression method
+    data[off++] = 0; // language tag (empty) terminator
+    data[off++] = 0; // translated keyword (empty) terminator
+    data.set(textBytes, off);
+    return buildPngChunk('iTXt', data);
+  }
+
+  function buildPngChunk(type, data) {
+    const typeBytes = new TextEncoder().encode(type);
+    const buf = new Uint8Array(8 + data.length + 4);
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(0, data.length);
+    buf.set(typeBytes, 4);
+    buf.set(data, 8);
+    const crcInput = new Uint8Array(typeBytes.length + data.length);
+    crcInput.set(typeBytes, 0);
+    crcInput.set(data, typeBytes.length);
+    dv.setUint32(8 + data.length, pngCrc32(crcInput));
+    return buf;
+  }
+
+  // PNG CRC は ITU-T V.42 (反転 CRC-32, 多項式 0xEDB88320) で計算。
+  const PNG_CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) {
+        c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function pngCrc32(bytes) {
+    let crc = 0xffffffff;
+    for (let i = 0; i < bytes.length; i += 1) {
+      crc = (PNG_CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)) >>> 0;
+    }
+    return (crc ^ 0xffffffff) >>> 0;
   }
 
 })();

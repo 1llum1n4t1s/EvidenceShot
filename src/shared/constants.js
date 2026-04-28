@@ -1,9 +1,9 @@
-(function initializeWebTestShotConstants() {
-  if (globalThis.WebTestShotConstants) {
+(function initializeEvidenceShotConstants() {
+  if (globalThis.EvidenceShotConstants) {
     return;
   }
 
-  globalThis.WebTestShotConstants = Object.freeze({
+  globalThis.EvidenceShotConstants = Object.freeze({
     SETTINGS_KEY: 'evidence-shot-settings',
     // chrome.storage キー (background.js から参照)
     CAPTURE_HISTORY_KEY: 'captureHistory',

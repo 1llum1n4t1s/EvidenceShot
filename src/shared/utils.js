@@ -1,5 +1,5 @@
-(function initializeWebTestShotShared() {
-  if (globalThis.WebTestShotShared) {
+(function initializeEvidenceShotShared() {
+  if (globalThis.EvidenceShotShared) {
     return;
   }
 
@@ -10,7 +10,7 @@
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
-  } = globalThis.WebTestShotConstants;
+  } = globalThis.EvidenceShotConstants;
 
   // saveSettingsChain は popup コンテキスト専用の直列化キュー。
   // service worker (background.js) は importScripts で utils.js を読むが、
@@ -264,7 +264,7 @@
       });
   }
 
-  globalThis.WebTestShotShared = {
+  globalThis.EvidenceShotShared = {
     cloneDefaultSettings,
     normalizeSettings,
     loadSettings,

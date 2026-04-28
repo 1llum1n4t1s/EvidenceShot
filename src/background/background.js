@@ -11,10 +11,9 @@ const {
   CAPTURE_HISTORY_KEY,
   CAPTURE_HISTORY_MAX,
   CAPTURE_LOCK_KEY,
-  CAPTURE_LOCK_TTL_MS,
   MESSAGE_TYPES,
-} = globalThis.WebTestShotConstants;
-const Shared = globalThis.WebTestShotShared;
+} = globalThis.EvidenceShotConstants;
+const Shared = globalThis.EvidenceShotShared;
 const t = Shared.t;
 const normalizeUserMessage = Shared.normalizeUserMessage;
 let creatingOffscreenDocumentPromise = null;
@@ -22,10 +21,6 @@ const OFFSCREEN_READY_RETRY_COUNT = 20;
 const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
 const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 
-// 撮影中ロックは chrome.storage.session に置いて SW 再起動後も残るようにする。
-// SW 再起動後の幽霊ロックは acquire 時に lease と in-memory 状態を見て掃除する。
-const activeCaptureTabs = new Set();
-const activeCaptureWindows = new Set();
 const pendingDownloadUrls = new Map();
 
 chrome.downloads.onChanged.addListener((delta) => {
@@ -37,108 +32,73 @@ chrome.downloads.onChanged.addListener((delta) => {
   }
 });
 
-// storage の read-modify-write の排他のため、直列キューを持つ。
-// 注意: MV3 SW は Idle 停止で揮発するため、この直列化は **同一 SW 寿命内** でのみ有効。
-// SW 再起動後は新しい Promise.resolve() から始まる。複数撮影の同時排他は
-// このチェーンではなく activeCaptureTabs / storage.session ロックで担保している。
-let captureLockChain = Promise.resolve();
-function sequenceLockOp(operation) {
-  const next = captureLockChain.then(operation, operation);
-  captureLockChain = next.then(() => undefined, () => undefined);
-  return next;
-}
+// ===== 撮影排他制御 (Web Locks API) =====
+// 旧実装は chrome.storage.session に「ロック中タブ ID 配列」を書いて TTL で
+// 幽霊検知していたが、SW 再起動跨ぎで競合検知が複雑化していた。
+// Web Locks API は SW 死亡で自動解放されるため、storage 経由の幽霊掃除が不要。
+// ロック粒度は (a) タブ単位 (b) 拡張機能全体 の 2 段階。
+const TAB_LOCK_PREFIX = 'evidenceshot-capture-tab-';
+const GLOBAL_LOCK_NAME = 'evidenceshot-capture-global';
 
-async function readCaptureLocks() {
-  const stored = await chrome.storage.session.get(CAPTURE_LOCK_KEY);
-  const raw = stored[CAPTURE_LOCK_KEY] || {};
-  return {
-    tabs: Array.isArray(raw.tabs) ? raw.tabs.slice() : [],
-    windows: Array.isArray(raw.windows) ? raw.windows.slice() : [],
-    startedAt: Number.isFinite(raw.startedAt) ? raw.startedAt : null,
-  };
-}
+// 旧 chrome.storage.session 由来の幽霊データを起動時に一括クリア (旧実装からの migration)。
+chrome.storage.session.remove(CAPTURE_LOCK_KEY).catch(() => undefined);
 
-async function writeCaptureLocks(locks) {
-  await chrome.storage.session.set({
-    [CAPTURE_LOCK_KEY]: {
-      tabs: Array.isArray(locks.tabs) ? locks.tabs : [],
-      windows: Array.isArray(locks.windows) ? locks.windows : [],
-      startedAt: Number.isFinite(locks.startedAt) ? locks.startedAt : null,
-    },
-  });
-}
-
-function hasCaptureLocks(locks) {
-  return locks.tabs.length > 0 || locks.windows.length > 0;
-}
-
-function hasInMemoryCaptureLocks() {
-  return activeCaptureTabs.size > 0 || activeCaptureWindows.size > 0;
-}
-
-function isCaptureLockExpired(locks) {
-  if (!hasCaptureLocks(locks)) {
-    return false;
-  }
-  if (!Number.isFinite(locks.startedAt)) {
-    return true;
-  }
-  return Date.now() - locks.startedAt > CAPTURE_LOCK_TTL_MS;
-}
-
-async function restoreStaleCaptureLocks(locks) {
-  await Promise.all(
-    locks.tabs.map((tabId) => (
-      chrome.tabs
-        .sendMessage(tabId, {
-          type: MESSAGE_TYPES.CAPTURE_RESTORE_V2,
-          payload: {},
-        })
-        .catch(() => undefined)
-    ))
-  );
-}
-
-// 新しいロックを取れれば { ok: true }、既存ロックとぶつかったら
-// 同一タブまたは拡張機能全体の競合として返す。
-async function tryAcquireCaptureSlot(tabId, windowId) {
-  return sequenceLockOp(async () => {
-    let locks = await readCaptureLocks();
-    if (hasCaptureLocks(locks) && (isCaptureLockExpired(locks) || !hasInMemoryCaptureLocks())) {
-      await restoreStaleCaptureLocks(locks);
-      locks = { tabs: [], windows: [], startedAt: null };
-      await writeCaptureLocks(locks);
-    }
-
-    if (locks.tabs.includes(tabId)) {
-      return { ok: false, conflict: 'tab' };
-    }
-    if (locks.windows.includes(windowId) || hasCaptureLocks(locks)) {
-      return { ok: false, conflict: 'window' };
-    }
-    locks.tabs.push(tabId);
-    locks.windows.push(windowId);
-    locks.startedAt = Date.now();
-    await writeCaptureLocks(locks);
-    activeCaptureTabs.add(tabId);
-    activeCaptureWindows.add(windowId);
-    return { ok: true };
-  });
-}
-
-async function releaseCaptureSlot(tabId, windowId) {
-  return sequenceLockOp(async () => {
-    const locks = await readCaptureLocks();
-    const tabs = locks.tabs.filter((id) => id !== tabId);
-    const windows = locks.windows.filter((id) => id !== windowId);
-    activeCaptureTabs.delete(tabId);
-    activeCaptureWindows.delete(windowId);
-    await writeCaptureLocks({
-      tabs,
-      windows,
-      startedAt: tabs.length > 0 || windows.length > 0 ? locks.startedAt : null,
+// navigator.locks.request の callback は「ロック保持中ずっと走る Promise」を返す形なので、
+// 取得時点で外側に release 関数を渡し、release 呼び出しで内部 Promise を解決して callback を抜ける。
+function acquireExclusiveLock(name) {
+  return new Promise((resolveOuter) => {
+    let releaseInternal = null;
+    const heldPromise = new Promise((resolve) => {
+      releaseInternal = resolve;
     });
+    navigator.locks
+      .request(name, { ifAvailable: true, mode: 'exclusive' }, async (lock) => {
+        if (!lock) {
+          // ifAvailable で他者が保持中なら lock=null。即座に null を返す。
+          resolveOuter(null);
+          return;
+        }
+        // 取得成功 → release function を外に渡し、release 呼び出しまで保持。
+        resolveOuter(() => {
+          if (releaseInternal) {
+            const r = releaseInternal;
+            releaseInternal = null;
+            r();
+          }
+        });
+        await heldPromise;
+      })
+      .catch((error) => {
+        console.warn('EvidenceShot: navigator.locks.request failed', error);
+        resolveOuter(null);
+      });
   });
+}
+
+// 撮影スロット取得: タブロック → 拡張機能全体ロック の 2 段。
+// 競合時は { ok: false, conflict: 'tab' | 'window' } を返す。
+// 取得成功時の release() は両方を解放する idempotent な関数。
+async function tryAcquireCaptureSlot(tabId, windowId) {
+  void windowId; // 設計上は windowId 単位ではなく拡張機能全体で 1 件 (旧実装と同等)
+  const tabRelease = await acquireExclusiveLock(`${TAB_LOCK_PREFIX}${tabId}`);
+  if (!tabRelease) {
+    return { ok: false, conflict: 'tab' };
+  }
+  const globalRelease = await acquireExclusiveLock(GLOBAL_LOCK_NAME);
+  if (!globalRelease) {
+    tabRelease();
+    return { ok: false, conflict: 'window' };
+  }
+  let released = false;
+  return {
+    ok: true,
+    release: () => {
+      if (released) return;
+      released = true;
+      try { globalRelease(); } catch { /* no-op */ }
+      try { tabRelease(); } catch { /* no-op */ }
+    },
+  };
 }
 
 const POPUP_PAGE_URL = chrome.runtime.getURL('src/popup/popup.html');
@@ -527,7 +487,8 @@ async function runCaptureWorkflow(tabId) {
       })
       .catch(() => undefined);
 
-    await releaseCaptureSlot(tabId, tab.windowId).catch(() => undefined);
+    // Web Locks ベースのロック解放。release は idempotent。
+    try { acquireResult.release(); } catch { /* no-op */ }
   }
 }
 

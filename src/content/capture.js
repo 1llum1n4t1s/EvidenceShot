@@ -1,6 +1,9 @@
 (function initializeCaptureController() {
   const CONTROLLER_KEY = '__evidenceShotCaptureControllerV2';
-  const CONTROLLER_VERSION = 3;
+  // CONTROLLER_VERSION: 旧 inject 済みインスタンスとの不整合検知用。
+  // collectFixedElements の Shadow DOM 走査追加 / グローバル名前空間リネーム /
+  // moveToCaptureStep の動的ロード警告で挙動変化があったため 3 → 4 にインクリメント。
+  const CONTROLLER_VERSION = 4;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -9,10 +12,10 @@
   const previousController = globalThis[CONTROLLER_KEY];
   previousController?.dispose?.();
 
-  const Shared = globalThis.WebTestShotShared;
+  const Shared = globalThis.EvidenceShotShared;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const Constants = globalThis.WebTestShotConstants;
+  const Constants = globalThis.EvidenceShotConstants;
   const { MESSAGE_TYPES } = Constants;
   const state = {
     captureSession: null,
@@ -146,6 +149,29 @@
           'ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。'
         ),
       };
+    }
+
+    // 動的ロード (無限スクロール / 遅延レンダリング SPA) の検知:
+    // 撮影開始時の plan.pageHeight より現在の document height が 20% 以上大きければ、
+    // ロード追加コンテンツが計画範囲外にある可能性。**撮影は計画通り完走するが**、
+    // 末尾コンテンツが画像に含まれない可能性があるため一度だけコンソールに警告。
+    // (Canvas を再確保する完全動的拡張は offscreen 側のセッション再構築が必要で
+    // 影響が大きいため、本実装では検知のみに留める。)
+    if (
+      state.captureSession.plan?.scrollingMode &&
+      !state.captureSession.dynamicGrowthWarned
+    ) {
+      const planPageHeight = state.captureSession.plan.pageHeight;
+      if (typeof planPageHeight === 'number' && planPageHeight > 0) {
+        const currentHeight = getDocumentHeight();
+        if (currentHeight > planPageHeight * 1.2) {
+          state.captureSession.dynamicGrowthWarned = true;
+          console.warn(
+            `EvidenceShot: page height grew from ${planPageHeight}px to ${currentHeight}px after capture started. ` +
+            'Late-loaded content (infinite scroll / lazy components) may not appear in the screenshot.'
+          );
+        }
+      }
     }
 
     const targetY = state.captureSession.positions[index];
@@ -464,11 +490,25 @@
       return fixedElements;
     }
 
-    const walker = document.createTreeWalker(document.body, window.NodeFilter.SHOW_ELEMENT);
-    let currentNode = walker.nextNode();
-    let scannedNodes = 0;
+    const seenShadowRoots = new WeakSet();
+    const scanState = { count: 0 };
+    walkRootForFixedElements(document.body, fixedElements, seenShadowRoots, scanState);
+    return fixedElements;
+  }
 
-    while (currentNode && scannedNodes < MAX_FIXED_SCAN_NODES && fixedElements.length < MAX_FIXED_ELEMENTS) {
+  // open mode の Shadow Root も走査するための再帰ヘルパー。
+  // closed mode の Shadow Root は element.shadowRoot が null なので透過 (退避不能 = 既知の制約)。
+  function walkRootForFixedElements(root, fixedElements, seenShadowRoots, scanState) {
+    if (!root) {
+      return;
+    }
+    const walker = document.createTreeWalker(root, window.NodeFilter.SHOW_ELEMENT);
+    let currentNode = walker.nextNode();
+    while (
+      currentNode &&
+      scanState.count < MAX_FIXED_SCAN_NODES &&
+      fixedElements.length < MAX_FIXED_ELEMENTS
+    ) {
       const style = window.getComputedStyle(currentNode);
       // `position: fixed` のみ非表示対象とする。sticky はスクロール位置に応じて
       // 自然な場所に現れるべきなので、一律に隠すと Notion / GitHub の sticky
@@ -488,11 +528,23 @@
         }
       }
 
-      currentNode = walker.nextNode();
-      scannedNodes += 1;
-    }
+      // open Shadow Root に入っていく (Web Components / LWC / Stencil 対応)。
+      // shadowRoot が null = closed mode または非カスタム要素 → スキップ。
+      const shadow = currentNode.shadowRoot;
+      if (shadow && !seenShadowRoots.has(shadow)) {
+        seenShadowRoots.add(shadow);
+        walkRootForFixedElements(shadow, fixedElements, seenShadowRoots, scanState);
+        if (
+          scanState.count >= MAX_FIXED_SCAN_NODES ||
+          fixedElements.length >= MAX_FIXED_ELEMENTS
+        ) {
+          return;
+        }
+      }
 
-    return fixedElements;
+      currentNode = walker.nextNode();
+      scanState.count += 1;
+    }
   }
 
   function installCaptureStyle() {

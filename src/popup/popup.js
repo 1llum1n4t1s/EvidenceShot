@@ -3,8 +3,8 @@
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
-  } = globalThis.WebTestShotConstants;
-  const Shared = globalThis.WebTestShotShared;
+  } = globalThis.EvidenceShotConstants;
+  const Shared = globalThis.EvidenceShotShared;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
 
