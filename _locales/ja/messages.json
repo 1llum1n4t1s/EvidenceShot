@@ -20,9 +20,6 @@
   "popupCaptureNowButton": {
     "message": "このタブを撮影する"
   },
-  "popupStatusReady": {
-    "message": "準備OK。撮影できます。"
-  },
   "popupSectionSave": {
     "message": "保存"
   },

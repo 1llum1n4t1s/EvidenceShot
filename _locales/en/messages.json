@@ -20,9 +20,6 @@
   "popupCaptureNowButton": {
     "message": "Capture This Tab"
   },
-  "popupStatusReady": {
-    "message": "Ready to capture."
-  },
   "popupSectionSave": {
     "message": "Save"
   },

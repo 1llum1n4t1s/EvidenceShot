@@ -41,7 +41,6 @@
     bindEvents();
     render();
     await renderShortcutInfo();
-    setStatus(t('popupStatusReady', '準備OK。撮影できます。'));
   }
 
   function bindEvents() {
