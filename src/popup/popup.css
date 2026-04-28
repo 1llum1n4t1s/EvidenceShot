@@ -291,6 +291,10 @@ select {
   padding: 7px 9px;
 }
 
+.status:empty {
+  display: none;
+}
+
 .status[data-tone="success"] {
   border-color: transparent;
   background: var(--success-bg);
