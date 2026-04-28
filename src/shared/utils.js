@@ -11,6 +11,12 @@
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
   } = globalThis.WebTestShotConstants;
+
+  // saveSettingsChain は popup コンテキスト専用の直列化キュー。
+  // service worker (background.js) は importScripts で utils.js を読むが、
+  // SW のモジュールスコープは MV3 の Idle 停止で揮発するため、SW からは
+  // saveSettings を呼んではいけない (直列化保証が破れて並列 read-modify-write になる)。
+  // 設定の永続化は常に popup 側でのみ実施すること。
   let saveSettingsChain = Promise.resolve();
 
   // 定数由来なので呼び出しごとに再構築する必要なし。初期化時に 1 回だけ生成。
@@ -43,7 +49,10 @@
         : base.timestampSize,
       footerText:
         typeof candidate.footerText === 'string'
-          ? candidate.footerText.trim().slice(0, 80)
+          // 制御文字 (C0/DEL) と zero-width / RTL/LTR 制御 (U+200B-U+200F, U+202A-U+202E)
+          // を除去。Canvas fillText は単一行描画だが、双方向制御文字は描画順を乱して
+          // 視覚的偽装を許すため落とす。
+          ? sanitizeFooterText(candidate.footerText)
           : base.footerText,
       captureMode: VALID_CAPTURE_MODES.has(candidate.captureMode)
         ? candidate.captureMode
@@ -58,6 +67,20 @@
           ? candidate.copyToClipboard
           : base.copyToClipboard,
     };
+  }
+
+  function sanitizeFooterText(raw) {
+    if (typeof raw !== 'string') {
+      return '';
+    }
+    // C0/DEL + 双方向 / zero-width 制御文字を除去 (U+200B-U+200F, U+202A-U+202E)。
+    // Canvas fillText は単一行描画なので改行は元から無視されるが、RLO 等は
+    // 描画順序を逆転させ視覚的偽装を許すため落とす。
+    return raw
+      .replace(/[\x00-\x1f\x7f]/g, '')
+      .replace(/[\u200B-\u200F\u202A-\u202E]/g, '')
+      .trim()
+      .slice(0, 80);
   }
 
   function sanitizeFileNamePrefix(raw) {
@@ -80,11 +103,14 @@
     return normalizeSettings(result[SETTINGS_KEY] || {});
   }
 
-  function saveSettings(partialSettings) {
+  function saveSettings(partialSettings, currentSettings) {
     saveSettingsChain = saveSettingsChain
       .catch(() => undefined)
       .then(async () => {
-        const current = await loadSettings();
+        // currentSettings が渡されればそれを基に正規化する。popup は現在値を持っているので
+        // storage.local からの再読込は不要 (read-modify-write の RTT 削減)。
+        // 渡されない場合は安全側で読み直す。
+        const current = currentSettings || await loadSettings();
         const next = normalizeSettings({
           ...current,
           ...partialSettings,
@@ -96,6 +122,9 @@
     return saveSettingsChain;
   }
 
+  // ⚠ DOM 依存ユーティリティ: requestAnimationFrame は Service Worker コンテキストには
+  // 存在しないため、SW から waitAnimationFrame / waitFrames を呼ぶと ReferenceError になる。
+  // content script / popup からのみ使用すること。SW では Shared.sleep を使う。
   function waitAnimationFrame() {
     return new Promise((resolve) => requestAnimationFrame(() => resolve()));
   }
@@ -159,19 +188,6 @@
     return `${baseName}-${stamp.year}${stamp.month}${stamp.day}-${stamp.hours}${stamp.minutes}${stamp.seconds}${partSuffix}.${extension}`;
   }
 
-  function buildTimestampText(style, date = new Date()) {
-    const stamp = buildTimestamp(date);
-    switch (style) {
-      case 'film':
-        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
-      case 'minimal':
-        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}`;
-      case 'japanese':
-      default:
-        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
-    }
-  }
-
   function isCapturableUrl(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') {
       return false;
@@ -233,6 +249,21 @@
     }
   }
 
+  // chrome.runtime.onMessage の async ハンドラで使う共通レスポンサ。
+  // background / content の両方で同じロジックが必要だったため shared に集約。
+  function respondAsync(promise, sendResponse, fallbackKey = 'errCaptureFailed', fallbackText = '撮影に失敗しました。') {
+    Promise.resolve(promise)
+      .then((response) => {
+        sendResponse(response);
+      })
+      .catch((error) => {
+        sendResponse({
+          ok: false,
+          error: normalizeUserMessage(error?.message, fallbackKey, fallbackText),
+        });
+      });
+  }
+
   globalThis.WebTestShotShared = {
     cloneDefaultSettings,
     normalizeSettings,
@@ -244,11 +275,12 @@
     clampNumber,
     sanitizeHost,
     sanitizeFileNamePrefix,
+    sanitizeFooterText,
     buildTimestamp,
-    buildTimestampText,
     buildFileName,
     isCapturableUrl,
     t,
     normalizeUserMessage,
+    respondAsync,
   };
 })();

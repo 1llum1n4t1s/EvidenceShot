@@ -49,7 +49,7 @@ jobs:
 
       - name: npm lifecycle 後の公開対象差分を検証
         run: |
-          dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json package-lock.json _locales src)
+          dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json package-lock.json _locales src scripts)
           if [ -n "$dirty" ]; then
             echo "::error::npm ci 後に公開対象ファイルへ差分が出ました"
             echo "$dirty"

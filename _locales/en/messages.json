@@ -302,5 +302,11 @@
   },
   "errDevicePixelRatioChanged": {
     "message": "Capture aborted because the window was moved to a display with a different zoom level. Please keep the window in place and try again."
+  },
+  "errClipboardWriteFailed": {
+    "message": "Failed to copy to clipboard."
+  },
+  "errClipboardUnsupported": {
+    "message": "Clipboard copy is not supported in this environment."
   }
 }

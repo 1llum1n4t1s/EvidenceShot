@@ -40,11 +40,14 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
   - 直近カーソル位置の取得
 - `src/offscreen/offscreen.js`
   - 画像の逐次合成
-  - タイムスタンプ / 左下固定テキスト / カーソル描画
+  - カーソル描画
   - クリップボード向け PNG コピー
   - 合成結果を background に返却
+- `src/offscreen/stamp-renderer.js`
+  - タイムスタンプ / 左下固定テキストのスタイル定義と描画本体
+  - `globalThis.WebTestShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
 - `src/shared/constants.js`
-  - メッセージ種別や既定設定
+  - 既定設定とスタイル / モード / 制限値の一覧
 - `src/shared/utils.js`
   - 設定正規化と保存ユーティリティ
 

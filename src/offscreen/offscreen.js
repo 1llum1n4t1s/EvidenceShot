@@ -3,7 +3,7 @@
   const StampRenderer = globalThis.WebTestShotStampRenderer;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION } = globalThis.WebTestShotConstants;
+  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.WebTestShotConstants;
   const captureSessions = new Map();
   const downloadUrlRevokeTimers = new Map();
   const MIN_TOKEN_LENGTH = 24;
@@ -11,8 +11,13 @@
   // URL クエリ `?token=...` で channelToken を埋め込む。offscreen は起動直後に
   // URL から token を読み取り、以降の sendMessage は URL の token と完全一致
   // した場合のみ受け付ける。
-  // これで SW 再起動直後の「初回メッセージを TOFU で受け入れる」設計を廃止し、
-  // 偽トークンによる先取り・DoS の経路を閉じる。
+  //
+  // 注: 主目的は「SW 再起動後のバージョン整合 / 旧 offscreen 識別」であり、
+  // セキュリティ境界としての効果は限定的 (sender.id + sender.tab チェックで
+  // 既に外部 origin の侵入は塞がれている)。channelToken は SW 再起動で
+  // 新トークンが発行されると、古い offscreen インスタンスは新 SW の通信に
+  // 答えられなくなる → isOffscreenDocumentCompatible が false → 作り直し
+  // という "暗黙的な世代管理" として機能している。
   const expectedChannelToken = (() => {
     try {
       const token = new URLSearchParams(globalThis.location?.search || '').get('token');
@@ -54,23 +59,23 @@
       return trustCheck;
     }
 
-    if (message.type === 'WTS_BEGIN_CAPTURE_SESSION') {
+    if (message.type === MESSAGE_TYPES.BEGIN_CAPTURE_SESSION) {
       return beginCaptureSession(message.sessionId, message.sessionSecret, message.meta);
     }
-    if (message.type === 'WTS_ADD_CAPTURE_SLICE') {
+    if (message.type === MESSAGE_TYPES.ADD_CAPTURE_SLICE) {
       return addCaptureSlice(message.sessionId, message.sessionSecret, message.capture);
     }
-    if (message.type === 'WTS_FINALIZE_CAPTURE_SESSION') {
+    if (message.type === MESSAGE_TYPES.FINALIZE_CAPTURE_SESSION) {
       return finalizeCaptureSession(message.sessionId, message.sessionSecret);
     }
-    if (message.type === 'WTS_ABORT_CAPTURE_SESSION') {
+    if (message.type === MESSAGE_TYPES.ABORT_CAPTURE_SESSION) {
       return abortCaptureSession(message.sessionId, message.sessionSecret);
     }
-    if (message.type === 'WTS_REVOKE_DOWNLOAD_URL') {
+    if (message.type === MESSAGE_TYPES.REVOKE_DOWNLOAD_URL) {
       revokeDownloadUrl(message.downloadUrl);
       return { ok: true };
     }
-    if (message.type === 'WTS_OFFSCREEN_PING') {
+    if (message.type === MESSAGE_TYPES.OFFSCREEN_PING) {
       return {
         ok: true,
         interfaceVersion: OFFSCREEN_INTERFACE_VERSION,
@@ -247,32 +252,28 @@
 
       const usedCanvasHeight = Math.max(1, Math.min(canvas.height, session.usedCanvasHeight || canvas.height));
       if (usedCanvasHeight !== canvas.height) {
+        // GPU メモリの 2 倍ピーク回避: 先に元 Canvas の必要領域を ImageBitmap (CPU 側) に
+        // 抽出し、元 Canvas の GPU バッファを **drawImage 前に** 解放する。
+        // その後、新 Canvas を確保して bitmap を draw する流れにすることで
+        // 「元 Canvas + 新 Canvas が GPU 上で同時存在する」瞬間をなくす。
+        const sourceBitmap = await createImageBitmap(canvas, 0, 0, canvas.width, usedCanvasHeight);
+        releaseCanvas(session.canvas);
+
         const trimmedCanvas = document.createElement('canvas');
         trimmedCanvas.width = canvas.width;
         trimmedCanvas.height = usedCanvasHeight;
 
         const trimmedContext = trimmedCanvas.getContext('2d', { alpha: false });
         if (!trimmedContext) {
+          sourceBitmap.close?.();
           throw new Error(t('errImageSaveFailed', '画像の保存に失敗しました。'));
         }
 
         trimmedContext.fillStyle = '#ffffff';
         trimmedContext.fillRect(0, 0, trimmedCanvas.width, trimmedCanvas.height);
-        trimmedContext.drawImage(
-          canvas,
-          0,
-          0,
-          canvas.width,
-          usedCanvasHeight,
-          0,
-          0,
-          trimmedCanvas.width,
-          trimmedCanvas.height
-        );
+        trimmedContext.drawImage(sourceBitmap, 0, 0);
+        sourceBitmap.close?.();
 
-        // 元 Canvas は drawImage でコピー済み → 以後不要。GPU バッファを即時解放して
-        // トリミング中の RAM ピークを 2 倍→1 倍に抑える。
-        releaseCanvas(session.canvas);
         canvas = trimmedCanvas;
         context = trimmedContext;
       }
@@ -392,93 +393,34 @@
   }
 
   async function copyImageBlobToClipboard(blob) {
-    let lastError = null;
-
-    if (navigator.clipboard?.write && typeof ClipboardItem === 'function') {
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'image/png': blob,
-          }),
-        ]);
-        return { status: 'copied', error: null };
-      } catch (error) {
-        lastError = error;
-      }
+    // Chrome 117+ (manifest minimum_chrome_version) では offscreen document でも
+    // navigator.clipboard.write が利用可能。execCommand フォールバックは
+    // (1) Base64 dataURL 化でメモリが膨張する、(2) text/html インジェクション経路を
+    // 許す、という難点があり、対象 Chrome バージョンでは不要なので削除している。
+    if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
+      return {
+        status: 'failed',
+        error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。'),
+      };
     }
 
     try {
-      await copyImageBlobWithExecCommand(blob);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': blob,
+        }),
+      ]);
       return { status: 'copied', error: null };
     } catch (error) {
-      lastError = error || lastError;
+      return {
+        status: 'failed',
+        error: normalizeUserMessage(
+          error?.message,
+          'errClipboardWriteFailed',
+          'クリップボードへのコピーに失敗しました。'
+        ),
+      };
     }
-
-    return {
-      status: 'failed',
-      error: normalizeUserMessage(
-        lastError?.message,
-        'errClipboardWriteFailed',
-        'クリップボードへのコピーに失敗しました。'
-      ),
-    };
-  }
-
-  async function copyImageBlobWithExecCommand(blob) {
-    if (typeof document.execCommand !== 'function') {
-      throw new Error(t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。'));
-    }
-
-    const dataUrl = await blobToDataUrl(blob);
-    const html = `<img src="${dataUrl}" alt="EvidenceShot screenshot">`;
-    const textElement = document.createElement('textarea');
-    textElement.value = 'EvidenceShot screenshot';
-    textElement.setAttribute('readonly', '');
-    textElement.style.position = 'fixed';
-    textElement.style.top = '-1000px';
-    textElement.style.left = '-1000px';
-
-    let handled = false;
-    let copyError = null;
-    const onCopy = (event) => {
-      try {
-        event.preventDefault();
-        event.clipboardData.setData('text/html', html);
-        event.clipboardData.setData('text/plain', textElement.value);
-        handled = true;
-      } catch (error) {
-        copyError = error;
-      }
-    };
-
-    document.body.appendChild(textElement);
-    document.addEventListener('copy', onCopy, { once: true });
-    try {
-      textElement.select();
-      const copied = document.execCommand('copy');
-      if (copyError) {
-        throw copyError;
-      }
-      if (!copied || !handled) {
-        throw new Error(t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。'));
-      }
-    } finally {
-      document.removeEventListener('copy', onCopy);
-      textElement.remove();
-    }
-  }
-
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        resolve(reader.result);
-      });
-      reader.addEventListener('error', () => {
-        reject(reader.error || new Error(t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。')));
-      });
-      reader.readAsDataURL(blob);
-    });
   }
 
   async function createImageBitmapFromDataUrl(dataUrl) {

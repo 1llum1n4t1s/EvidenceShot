@@ -8,6 +8,11 @@ const {
   OFFSCREEN_DOCUMENT_PATH,
   OFFSCREEN_INTERFACE_VERSION,
   CAPTURE_INTERVAL_MS,
+  CAPTURE_HISTORY_KEY,
+  CAPTURE_HISTORY_MAX,
+  CAPTURE_LOCK_KEY,
+  CAPTURE_LOCK_TTL_MS,
+  MESSAGE_TYPES,
 } = globalThis.WebTestShotConstants;
 const Shared = globalThis.WebTestShotShared;
 const t = Shared.t;
@@ -17,12 +22,8 @@ const OFFSCREEN_READY_RETRY_COUNT = 20;
 const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
 const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
 
-const CAPTURE_HISTORY_KEY = 'captureHistory';
-const CAPTURE_HISTORY_MAX = 50;
 // 撮影中ロックは chrome.storage.session に置いて SW 再起動後も残るようにする。
 // SW 再起動後の幽霊ロックは acquire 時に lease と in-memory 状態を見て掃除する。
-const CAPTURE_LOCK_KEY = 'activeCaptureLocks';
-const CAPTURE_LOCK_TTL_MS = 10 * 60 * 1000;
 const activeCaptureTabs = new Set();
 const activeCaptureWindows = new Set();
 const pendingDownloadUrls = new Map();
@@ -37,6 +38,9 @@ chrome.downloads.onChanged.addListener((delta) => {
 });
 
 // storage の read-modify-write の排他のため、直列キューを持つ。
+// 注意: MV3 SW は Idle 停止で揮発するため、この直列化は **同一 SW 寿命内** でのみ有効。
+// SW 再起動後は新しい Promise.resolve() から始まる。複数撮影の同時排他は
+// このチェーンではなく activeCaptureTabs / storage.session ロックで担保している。
 let captureLockChain = Promise.resolve();
 function sequenceLockOp(operation) {
   const next = captureLockChain.then(operation, operation);
@@ -87,7 +91,7 @@ async function restoreStaleCaptureLocks(locks) {
     locks.tabs.map((tabId) => (
       chrome.tabs
         .sendMessage(tabId, {
-          type: 'WTS_CAPTURE_RESTORE_V2',
+          type: MESSAGE_TYPES.CAPTURE_RESTORE_V2,
           payload: {},
         })
         .catch(() => undefined)
@@ -148,7 +152,7 @@ function isTrustedPopupSender(sender) {
   if (sender.tab) {
     return false;
   }
-  if (typeof sender.url !== 'string' || !sender.url.startsWith(POPUP_PAGE_URL)) {
+  if (typeof sender.url !== 'string' || sender.url !== POPUP_PAGE_URL) {
     return false;
   }
   return true;
@@ -164,7 +168,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   switch (message.type) {
-    case 'WTS_CAPTURE_FROM_POPUP':
+    case MESSAGE_TYPES.CAPTURE_FROM_POPUP:
       respondAsync(runCaptureWorkflowWithHistory(message.tabId), sendResponse);
       return true;
     default:
@@ -172,36 +176,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-function respondAsync(promise, sendResponse) {
-  Promise.resolve(promise)
-    .then((response) => {
-      sendResponse(response);
-    })
-    .catch((error) => {
-      sendResponse({
-        ok: false,
-        error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
-      });
-    });
-}
+// respondAsync は Shared に移管 (capture.js と重複定義していたため統合)
+const respondAsync = Shared.respondAsync;
 
 if (chrome.commands?.onCommand) {
-  chrome.commands.onCommand.addListener((command) => {
+  // Chrome 117+ では onCommand コールバックの第二引数に「ショートカット押下時点の
+  // アクティブタブ」が渡る。chrome.tabs.query で取り直す経路は数ミリ秒の async ギャップで
+  // 別タブが返る競合があるため、tab 引数を最優先で使う。レガシー Chrome 用のフォールバックとして
+  // captureActiveTabFromCommand 内で query も残す。
+  chrome.commands.onCommand.addListener((command, tab) => {
     if (command !== 'capture-active-tab') {
       return;
     }
 
-    captureActiveTabFromCommand().catch((error) => {
+    captureActiveTabFromCommand(tab).catch((error) => {
       console.warn('EvidenceShot: shortcut capture failed', error);
     });
   });
 }
 
-async function captureActiveTabFromCommand() {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
+async function captureActiveTabFromCommand(tabFromCommand) {
+  let tab = tabFromCommand && tabFromCommand.id ? tabFromCommand : null;
+  if (!tab) {
+    [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+  }
 
   const result = tab?.id
     ? await runCaptureWorkflowWithHistory(tab.id)
@@ -262,11 +263,9 @@ async function runCaptureWorkflowWithHistory(tabId) {
 
 async function appendCaptureHistory(entry) {
   const stored = await chrome.storage.local.get(CAPTURE_HISTORY_KEY);
-  const history = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY].slice() : [];
-  history.push(entry);
-  if (history.length > CAPTURE_HISTORY_MAX) {
-    history.splice(0, history.length - CAPTURE_HISTORY_MAX);
-  }
+  const existing = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY] : [];
+  // slice(-N) で末尾 N 件を取り出す。push + splice(0, N) より中間配列が 1 つ少ない。
+  const history = [...existing, entry].slice(-CAPTURE_HISTORY_MAX);
   await chrome.storage.local.set({ [CAPTURE_HISTORY_KEY]: history });
 }
 
@@ -319,7 +318,7 @@ async function runCaptureWorkflow(tabId) {
     await ensureContentScriptOnTab(tabId);
 
     const prepareResult = await chrome.tabs.sendMessage(tabId, {
-      type: 'WTS_CAPTURE_PREPARE_V2',
+      type: MESSAGE_TYPES.CAPTURE_PREPARE_V2,
       payload: {
         sessionId,
         settings,
@@ -405,7 +404,7 @@ async function runCaptureWorkflow(tabId) {
           }
 
           const stepResult = await chrome.tabs.sendMessage(tabId, {
-            type: 'WTS_CAPTURE_STEP_V2',
+            type: MESSAGE_TYPES.CAPTURE_STEP_V2,
             payload: { sessionId, index: idx },
           });
 
@@ -424,8 +423,10 @@ async function runCaptureWorkflow(tabId) {
             break;
           }
 
-          await ensureTargetTabStillActive(tabId, tab.windowId);
-
+          // captureVisibleTab はスロットリング待機後に1回呼ぶだけにし、
+          // 直前チェックは省く (待機中の切替を見抜けないため安全寄与が薄い)。
+          // 切替検知は captureVisibleTab 直後の事後チェックで行い、
+          // 例外が出れば finally の abort でセッション破棄 → ダウンロード/クリップボード書き込みは行われない。
           const waitForRateLimit = lastCapturedAt
             ? Math.max(0, CAPTURE_INTERVAL_MS - (Date.now() - lastCapturedAt))
             : 0;
@@ -448,7 +449,7 @@ async function runCaptureWorkflow(tabId) {
         }
 
         const pushResult = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-          type: 'WTS_ADD_CAPTURE_SLICE',
+          type: MESSAGE_TYPES.ADD_CAPTURE_SLICE,
           sessionId,
           sessionSecret,
           capture: {
@@ -521,7 +522,7 @@ async function runCaptureWorkflow(tabId) {
 
     await chrome.tabs
       .sendMessage(tabId, {
-        type: 'WTS_CAPTURE_RESTORE_V2',
+        type: MESSAGE_TYPES.CAPTURE_RESTORE_V2,
         payload: { sessionId },
       })
       .catch(() => undefined);
@@ -551,7 +552,7 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
   await ensureOffscreenDocument();
 
   const request = buildOffscreenMessage({
-    type: 'WTS_BEGIN_CAPTURE_SESSION',
+    type: MESSAGE_TYPES.BEGIN_CAPTURE_SESSION,
     sessionId,
     sessionSecret,
     meta: {
@@ -583,7 +584,7 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
 
 async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
   const result = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: 'WTS_FINALIZE_CAPTURE_SESSION',
+    type: MESSAGE_TYPES.FINALIZE_CAPTURE_SESSION,
     sessionId,
     sessionSecret,
   })).catch(() => undefined);
@@ -634,7 +635,7 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
 
 async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
   await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: 'WTS_ABORT_CAPTURE_SESSION',
+    type: MESSAGE_TYPES.ABORT_CAPTURE_SESSION,
     sessionId,
     sessionSecret,
   })).catch(() => undefined);
@@ -645,7 +646,7 @@ async function revokeOffscreenDownloadUrl(downloadUrl) {
     return;
   }
   await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: 'WTS_REVOKE_DOWNLOAD_URL',
+    type: MESSAGE_TYPES.REVOKE_DOWNLOAD_URL,
     downloadUrl,
   }), 3_000).catch(() => undefined);
 }
@@ -661,35 +662,36 @@ function buildFullOffscreenDocumentUrl() {
 }
 
 async function ensureOffscreenDocument() {
-  if (await isOffscreenDocumentCompatible()) {
-    return;
-  }
-
+  // 同時呼び出しの二重生成を防ぐため、最初に creatingOffscreenDocumentPromise を
+  // **同期的に** チェック→セットする。await を挟むと両 awaiter が null チェックを
+  // 通過して chrome.offscreen.createDocument が 2 回呼ばれるレースになる。
   if (!creatingOffscreenDocumentPromise) {
     creatingOffscreenDocumentPromise = (async () => {
-      if (await isOffscreenDocumentCompatible()) {
-        return;
-      }
+      try {
+        if (await isOffscreenDocumentCompatible()) {
+          return;
+        }
 
-      if ('closeDocument' in chrome.offscreen) {
-        try {
-          await chrome.offscreen.closeDocument();
-        } catch (error) {
-          if (!String(error?.message || '').includes('No document')) {
-            console.warn('EvidenceShot: failed to close offscreen document:', error.message);
+        if ('closeDocument' in chrome.offscreen) {
+          try {
+            await chrome.offscreen.closeDocument();
+          } catch (error) {
+            if (!String(error?.message || '').includes('No document')) {
+              console.warn('EvidenceShot: failed to close offscreen document:', error.message);
+            }
           }
         }
-      }
 
-      await createOffscreenDocument();
+        await createOffscreenDocument();
+      } finally {
+        // 完了後に null に戻すことで次回呼び出しが新規作成できるようにする。
+        // await している awaiter は Promise の参照を持っているため、null 化しても解決は受け取れる。
+        creatingOffscreenDocumentPromise = null;
+      }
     })();
   }
 
-  try {
-    await creatingOffscreenDocumentPromise;
-  } finally {
-    creatingOffscreenDocumentPromise = null;
-  }
+  await creatingOffscreenDocumentPromise;
 }
 
 async function isOffscreenDocumentCompatible() {
@@ -768,7 +770,7 @@ async function isCurrentOffscreenCompatible() {
   try {
     // PING は応答が早い想定なので短めのタイムアウトで判定（ハング検出）。
     const response = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-      type: 'WTS_OFFSCREEN_PING',
+      type: MESSAGE_TYPES.OFFSCREEN_PING,
     }), 3_000);
 
     return response?.ok && response.interfaceVersion === OFFSCREEN_INTERFACE_VERSION;
@@ -807,7 +809,12 @@ function sendOffscreenMessageWithTimeout(payload, timeoutMs = OFFSCREEN_MESSAGE_
 function generateSecureToken(byteLength = 16) {
   const bytes = new Uint8Array(byteLength);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+  // hex 化は中間配列なしで連結 (Array.from + join より allocation が 1 つ少ない)。
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    out += bytes[i].toString(16).padStart(2, '0');
+  }
+  return out;
 }
 
 async function ensureContentScriptOnTab(tabId) {

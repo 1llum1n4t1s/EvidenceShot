@@ -122,7 +122,7 @@
       }
 
       const result = await chrome.runtime.sendMessage({
-        type: 'WTS_CAPTURE_FROM_POPUP',
+        type: MESSAGE_TYPES.CAPTURE_FROM_POPUP,
         tabId: tab.id,
       });
 
@@ -161,7 +161,9 @@
   }
 
   async function persistPopupSettings({ renderAfterSave = true } = {}) {
-    settings = await Shared.saveSettings(collectSettingsFromForm());
+    // popup は現在の設定 (settings) をモジュールスコープで保持しているため、
+    // Shared.saveSettings 内での loadSettings 再読み込み (storage.local.get) を省ける。
+    settings = await Shared.saveSettings(collectSettingsFromForm(), settings);
     if (renderAfterSave) {
       render();
     }

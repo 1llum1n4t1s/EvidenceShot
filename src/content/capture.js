@@ -13,12 +13,15 @@
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const Constants = globalThis.WebTestShotConstants;
+  const { MESSAGE_TYPES } = Constants;
   const state = {
     captureSession: null,
   };
   const MAX_MAIN_COLUMN_SCAN_NODES = 1800;
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
+  // background の CAPTURE_LOCK_TTL_MS と意味的に揃えてあること (両者ペアで運用)。
+  // ロックが切れる頃にはセッションも無効化される必要があるため、片方を変えるなら両方変える。
   const CAPTURE_SESSION_TTL_MS = 10 * 60 * 1000;
   const POINTER_POSITION_MAX_AGE_MS = 30_000;
   const pointerPositionEvents = ['pointermove', 'pointerdown', 'mousemove', 'mousedown'];
@@ -36,13 +39,13 @@
     }
 
     switch (message.type) {
-      case 'WTS_CAPTURE_PREPARE_V2':
+      case MESSAGE_TYPES.CAPTURE_PREPARE_V2:
         respondAsync(prepareCapture(message.payload?.sessionId, message.payload?.settings), sendResponse);
         return true;
-      case 'WTS_CAPTURE_STEP_V2':
+      case MESSAGE_TYPES.CAPTURE_STEP_V2:
         respondAsync(moveToCaptureStep(message.payload?.sessionId, message.payload?.index), sendResponse);
         return true;
-      case 'WTS_CAPTURE_RESTORE_V2':
+      case MESSAGE_TYPES.CAPTURE_RESTORE_V2:
         restoreCaptureState(message.payload?.sessionId);
         sendResponse({ ok: true });
         return undefined;
@@ -51,22 +54,8 @@
     }
   };
 
-  function respondAsync(promise, sendResponse) {
-    Promise.resolve(promise)
-      .then((response) => {
-        sendResponse(response);
-      })
-      .catch((error) => {
-        sendResponse({
-          ok: false,
-          error: normalizeUserMessage(
-            error?.message,
-            'errCaptureFailed',
-            '撮影に失敗しました。'
-          ),
-        });
-      });
-  }
+  // respondAsync は Shared に集約済み (background と重複していたため統合)
+  const respondAsync = Shared.respondAsync;
 
   chrome.runtime.onMessage.addListener(messageHandler);
   pointerPositionEvents.forEach((eventName) => {
@@ -389,8 +378,8 @@
       };
     }
 
-    const left = clamp(Math.round(bestCandidate.rect.left), 0, Math.max(0, viewportWidth - 1));
-    const right = clamp(Math.round(bestCandidate.rect.right), left + 1, viewportWidth);
+    const left = Shared.clampNumber(Math.round(bestCandidate.rect.left), 0, Math.max(0, viewportWidth - 1), 0);
+    const right = Shared.clampNumber(Math.round(bestCandidate.rect.right), left + 1, viewportWidth, viewportWidth);
     return {
       x: left,
       y: 0,
@@ -617,7 +606,4 @@
     return boost;
   }
 
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
 })();

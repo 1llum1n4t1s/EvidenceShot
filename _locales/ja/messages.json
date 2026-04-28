@@ -302,5 +302,11 @@
   },
   "errDevicePixelRatioChanged": {
     "message": "ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。"
+  },
+  "errClipboardWriteFailed": {
+    "message": "クリップボードへのコピーに失敗しました。"
+  },
+  "errClipboardUnsupported": {
+    "message": "この環境ではクリップボードコピーを利用できません。"
   }
 }

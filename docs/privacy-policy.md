@@ -32,6 +32,10 @@ Used to save the generated screenshot file through Chrome's download system.
 
 Used to copy the generated screenshot image to the clipboard when the user enables that option.
 
+## Keyboard Shortcut
+
+A `commands` entry registers `Ctrl+Shift+Y` (macOS: `Command+Shift+Y`) so the user can capture the current tab from the keyboard. Shortcut captures are user-initiated, run only within the `activeTab` grant, and never transmit data externally.
+
 ## Data Handling
 
 - Screenshot data is processed locally within the extension runtime

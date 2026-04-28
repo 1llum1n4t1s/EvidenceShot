@@ -179,11 +179,14 @@
   }
 
   function drawTimestamp(context, canvas, style, size = 'md') {
-    const timestamp = Shared.buildTimestampText(resolveTimestampTextStyle(style), new Date());
+    const timestamp = buildTimestampText(resolveTimestampTextStyle(style), new Date());
     drawStampOverlay(context, canvas, timestamp, style, size, 'right');
   }
 
   function drawFooterLabel(context, canvas, footerText, style, size = 'md') {
+    // normalizeSettings (utils.js) の sanitizeFooterText で既に trim/slice/制御文字除去
+    // 済みだが、stamp-renderer は外部から直接呼べる API として残す防御層。
+    // 二重適用しても結果は冪等。
     const safeText = String(footerText).trim().slice(0, 80);
     drawStampOverlay(context, canvas, safeText, style, size, 'left');
   }
@@ -200,6 +203,21 @@
         return 'minimal';
       default:
         return 'japanese';
+    }
+  }
+
+  // 旧 utils.buildTimestampText から移設。スタンプ描画固有のテキスト整形は
+  // shared utils ではなく stamp-renderer 側で持つ。
+  function buildTimestampText(style, date = new Date()) {
+    const stamp = Shared.buildTimestamp(date);
+    switch (style) {
+      case 'film':
+        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
+      case 'minimal':
+        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}`;
+      case 'japanese':
+      default:
+        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
     }
   }
 

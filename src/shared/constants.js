@@ -5,6 +5,26 @@
 
   globalThis.WebTestShotConstants = Object.freeze({
     SETTINGS_KEY: 'evidence-shot-settings',
+    // chrome.storage キー (background.js から参照)
+    CAPTURE_HISTORY_KEY: 'captureHistory',
+    CAPTURE_HISTORY_MAX: 50,
+    CAPTURE_LOCK_KEY: 'activeCaptureLocks',
+    CAPTURE_LOCK_TTL_MS: 10 * 60 * 1000,
+    // popup ↔ background ↔ content ↔ offscreen 間で交わすメッセージ種別。
+    // 文字列リテラルの揺れを避け、リネーム時の Grep を確実にするため一元管理する。
+    // OFFSCREEN_INTERFACE_VERSION と組で「offscreen 側プロトコル変更時にインクリメント」運用。
+    MESSAGE_TYPES: Object.freeze({
+      CAPTURE_FROM_POPUP: 'WTS_CAPTURE_FROM_POPUP',
+      CAPTURE_PREPARE_V2: 'WTS_CAPTURE_PREPARE_V2',
+      CAPTURE_STEP_V2: 'WTS_CAPTURE_STEP_V2',
+      CAPTURE_RESTORE_V2: 'WTS_CAPTURE_RESTORE_V2',
+      BEGIN_CAPTURE_SESSION: 'WTS_BEGIN_CAPTURE_SESSION',
+      ADD_CAPTURE_SLICE: 'WTS_ADD_CAPTURE_SLICE',
+      FINALIZE_CAPTURE_SESSION: 'WTS_FINALIZE_CAPTURE_SESSION',
+      ABORT_CAPTURE_SESSION: 'WTS_ABORT_CAPTURE_SESSION',
+      OFFSCREEN_PING: 'WTS_OFFSCREEN_PING',
+      REVOKE_DOWNLOAD_URL: 'WTS_REVOKE_DOWNLOAD_URL',
+    }),
     CONTENT_SCRIPT_FILES: [
       'src/shared/constants.js',
       'src/shared/utils.js',
