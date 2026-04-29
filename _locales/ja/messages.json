@@ -26,6 +26,15 @@
   "popupLabelFormat": {
     "message": "保存形式"
   },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
   "popupLabelFileNamePrefix": {
     "message": "ファイル名の先頭"
   },
@@ -71,10 +80,16 @@
     }
   },
   "popupNoteShortcutUnassigned": {
-    "message": "ショートカットは未設定です。Chrome の拡張機能ショートカット設定で割り当てできます。"
+    "message": "ショートカットは未設定です。下のボタンから設定画面を開けます。"
   },
   "popupNoteShortcutDefault": {
     "message": "ショートカット候補: Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "ショートカットを設定する"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "ショートカット設定画面を開けませんでした。"
   },
   "popupLabelTimestampStyle": {
     "message": "日付デザイン"

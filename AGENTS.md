@@ -68,7 +68,7 @@ EvidenceShot/
   - 合成結果を background に返却（実際のダウンロードは background 側）
 - `src/offscreen/stamp-renderer.js`
   - タイムスタンプ／フッターラベルのスタイル定義と描画本体
-  - `globalThis.WebTestShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
+  - `globalThis.EvidenceShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
 
 ## 権限
 

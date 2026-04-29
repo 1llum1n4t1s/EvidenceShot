@@ -275,6 +275,36 @@ select {
   margin-top: 2px;
 }
 
+.secondary {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+  padding: 6px 10px;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.secondary:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-pressed);
+  color: var(--text);
+}
+
+.secondary:focus-visible {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 24%, transparent);
+}
+
 .note,
 .status {
   margin: 8px 0 0;

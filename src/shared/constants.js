@@ -9,7 +9,7 @@
     CAPTURE_HISTORY_KEY: 'captureHistory',
     CAPTURE_HISTORY_MAX: 50,
     CAPTURE_LOCK_KEY: 'activeCaptureLocks',
-    CAPTURE_LOCK_TTL_MS: 10 * 60 * 1000,
+    CAPTURE_SESSION_TTL_MS: 10 * 60 * 1000,
     // popup ↔ background ↔ content ↔ offscreen 間で交わすメッセージ種別。
     // 文字列リテラルの揺れを避け、リネーム時の Grep を確実にするため一元管理する。
     // OFFSCREEN_INTERFACE_VERSION と組で「offscreen 側プロトコル変更時にインクリメント」運用。
@@ -18,12 +18,18 @@
       CAPTURE_PREPARE_V2: 'WTS_CAPTURE_PREPARE_V2',
       CAPTURE_STEP_V2: 'WTS_CAPTURE_STEP_V2',
       CAPTURE_RESTORE_V2: 'WTS_CAPTURE_RESTORE_V2',
+      // background → content script (ショートカット経由限定)。
+      // ショートカットは popup を開かないので web page が focus を保っている。
+      // content script は active tab で動作するため navigator.clipboard.write が成功する。
+      // popup 経由ではこのメッセージは使わない (popup 自身が clipboard.write する)。
+      CLIPBOARD_COPY_FROM_URL: 'WTS_CLIPBOARD_COPY_FROM_URL',
       BEGIN_CAPTURE_SESSION: 'WTS_BEGIN_CAPTURE_SESSION',
       ADD_CAPTURE_SLICE: 'WTS_ADD_CAPTURE_SLICE',
       FINALIZE_CAPTURE_SESSION: 'WTS_FINALIZE_CAPTURE_SESSION',
       ABORT_CAPTURE_SESSION: 'WTS_ABORT_CAPTURE_SESSION',
       OFFSCREEN_PING: 'WTS_OFFSCREEN_PING',
       REVOKE_DOWNLOAD_URL: 'WTS_REVOKE_DOWNLOAD_URL',
+      REVOKE_OBJECT_URL_FROM_POPUP: 'WTS_REVOKE_OBJECT_URL_FROM_POPUP',
     }),
     CONTENT_SCRIPT_FILES: [
       'src/shared/constants.js',
@@ -31,7 +37,7 @@
       'src/content/capture.js',
     ],
     OFFSCREEN_DOCUMENT_PATH: 'src/offscreen/offscreen.html',
-    OFFSCREEN_INTERFACE_VERSION: 14,
+    OFFSCREEN_INTERFACE_VERSION: 16,
     DEFAULT_SETTINGS: {
       format: 'png',
       timestampEnabled: true,
@@ -46,7 +52,9 @@
     CAPTURE_INTERVAL_MS: 650,
     CAPTURE_SETTLE_MS: 180,
     MAX_CANVAS_EDGE: 65535,
-    MAX_CANVAS_AREA: 268435456,
+    MAX_TILE_CANVAS_AREA: 67108864,
+    MAX_CAPTURE_DATA_URL_LENGTH: 60 * 1024 * 1024,
+    MAX_HTML_CLIPBOARD_BYTES: 8 * 1024 * 1024,
     TIMESTAMP_STYLES: [
       { value: 'japanese', labelKey: 'optionTimestampStyleJapanese', label: '業務: 和風標準' },
       { value: 'audit', labelKey: 'optionTimestampStyleAudit', label: '業務: 監査プレート' },
@@ -74,6 +82,10 @@
       { value: 'fullPage', labelKey: 'optionCaptureModeFullPage', label: 'ページ全体（レイアウト込み）' },
       { value: 'mainColumn', labelKey: 'optionCaptureModeMainColumn', label: '中央本文のみ（主カラム）' },
     ],
-    FORMAT_OPTIONS: ['png', 'jpg', 'webp'],
+    FORMAT_OPTIONS: [
+      { value: 'png', labelKey: 'optionFormatPng', label: 'PNG' },
+      { value: 'jpg', labelKey: 'optionFormatJpg', label: 'JPG' },
+      { value: 'webp', labelKey: 'optionFormatWebp', label: 'WEBP' },
+    ],
   });
 })();

@@ -15,7 +15,7 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 - 撮影後の任意クリップボードコピー (PNG)
 - ブラウザテーマに連動するポップアップのライト / ダーク自動切替
 - フローティングボタンなし、常時 `<all_urls>` 権限なし
-- **PNG 出力には改ざん検知メタデータ (`iTXt`) を埋め込み**: URL / タイムスタンプ / タイトル / 拡張機能バージョン / IDAT-SHA256
+- **PNG 出力には改ざん検知メタデータ (`iTXt`) を埋め込み**: クエリとハッシュを除いた URL / タイムスタンプ / タイトル / 拡張機能バージョン / IDAT-SHA256
 - 文字サイズはタイムスタンプと左下固定テキストに連動し、極小が旧標準相当
 
 ## アーキテクチャ概観 (4 context)
@@ -43,6 +43,22 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (SW)
 - **`OFFSCREEN_CHANNEL_TOKEN`** は SW 起動時に CSPRNG で生成し offscreen URL のクエリに埋込み。世代管理を兼ねる (セキュリティ境界の効果は限定的、`sender.id` + `sender.tab` チェックが主防御)。
 - **撮影排他制御は `navigator.locks` (Web Locks API)** を使用。`evidenceshot-capture-tab-<tabId>` (タブ単位) と `evidenceshot-capture-global` (拡張機能全体) の 2 段ロック。SW 死亡で自動解放されるため幽霊ロック判定は不要。
 - **`CONTROLLER_VERSION` (capture.js)** は content script のバージョン。挙動を変えたらインクリメントして旧 inject の dispose を強制する。
+
+## クリップボード書込パス (PNG コピー) — 二経路ハイブリッド
+
+`navigator.clipboard.write` は **`document.hasFocus()` が true な context** でしか成功しない (DOMException: `Document is not focused.`)。`offscreen` は常に hidden で書けず、`content script` も popup を開いている間は focus を奪われて書けない。よって以下の二経路で **書込 context を起動経路ごとに切り替える**:
+
+| 起動経路 | 書込 context | 理由 |
+|---|---|---|
+| ポップアップから撮影 | **popup 自身** | popup が user activation を保持。content script は popup に focus を奪われて書込不可 |
+| ショートカット (`Ctrl+Shift+Y`) | **active タブの content script** | popup が無いので web page が focus を保つ |
+
+`offscreen.js` は書込を試みず **PNG blob URL (`URL.createObjectURL`) を返すだけ**。実装対応:
+
+- popup 経由: `popup.js` の `writeClipboardFromUrl` が `result.clipboardObjectUrl` を fetch + `clipboard.write`
+- ショートカット経由: `background.js` の `delegateClipboardCopyToContent` が `MESSAGE_TYPES.CLIPBOARD_COPY_FROM_URL` を content script へ送る。content script の `copyClipboardFromUrl` が fetch + `clipboard.write` を優先し、`http://` など secure context でないページでは `document.execCommand('copy')` による HTML `<img>` コピーへ fallback する。
+- いずれも `chrome-extension://<id>/blob:...` を fetch するが、**同一拡張機能 origin** なので `web_accessible_resources` 不要
+- 書込終了後の URL 解放は二段保証: (1) popup / SW (`captureActiveTabFromCommand`) が `MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP` 経由で **即時 revoke 依頼**、(2) offscreen 側の `scheduleDownloadUrlRevoke` が **60 秒タイマー** で保険 revoke。popup が閉じる等で (1) が届かなくても (2) で確実に解放される
 
 ## 主要ファイル
 
@@ -75,7 +91,7 @@ npm run build                   # 上記 2 つを連続実行
 1. `chrome://extensions` を開く
 2. 「デベロッパーモード」ON → 「パッケージ化されていない拡張機能を読み込む」でリポジトリルートを選択
 3. ソース変更後は同画面の更新ボタンで再読込
-4. 手動確認用フィクスチャは `scripts/manual-fixture.html`
+4. 手動確認用フィクスチャは `docs/manual-fixture.html`
 
 テストフレームワーク・lint は導入していない。挙動確認は手動。
 
@@ -114,8 +130,13 @@ CI で必要な GitHub Secrets: `CWS_CLIENT_ID` / `CWS_CLIENT_SECRET` / `CWS_REF
 
 - **`Shared.normalizeUserMessage` の英語フィルタ**: 日本語 UI で英語のみのエラー (`Could not establish connection.` 等 Chrome ネイティブメッセージ) を fallback 文言「撮影に失敗しました。」に置換する。原文の真因を残すため、`runCaptureWorkflow` の catch では必ず `console.error` で原文も Service Worker コンソールへ出すこと (これを消すと SW コンソールに証拠が残らない)。
 - **`isTrustedPopupSender` の URL 完全一致ゲート**: popup → background のメッセージは `sender.url === POPUP_PAGE_URL` (= `chrome.runtime.getURL('src/popup/popup.html')`) を要求。弾かれると `sendResponse` されず popup 側は `undefined` を受け取り fallback 「撮影に失敗しました」になる。リスナー側で sender を吐くと一発で見える。
-- **撮影履歴ストレージ**: `chrome.storage.local` の `evidenceShotCaptureHistory` に直近 50 件、成功・失敗とも永続化される。SW Console から `chrome.storage.local.get('evidenceShotCaptureHistory', console.log)` で全件読める。失敗エントリの `error` フィールドが UI 表示前の真の文言。
+- **撮影履歴ストレージ**: `chrome.storage.local` の `captureHistory` に直近 50 件、成功・失敗とも永続化される。SW Console から `chrome.storage.local.get('captureHistory', console.log)` で全件読める。失敗エントリの `error` フィールドが UI 表示前の真の文言。
 - **MESSAGE_TYPES 文字列を参照置換するときの定石**: 各コンテキスト (popup / background / content / offscreen) は冒頭で `globalThis.EvidenceShotConstants` から `MESSAGE_TYPES` を分割代入している。リテラル `'WTS_FOO'` を `MESSAGE_TYPES.FOO` に置換するときは **使用箇所だけでなく該当ファイルの分割代入の `{ ... }` にも `MESSAGE_TYPES` を入れる**こと。動的言語のため分割代入漏れは実行時まで気づけない (これが v1.0.4 のバグ)。
+- **offscreen document の API 制約**:
+  - `document.hasFocus()` が常に **false** → `navigator.clipboard.write` は永久に失敗する。書込みは popup または content script に委譲する (上の「クリップボード書込パス」参照)。
+  - `chrome.runtime.getManifest()` は **`TypeError: chrome.runtime.getManifest is not a function`** で失敗する。拡張機能バージョンが必要なら SW 側で取得して `meta.extensionVersion` 経由で渡すこと (これを忘れると PNG `iTXt` メタデータが空フィールドで埋まる v1.0.4〜v1.0.8 のバグになる)。
+- **`ensureContentScriptOnTab` の inject 拒否**: Chrome Web Store (`chromewebstore.google.com`) / `chrome://` / `view-source:` 等は `chrome.scripting.executeScript` が拒否し `cannot be scripted` 等の英語例外を投げる。`isCapturableUrl` は protocol しか見ないので `https` の Chrome Web Store は事前に弾けない。`ensureContentScriptOnTab` 内で例外メッセージを文字列パターンマッチして `errPageNotCapturable` (日本語) に正規化することで「撮影に失敗しました」(原因不明) を回避している。
+- **ショートカットが Chrome 挙動で消える**: Chromium は unpacked 拡張機能のリロード時に `commands.suggested_key` を一時的にリセットすることがある (既知の Chromium 挙動)。一度外れると manifest 修正で自動復活しないため、popup の「ショートカットを設定する」ボタンから `chrome://extensions/shortcuts` へワンクリックでジャンプして再設定できる救済 UI を `popup.js` の `onOpenShortcutSettings` に置いている。
 
 ## 補足
 

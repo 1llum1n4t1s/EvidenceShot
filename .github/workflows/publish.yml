@@ -44,10 +44,10 @@ jobs:
           cache: 'npm'
 
       - name: 依存関係をインストール
-        # lockfile 整合性を強制するため npm ci のみ。
-        run: npm ci
+        # 公開用 secrets を扱う同一 job では依存の lifecycle script を走らせない。
+        run: npm ci --ignore-scripts
 
-      - name: npm lifecycle 後の公開対象差分を検証
+      - name: 依存インストール後の公開対象差分を検証
         run: |
           dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json package-lock.json _locales src scripts)
           if [ -n "$dirty" ]; then
@@ -63,6 +63,11 @@ jobs:
           pkg_ver=$(node -p "require('./package.json').version")
           if [ "$pkg_ver" != "$MANIFEST_VERSION" ]; then
             echo "::error::package.json ($pkg_ver) と manifest.json ($MANIFEST_VERSION) が一致しません"
+            exit 1
+          fi
+          lock_ver=$(node -p "require('./package-lock.json').version")
+          if [ "$lock_ver" != "$MANIFEST_VERSION" ]; then
+            echo "::error::package-lock.json ($lock_ver) と manifest.json ($MANIFEST_VERSION) が一致しません"
             exit 1
           fi
 

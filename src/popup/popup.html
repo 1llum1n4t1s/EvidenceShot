@@ -15,6 +15,7 @@
         <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">このタブを撮影する</button>
         <p class="status" id="status-text"></p>
         <p class="note" id="shortcut-note" data-i18n="popupNoteShortcutChecking">ショートカットを確認中です。</p>
+        <button class="secondary" id="shortcut-setup" type="button" hidden data-i18n="popupShortcutSetupButton">ショートカットを設定する</button>
       </section>
 
       <section class="panel">
@@ -24,11 +25,7 @@
 
         <label class="field">
           <span data-i18n="popupLabelFormat">保存形式</span>
-          <select id="format">
-            <option value="png">PNG</option>
-            <option value="jpg">JPG</option>
-            <option value="webp">WEBP</option>
-          </select>
+          <select id="format"></select>
         </label>
 
         <label class="field">

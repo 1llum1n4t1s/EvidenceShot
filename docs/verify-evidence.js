@@ -56,7 +56,8 @@ function verify(filePath) {
   }
 
   const evidenceFields = {};
-  const idatChunks = [];
+  const idatHash = crypto.createHash('sha256');
+  let hasIdat = false;
   let offset = 8;
   while (offset + 12 <= buf.length) {
     const length = readUint32BE(buf, offset);
@@ -64,7 +65,8 @@ function verify(filePath) {
     const data = buf.slice(offset + 8, offset + 8 + length);
 
     if (type === 'IDAT') {
-      idatChunks.push(data);
+      idatHash.update(data);
+      hasIdat = true;
     } else if (type === 'iTXt') {
       const decoded = decodeITextData(data);
       if (decoded && decoded.keyword.startsWith('EvidenceShot:')) {
@@ -94,8 +96,7 @@ function verify(filePath) {
 
   console.log();
   console.log('--- Tamper Check (IDAT SHA-256) ---');
-  const idatTotal = Buffer.concat(idatChunks);
-  const recomputed = crypto.createHash('sha256').update(idatTotal).digest('hex');
+  const recomputed = hasIdat ? idatHash.digest('hex') : '';
   const embedded = evidenceFields['EvidenceShot:IdatHashSha256'];
 
   console.log(`  Recomputed: ${recomputed}`);

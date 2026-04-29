@@ -2,7 +2,7 @@
 
 ## 1. 基本情報
 - 拡張機能名: `EvidenceShot`
-- バージョン: `1.0.3`
+- バージョン: `1.0.8`
 - カテゴリ候補: `Developer Tools` または `Productivity`
 - 言語: `日本語 (ja-JP)`
 

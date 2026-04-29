@@ -23,6 +23,7 @@
   const VALID_TIMESTAMP_STYLES = new Set(TIMESTAMP_STYLES.map(({ value }) => value));
   const VALID_TIMESTAMP_SIZES = new Set(TIMESTAMP_SIZE_OPTIONS.map(({ value }) => value));
   const VALID_CAPTURE_MODES = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
+  const VALID_FORMATS = new Set(FORMAT_OPTIONS.map(({ value }) => value));
 
   function cloneDefaultSettings() {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -36,7 +37,7 @@
         : null;
 
     return {
-      format: FORMAT_OPTIONS.includes(candidate.format) ? candidate.format : base.format,
+      format: VALID_FORMATS.has(candidate.format) ? candidate.format : base.format,
       timestampEnabled:
         typeof candidate.timestampEnabled === 'boolean'
           ? candidate.timestampEnabled

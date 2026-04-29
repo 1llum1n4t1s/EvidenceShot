@@ -3,6 +3,7 @@
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
     CAPTURE_MODE_OPTIONS,
+    FORMAT_OPTIONS,
     MESSAGE_TYPES,
   } = globalThis.EvidenceShotConstants;
   const Shared = globalThis.EvidenceShotShared;
@@ -22,6 +23,7 @@
     captureNow: document.getElementById('capture-now'),
     statusText: document.getElementById('status-text'),
     shortcutNote: document.getElementById('shortcut-note'),
+    shortcutSetup: document.getElementById('shortcut-setup'),
   };
 
   let settings = Shared.cloneDefaultSettings();
@@ -35,6 +37,7 @@
 
   async function bootstrap() {
     applyStaticLocalization();
+    populateSelectOptions(elements.format, FORMAT_OPTIONS);
     populateSelectOptions(elements.timestampStyle, TIMESTAMP_STYLES);
     populateSelectOptions(elements.timestampSize, TIMESTAMP_SIZE_OPTIONS);
     populateSelectOptions(elements.captureMode, CAPTURE_MODE_OPTIONS);
@@ -86,6 +89,31 @@
     });
 
     elements.captureNow.addEventListener('click', onCaptureNow);
+
+    if (elements.shortcutSetup) {
+      elements.shortcutSetup.addEventListener('click', onOpenShortcutSettings);
+    }
+  }
+
+  // Chrome の拡張機能ショートカット設定画面を新規タブで開く。
+  // 一般ユーザーは chrome://extensions/shortcuts のパスを知らないため、
+  // popup から 1 クリックで誘導できるようにする。
+  // (Chromium の既知挙動: unpacked 拡張機能のリロードで suggested_key が
+  // 一時的に reset されるケースがあり、ユーザーがこの画面で再設定する必要がある)
+  async function onOpenShortcutSettings() {
+    try {
+      await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+      // 設定画面を開いたら popup 自身は閉じる (Chrome はフォーカス遷移時に
+      // popup を自動で閉じる挙動だが、明示的に閉じる)。
+      window.close();
+    } catch (error) {
+      // chrome.tabs.create が拒否される稀なケース (権限・状況依存) は
+      // 静的にエラーを popup へ表示するに留める。
+      setStatus(
+        normalizeUserMessage(error?.message, 'errOpenShortcutSettingsFailed', 'ショートカット設定画面を開けませんでした。'),
+        'error'
+      );
+    }
   }
 
   function render() {
@@ -134,6 +162,23 @@
         return;
       }
 
+      // クリップボード書込は popup 自身で行う。offscreen / content script では
+      // document.hasFocus() が常に false で navigator.clipboard.write が
+      // 「Document is not focused.」で必ず失敗するため、user activation を保持する
+      // popup context へ書込を一本化している。
+      if (result.clipboardObjectUrl) {
+        const clipboardObjectUrl = result.clipboardObjectUrl;
+        try {
+          const writeResult = await writeClipboardFromUrl(clipboardObjectUrl);
+          result.clipboardStatus = writeResult.ok ? 'copied' : 'failed';
+          result.clipboardError = writeResult.error || null;
+        } finally {
+          // 成否に関わらず blob URL は不要。offscreen 側の 60 秒タイマーは保険にする。
+          result.clipboardObjectUrl = null;
+          await revokeOffscreenObjectUrl(clipboardObjectUrl);
+        }
+      }
+
       const successStatus = buildSuccessStatus(result);
       setStatus(successStatus.message, successStatus.tone);
     } catch (error) {
@@ -175,6 +220,42 @@
     const enableDecorations = elements.timestampEnabled.checked || hasFooterText;
     elements.timestampStyle.disabled = !enableDecorations;
     elements.timestampSize.disabled = !enableDecorations;
+  }
+
+  async function writeClipboardFromUrl(url) {
+    if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
+      return { ok: false, error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。') };
+    }
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+      }
+      const blob = await response.blob();
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      return { ok: true };
+    } catch (error) {
+      // DOMException 等の英語メッセージは normalizeUserMessage で fallback に丸められるため原文を console に残す。
+      console.error('EvidenceShot: clipboard write failed in popup', error?.name, error?.message);
+      return {
+        ok: false,
+        error: normalizeUserMessage(
+          error?.message,
+          'errClipboardWriteFailed',
+          'クリップボードへのコピーに失敗しました。'
+        ),
+      };
+    }
+  }
+
+  async function revokeOffscreenObjectUrl(url) {
+    if (typeof url !== 'string' || !url) {
+      return;
+    }
+    await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP,
+      downloadUrl: url,
+    }).catch(() => undefined);
   }
 
   function buildSuccessStatus(result) {
@@ -230,13 +311,20 @@
         ? t('popupNoteShortcutCurrent', `ショートカット: ${shortcut}`, [shortcut])
         : t(
             'popupNoteShortcutUnassigned',
-            'ショートカットは未設定です。Chrome の拡張機能ショートカット設定で割り当てできます。'
+            'ショートカットは未設定です。下のボタンから設定画面を開けます。'
           );
+      // 未設定 (= 空文字 / undefined) のときだけ設定誘導ボタンを出す。
+      // Chromium の挙動で unpacked 拡張機能のリロード時に suggested_key が
+      // reset されるケースがあり、一般ユーザーは復旧経路を知らないため。
+      if (elements.shortcutSetup) {
+        elements.shortcutSetup.hidden = Boolean(shortcut);
+      }
     } catch {
       elements.shortcutNote.textContent = t(
         'popupNoteShortcutDefault',
         'ショートカット候補: Ctrl+Shift+Y'
       );
+      // 取得失敗時はボタン状態を変えない (hidden のまま)。
     }
   }
 

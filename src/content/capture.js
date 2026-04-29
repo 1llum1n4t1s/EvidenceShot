@@ -3,7 +3,11 @@
   // CONTROLLER_VERSION: 旧 inject 済みインスタンスとの不整合検知用。
   // collectFixedElements の Shadow DOM 走査追加 / グローバル名前空間リネーム /
   // moveToCaptureStep の動的ロード警告で挙動変化があったため 3 → 4 にインクリメント。
-  const CONTROLLER_VERSION = 4;
+  // CLIPBOARD_COPY_FROM_URL ハンドラ追加 (ショートカット経由のクリップボードコピー
+  // を active tab の content script で実行するため) で 4 → 5。
+  // HTTP ページ向け execCommand fallback 追加で 5 → 6。
+  // fallback のサイズ上限と状態分離で 6 → 7。
+  const CONTROLLER_VERSION = 7;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -17,15 +21,15 @@
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const Constants = globalThis.EvidenceShotConstants;
   const { MESSAGE_TYPES } = Constants;
+  const CAPTURE_SESSION_TTL_MS = Constants.CAPTURE_SESSION_TTL_MS || 10 * 60 * 1000;
+  const MAX_HTML_CLIPBOARD_BYTES = Constants.MAX_HTML_CLIPBOARD_BYTES || 8 * 1024 * 1024;
+  const MAX_TILE_CANVAS_AREA = Constants.MAX_TILE_CANVAS_AREA || 67108864;
   const state = {
     captureSession: null,
   };
   const MAX_MAIN_COLUMN_SCAN_NODES = 1800;
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
-  // background の CAPTURE_LOCK_TTL_MS と意味的に揃えてあること (両者ペアで運用)。
-  // ロックが切れる頃にはセッションも無効化される必要があるため、片方を変えるなら両方変える。
-  const CAPTURE_SESSION_TTL_MS = 10 * 60 * 1000;
   const POINTER_POSITION_MAX_AGE_MS = 30_000;
   const pointerPositionEvents = ['pointermove', 'pointerdown', 'mousemove', 'mousedown'];
   let lastPointerPosition = null;
@@ -52,6 +56,9 @@
         restoreCaptureState(message.payload?.sessionId);
         sendResponse({ ok: true });
         return undefined;
+      case MESSAGE_TYPES.CLIPBOARD_COPY_FROM_URL:
+        respondAsync(copyClipboardFromUrl(message.payload?.url), sendResponse);
+        return true;
       default:
         return undefined;
     }
@@ -229,6 +236,135 @@
     state.captureSession = null;
   }
 
+  // ショートカット経由の撮影完了後に SW から呼ばれる。popup を経由しないため
+  // web page (= content script の document) は focus を保ったまま。
+  // navigator.clipboard.write は document.hasFocus() が true ならば成功する。
+  // ただし http:// ページでは secure context ではないため Async Clipboard が
+  // 公開されない。そこで HTML 画像コピーの execCommand fallback も持つ。
+  // url は offscreen が URL.createObjectURL した chrome-extension:// 配下の Blob URL で、
+  // content script は同一拡張機能 origin で動作するため fetch でこの URL を読める。
+  async function copyClipboardFromUrl(url) {
+    if (typeof url !== 'string' || !url) {
+      return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+    }
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+      }
+      const blob = await response.blob();
+      return await copyImageBlobToClipboard(blob);
+    } catch (error) {
+      // DOMException など Chrome ネイティブの英語メッセージは normalizeUserMessage で
+      // fallback 文言へ畳み込まれるため、原文は console.error に残す。
+      // (例: ユーザーがアドレスバーに focus を移していると "Document is not focused." で失敗)
+      console.error('EvidenceShot: clipboard write failed in content', error?.name, error?.message);
+      return {
+        ok: false,
+        error: normalizeUserMessage(
+          error?.message,
+          'errClipboardWriteFailed',
+          'クリップボードへのコピーに失敗しました。'
+        ),
+      };
+    }
+  }
+
+  async function copyImageBlobToClipboard(blob) {
+    if (navigator.clipboard?.write && typeof ClipboardItem === 'function') {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        return { ok: true, clipboardStatus: 'copied' };
+      } catch (error) {
+        // focus 喪失などで失敗した場合も、旧 API の HTML コピーを最後に試す。
+        console.warn('EvidenceShot: async clipboard write failed in content', error?.name, error?.message);
+      }
+    }
+
+    return await copyImageBlobAsHtml(blob);
+  }
+
+  async function copyImageBlobAsHtml(blob) {
+    if (typeof document.execCommand !== 'function') {
+      return { ok: false, error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。') };
+    }
+    if (blob.size > MAX_HTML_CLIPBOARD_BYTES) {
+      return {
+        ok: false,
+        error: t(
+          'errClipboardHtmlFallbackTooLarge',
+          'クリップボード互換コピーには画像が大きすぎます。'
+        ),
+      };
+    }
+
+    const dataUrl = await readBlobAsDataUrl(blob);
+    if (!dataUrl) {
+      return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+    }
+
+    const editable = document.createElement('textarea');
+    editable.value = ' ';
+    editable.setAttribute('readonly', 'readonly');
+    editable.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+
+    const selection = window.getSelection?.();
+    const ranges = [];
+    if (selection) {
+      for (let index = 0; index < selection.rangeCount; index += 1) {
+        ranges.push(selection.getRangeAt(index).cloneRange());
+      }
+    }
+    const activeElement = document.activeElement;
+    let copied = false;
+
+    const onCopy = (event) => {
+      if (!event.clipboardData) {
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.clipboardData.setData('text/html', `<img src="${dataUrl}" alt="">`);
+      event.clipboardData.setData('text/plain', '');
+      copied = true;
+    };
+
+    try {
+      document.addEventListener('copy', onCopy, true);
+      (document.body || document.documentElement).appendChild(editable);
+      editable.focus({ preventScroll: true });
+      editable.select();
+      const commandSucceeded = document.execCommand('copy');
+      return commandSucceeded && copied
+        ? { ok: true, clipboardStatus: 'copied_html_fallback' }
+        : { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+    } finally {
+      document.removeEventListener('copy', onCopy, true);
+      editable.remove();
+      if (selection) {
+        selection.removeAllRanges();
+        ranges.forEach((range) => selection.addRange(range));
+      }
+      if (activeElement && typeof activeElement.focus === 'function') {
+        try {
+          activeElement.focus({ preventScroll: true });
+        } catch {
+          // 元の要素が消えている場合でもコピー結果は維持する。
+        }
+      }
+    }
+  }
+
+  function readBlobAsDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(reader.error || new Error('Failed to read clipboard image.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+
   // body または html が overflow: hidden/clip になっているとウィンドウスクロールが
   // 効かず、スクロール連結撮影が同一位置の繰り返し撮影になる（モーダル開放中の
   // Gmail / Linear 等で発生）。ここで検知し、scrollingMode を viewport にフォールバック。
@@ -272,7 +408,7 @@
     const cropWidthDevice = Math.max(1, Math.round(cropRect.width * dpr));
     const maxCanvasCssHeightByArea = Math.max(
       1,
-      Math.floor(Constants.MAX_CANVAS_AREA / cropWidthDevice / Math.max(dpr, 1))
+      Math.floor(MAX_TILE_CANVAS_AREA / cropWidthDevice / Math.max(dpr, 1))
     );
     const maxTileCssHeight = Math.min(maxCanvasCssEdge, maxCanvasCssHeightByArea);
     const positions = [];
@@ -370,11 +506,14 @@
       '[role="feed"]',
     ];
 
-    selectorCandidates.forEach((selector) => {
-      document.querySelectorAll(selector).forEach((element) => {
-        pushCandidate(element);
-      });
-    });
+    let semanticCandidateCount = 0;
+    for (const element of document.querySelectorAll(selectorCandidates.join(','))) {
+      if (semanticCandidateCount >= MAX_MAIN_COLUMN_SCAN_NODES) {
+        break;
+      }
+      pushCandidate(element);
+      semanticCandidateCount += 1;
+    }
 
     let bestCandidate = getBestCandidate();
     if (!bestCandidate) {

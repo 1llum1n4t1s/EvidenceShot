@@ -11,6 +11,7 @@ const {
   CAPTURE_HISTORY_KEY,
   CAPTURE_HISTORY_MAX,
   CAPTURE_LOCK_KEY,
+  MAX_CAPTURE_DATA_URL_LENGTH,
   MESSAGE_TYPES,
 } = globalThis.EvidenceShotConstants;
 const Shared = globalThis.EvidenceShotShared;
@@ -131,6 +132,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case MESSAGE_TYPES.CAPTURE_FROM_POPUP:
       respondAsync(runCaptureWorkflowWithHistory(message.tabId), sendResponse);
       return true;
+    case MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP:
+      respondAsync(
+        revokeOffscreenDownloadUrl(message.downloadUrl).then(() => ({ ok: true })),
+        sendResponse
+      );
+      return true;
     default:
       return undefined;
   }
@@ -167,6 +174,18 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   const result = tab?.id
     ? await runCaptureWorkflowWithHistory(tab.id)
     : { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
+
+  // ショートカット経由は popup を開かないため web page が focus を保ったままになる。
+  // この条件下では active タブの content script で navigator.clipboard.write が成功するため、
+  // SW から content script へクリップボード書込を委譲する。
+  // (popup 経由では popup 自身が書込を担当し、このパスは通らない)
+  if (result?.clipboardObjectUrl && tab?.id) {
+    const clipResult = await delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl);
+    result.clipboardStatus = clipResult.ok ? (clipResult.clipboardStatus || 'copied') : 'failed';
+    result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
+    await revokeOffscreenDownloadUrl(result.clipboardObjectUrl).catch(() => undefined);
+    result.clipboardObjectUrl = null;
+  }
 
   await showCommandCaptureBadge(result);
   if (!result?.ok) {
@@ -268,13 +287,16 @@ async function runCaptureWorkflow(tabId) {
     };
   }
 
-  const settings = await Shared.loadSettings();
-  // sessionId の予測可能性を避けるため Math.random ではなく CSPRNG を用いる。
-  const sessionId = `capture-${Date.now()}-${generateSecureToken(8)}`;
-  const sessionSecret = generateSecureToken();
+  let sessionId = null;
+  let sessionSecret = null;
   let offscreenSessionStarted = false;
 
   try {
+    const settings = await Shared.loadSettings();
+    // sessionId の予測可能性を避けるため Math.random ではなく CSPRNG を用いる。
+    sessionId = `capture-${Date.now()}-${generateSecureToken(8)}`;
+    sessionSecret = generateSecureToken();
+
     await ensureContentScriptOnTab(tabId);
 
     const prepareResult = await chrome.tabs.sendMessage(tabId, {
@@ -307,6 +329,10 @@ async function runCaptureWorkflow(tabId) {
       ? (tiles.length === 1 ? 'pending' : 'skipped_multipart')
       : 'disabled';
     let clipboardError = null;
+    // popup へ伝搬する PNG blob URL。popup 側で fetch + clipboard.write する。
+    // offscreen / content script では document.hasFocus() が常に false で書込失敗するため、
+    // user activation を保持する popup context に書込を一本化している。
+    let clipboardObjectUrl = null;
     let lastCapturedAt = 0;
     let lastCapture = null;
     let captureDone = false;
@@ -397,6 +423,12 @@ async function runCaptureWorkflow(tabId) {
           const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
             format: 'png',
           });
+          if (typeof dataUrl === 'string' && dataUrl.length > MAX_CAPTURE_DATA_URL_LENGTH) {
+            throw new Error(t(
+              'errCaptureSliceTooLarge',
+              '撮影データが大きすぎます。ウィンドウを小さくして再度お試しください。'
+            ));
+          }
           lastCapturedAt = Date.now();
           await ensureTargetTabStillActive(tabId, tab.windowId);
 
@@ -438,14 +470,18 @@ async function runCaptureWorkflow(tabId) {
       }
 
       const finalizeResult = await finalizeOffscreenCaptureSession(sessionId, sessionSecret);
-      offscreenSessionStarted = false;
       if (!finalizeResult.ok) {
         return finalizeResult;
       }
+      offscreenSessionStarted = false;
       downloadedFiles.push(finalizeResult.fileName);
       if (finalizeResult.clipboardStatus) {
         clipboardStatus = finalizeResult.clipboardStatus;
         clipboardError = finalizeResult.clipboardError || null;
+      }
+      // pending_in_content の場合は popup で書込みする。clipboardObjectUrl は popup へそのまま伝搬。
+      if (finalizeResult.clipboardObjectUrl) {
+        clipboardObjectUrl = finalizeResult.clipboardObjectUrl;
       }
       if (Number.isInteger(finalizeResult.downloadId)) {
         downloadIds.push(finalizeResult.downloadId);
@@ -467,6 +503,8 @@ async function runCaptureWorkflow(tabId) {
       downloadStatus: 'started',
       clipboardStatus,
       clipboardError,
+      // pending_in_content のときに popup が fetch + clipboard.write する。null のときは書込なし。
+      clipboardObjectUrl,
       downloadId: downloadIds[0] || null,
       downloadIds,
     };
@@ -479,16 +517,18 @@ async function runCaptureWorkflow(tabId) {
       error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
     };
   } finally {
-    if (offscreenSessionStarted) {
+    if (offscreenSessionStarted && sessionId && sessionSecret) {
       await abortOffscreenCaptureSession(sessionId, sessionSecret);
     }
 
-    await chrome.tabs
-      .sendMessage(tabId, {
-        type: MESSAGE_TYPES.CAPTURE_RESTORE_V2,
-        payload: { sessionId },
-      })
-      .catch(() => undefined);
+    if (sessionId) {
+      await chrome.tabs
+        .sendMessage(tabId, {
+          type: MESSAGE_TYPES.CAPTURE_RESTORE_V2,
+          payload: { sessionId },
+        })
+        .catch(() => undefined);
+    }
 
     // Web Locks ベースのロック解放。release は idempotent。
     try { acquireResult.release(); } catch { /* no-op */ }
@@ -525,6 +565,9 @@ async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab,
       url: tab.url,
       title: tab.title || '',
       part: part || null,
+      // chrome.runtime.getManifest() は offscreen document では提供されない
+      // (TypeError: not a function) ため、SW 側で解決して meta に積む。
+      extensionVersion: chrome.runtime.getManifest().version,
     },
   });
 
@@ -574,6 +617,10 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
 
   try {
     const downloadId = await downloadCapture(downloadUrl, result.fileName);
+    if (result.clipboardStatus === 'failed') {
+      // offscreen 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
+      console.warn('EvidenceShot: clipboard prepare failed in offscreen', result.clipboardError);
+    }
     return {
       ok: true,
       fileName: result.fileName,
@@ -581,6 +628,8 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
       downloadStatus: 'started',
       clipboardStatus: result.clipboardStatus || 'disabled',
       clipboardError: result.clipboardError || null,
+      // 'pending_in_content' のとき、SW (runCaptureWorkflow) が content script にコピー依頼するための URL。
+      clipboardObjectUrl: result.clipboardObjectUrl || null,
       downloadId,
     };
   } catch (error) {
@@ -782,10 +831,68 @@ function generateSecureToken(byteLength = 16) {
 }
 
 async function ensureContentScriptOnTab(tabId) {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: CONTENT_SCRIPT_FILES,
-  });
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: CONTENT_SCRIPT_FILES,
+    });
+  } catch (error) {
+    // Chrome Web Store / chrome:// / view-source: などの特殊ページは scripting API で
+    // inject 不可。代表的な英語メッセージ:
+    //   "The extensions gallery cannot be scripted."
+    //   "Cannot access contents of url ..."
+    //   "Cannot access a chrome-extension:// URL"
+    //   "Cannot access a chrome:// URL"
+    //   "Missing host permission for the tab"
+    // これらを normalizeUserMessage に通すと「撮影に失敗しました。」に丸められて
+    // 真因が伝わらないため、ここで http/https 制限文言に統一して投げ直す。
+    const msg = String(error?.message || '');
+    if (
+      msg.includes('cannot be scripted') ||
+      msg.includes('Cannot access') ||
+      msg.includes('Missing host permission')
+    ) {
+      throw new Error(t(
+        'errPageNotCapturable',
+        'このページでは撮影できません。http / https のページで試してください。'
+      ));
+    }
+    throw error;
+  }
+}
+
+// ショートカット経由限定。active タブの content script (focus 保有) に PNG blob URL を
+// 渡してクリップボード書込を委譲する。popup 経由ではこの関数は呼ばれず、popup 自身が
+// clipboard.write を実行する (popup が focus を奪うため content script では失敗するため)。
+async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, {
+      type: MESSAGE_TYPES.CLIPBOARD_COPY_FROM_URL,
+      payload: { url: clipboardObjectUrl },
+    });
+    if (response?.ok) {
+      return { ok: true, clipboardStatus: response.clipboardStatus || 'copied' };
+    }
+    return {
+      ok: false,
+      error: normalizeUserMessage(
+        response?.error,
+        'errClipboardWriteFailed',
+        'クリップボードへのコピーに失敗しました。'
+      ),
+    };
+  } catch (error) {
+    // sendMessage 失敗 (タブ閉鎖、content script 不在 等) は SW コンソールへ原文を残す。
+    console.warn('EvidenceShot: clipboard delegation failed', error?.message);
+    return {
+      ok: false,
+      error: normalizeUserMessage(
+        error?.message,
+        'errClipboardWriteFailed',
+        'クリップボードへのコピーに失敗しました。'
+      ),
+    };
+  }
 }
 
 async function ensureTargetTabStillActive(tabId, windowId) {
@@ -851,4 +958,3 @@ function revokePendingDownloadUrl(downloadId) {
   pendingDownloadUrls.delete(downloadId);
   revokeOffscreenDownloadUrl(downloadUrl).catch(() => undefined);
 }
-

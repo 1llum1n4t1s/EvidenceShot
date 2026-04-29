@@ -26,6 +26,15 @@
   "popupLabelFormat": {
     "message": "File Format"
   },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
   "popupLabelFileNamePrefix": {
     "message": "Filename Prefix"
   },
@@ -71,10 +80,16 @@
     }
   },
   "popupNoteShortcutUnassigned": {
-    "message": "No shortcut is assigned. You can assign one in Chrome extension shortcuts."
+    "message": "No shortcut is assigned. Click the button below to open the setup page."
   },
   "popupNoteShortcutDefault": {
     "message": "Suggested shortcut: Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "Set up shortcut"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "Could not open the shortcut settings page."
   },
   "popupLabelTimestampStyle": {
     "message": "Timestamp Style"

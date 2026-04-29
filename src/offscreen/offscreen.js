@@ -3,7 +3,7 @@
   const StampRenderer = globalThis.EvidenceShotStampRenderer;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const { MAX_CANVAS_EDGE, MAX_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.EvidenceShotConstants;
+  const { MAX_CANVAS_EDGE, MAX_TILE_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.EvidenceShotConstants;
   const captureSessions = new Map();
   const downloadUrlRevokeTimers = new Map();
   const MIN_TOKEN_LENGTH = 24;
@@ -155,7 +155,7 @@
       canvasHeight < 1 ||
       canvasWidth > MAX_CANVAS_EDGE ||
       canvasHeight > MAX_CANVAS_EDGE ||
-      canvasWidth * canvasHeight > MAX_CANVAS_AREA
+      canvasWidth * canvasHeight > MAX_TILE_CANVAS_AREA
     ) {
       return {
         ok: false,
@@ -290,16 +290,26 @@
         StampRenderer.drawFooterLabel(context, canvas, settings.footerText, settings.timestampStyle, settings.timestampSize);
       }
 
+      // クリップボード書き込みは offscreen document からは実施できない
+      // (document.hasFocus() が常に false → navigator.clipboard.write は
+      // 「Document is not focused.」で必ず失敗する)。本実装では PNG blob URL
+      // を生成して content script に委譲する流れに統一した。ここでは
+      // 「PNG blob を準備して URL を作る」だけで、書き込み成否は判定不能なので
+      // status は 'pending_in_content' (content script で書込予定) を返す。
       let clipboardBlob = null;
-      let clipboardResult = { status: settings.copyToClipboard ? 'failed' : 'disabled', error: null };
+      let clipboardObjectUrl = null;
+      let clipboardResult = { status: settings.copyToClipboard ? 'pending_in_content' : 'disabled', error: null };
       if (settings.copyToClipboard) {
         try {
           const rawClip = await canvasToBlob(canvas, 'image/png');
-          // クリップボードに渡す PNG にも改ざん検知メタデータを埋める。
           clipboardBlob = await embedEvidenceMetadataIntoPng(rawClip, meta);
-          clipboardResult = await copyImageBlobToClipboard(clipboardBlob);
+          clipboardObjectUrl = URL.createObjectURL(clipboardBlob);
+          // 書込側で fetch されないまま放置されるリスクに備えた保険 revoke。
+          // SW 側は完了通知が来たら即 revoke を依頼する想定。
+          scheduleDownloadUrlRevoke(clipboardObjectUrl);
         } catch (error) {
           clipboardBlob = null;
+          clipboardObjectUrl = null;
           clipboardResult = {
             status: 'failed',
             error: normalizeUserMessage(
@@ -353,6 +363,8 @@
         savedAsFormat,
         clipboardStatus: clipboardResult.status,
         clipboardError: clipboardResult.error,
+        // pending_in_content の場合のみ意味のある URL。content script で fetch して clipboard.write に渡す。
+        clipboardObjectUrl,
       };
     } catch (error) {
       return {
@@ -402,37 +414,6 @@
       URL.revokeObjectURL(downloadUrl);
     } catch {
       // no-op
-    }
-  }
-
-  async function copyImageBlobToClipboard(blob) {
-    // Chrome 117+ (manifest minimum_chrome_version) では offscreen document でも
-    // navigator.clipboard.write が利用可能。execCommand フォールバックは
-    // (1) Base64 dataURL 化でメモリが膨張する、(2) text/html インジェクション経路を
-    // 許す、という難点があり、対象 Chrome バージョンでは不要なので削除している。
-    if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
-      return {
-        status: 'failed',
-        error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。'),
-      };
-    }
-
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'image/png': blob,
-        }),
-      ]);
-      return { status: 'copied', error: null };
-    } catch (error) {
-      return {
-        status: 'failed',
-        error: normalizeUserMessage(
-          error?.message,
-          'errClipboardWriteFailed',
-          'クリップボードへのコピーに失敗しました。'
-        ),
-      };
     }
   }
 
@@ -562,7 +543,7 @@
   // PNG iTXt チャンクとして以下を埋め込む:
   //   EvidenceShot:Version       拡張機能バージョン
   //   EvidenceShot:Timestamp     撮影時刻 (ISO 8601, UTC)
-  //   EvidenceShot:URL           ページ URL
+  //   EvidenceShot:URL           クエリとハッシュを除いたページ URL
   //   EvidenceShot:Title         ページタイトル
   //   EvidenceShot:IdatHashSha256  IDAT チャンクの結合バイト列の SHA-256
   // メタデータは IEND の前に挿入する。IDAT のハッシュを別フィールドに記録するため、
@@ -614,35 +595,45 @@
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
 
-      const manifest = chrome.runtime.getManifest();
+      // chrome.runtime.getManifest() は offscreen document では未提供 (TypeError)。
+      // SW 側で解決した値を meta.extensionVersion 経由で受け取る。
       const fields = [
-        ['EvidenceShot:Version', manifest.version || ''],
+        ['EvidenceShot:Version', String(meta?.extensionVersion || '')],
         ['EvidenceShot:Timestamp', new Date().toISOString()],
-        ['EvidenceShot:URL', String(meta?.url || '')],
-        ['EvidenceShot:Title', String(meta?.title || '')],
+        ['EvidenceShot:URL', redactEvidenceUrl(meta?.url)],
+        ['EvidenceShot:Title', truncateMetadataField(meta?.title, 512)],
         ['EvidenceShot:IdatHashSha256', hashHex],
       ];
 
       const newChunks = fields.map(([key, value]) => buildPngITextChunk(key, value));
 
-      const before = bytes.subarray(0, iendStart);
-      const iend = bytes.subarray(iendStart);
-      const insertSize = newChunks.reduce((sum, c) => sum + c.length, 0);
-      const result = new Uint8Array(before.length + insertSize + iend.length);
-      result.set(before, 0);
-      let pos = before.length;
-      for (const c of newChunks) {
-        result.set(c, pos);
-        pos += c.length;
-      }
-      result.set(iend, pos);
-
-      return new Blob([result], { type: 'image/png' });
+      return new Blob([
+        bytes.subarray(0, iendStart),
+        ...newChunks,
+        bytes.subarray(iendStart),
+      ], { type: 'image/png' });
     } catch (error) {
       // メタ埋め込みの失敗は撮影成功自体を妨げない (画像はそのまま返す)。
       console.warn('EvidenceShot: failed to embed PNG metadata', error);
       return blob;
     }
+  }
+
+  function redactEvidenceUrl(rawUrl) {
+    if (typeof rawUrl !== 'string' || !rawUrl) {
+      return '';
+    }
+    try {
+      const parsed = new URL(rawUrl);
+      return truncateMetadataField(`${parsed.origin}${parsed.pathname}`, 2048);
+    } catch {
+      return '';
+    }
+  }
+
+  function truncateMetadataField(value, maxLength) {
+    const text = typeof value === 'string' ? value : String(value || '');
+    return text.slice(0, maxLength);
   }
 
   // PNG iTXt チャンク: keyword \0 [compFlag][compMethod] \0 \0 text(UTF-8)
