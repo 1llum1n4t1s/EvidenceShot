@@ -214,7 +214,7 @@
       case 'film':
         return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
       case 'minimal':
-        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}`;
+        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
       case 'japanese':
       default:
         return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
