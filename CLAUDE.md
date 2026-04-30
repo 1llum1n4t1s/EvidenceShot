@@ -109,7 +109,7 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 `/vava` スキルでバージョンアップ〜リリースまで一括処理する。手動でやる場合の必須手順:
 
-1. **バージョン同期 (3 ファイル)**: `manifest.json` / `package.json` / `README.md` を必ず揃える
+1. **バージョン同期 (4 ファイル)**: `manifest.json` / `package.json` / `package-lock.json` / `README.md` を必ず揃える。`package-lock.json` は root 直下の `version` と `packages.""` 配下の `version` の 2 箇所。これを忘れると CI の `npm ci --ignore-scripts` が `EUSAGE` で落ち、後段の `package-lock.json` バージョン明示チェックでも弾かれる (v1.0.10 で踏んだ罠)
 2. **`release/x.y.z` ブランチ名 = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで一致を確認
 3. main にコミット → push → `release/x.y.z` ブランチを作成して push
 4. **`release/**` への push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由で auto-publish
