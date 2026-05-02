@@ -1,6 +1,6 @@
 {
   "name": "evidence-shot",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "type": "commonjs",
   "description": "EvidenceShot: Web テスト時の証跡用に、ポップアップから表示領域やスクロール連結撮影を行い、多彩なタイムスタンプ付きで保存できる Chrome スクリーンショット拡張機能",
   "scripts": {

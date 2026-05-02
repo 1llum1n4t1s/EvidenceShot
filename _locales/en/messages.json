@@ -320,5 +320,11 @@
   },
   "errClipboardUnsupported": {
     "message": "Clipboard copy is not supported in this environment."
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "Image is too large for clipboard compatibility copy."
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "Capture data is too large. Please shrink the window and try again."
   }
 }

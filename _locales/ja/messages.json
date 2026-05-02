@@ -320,5 +320,11 @@
   },
   "errClipboardUnsupported": {
     "message": "この環境ではクリップボードコピーを利用できません。"
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "クリップボード互換コピーには画像が大きすぎます。"
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "撮影データが大きすぎます。ウィンドウを小さくして再度お試しください。"
   }
 }

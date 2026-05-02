@@ -20,10 +20,7 @@
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const Constants = globalThis.EvidenceShotConstants;
-  const { MESSAGE_TYPES } = Constants;
-  const CAPTURE_SESSION_TTL_MS = Constants.CAPTURE_SESSION_TTL_MS || 10 * 60 * 1000;
-  const MAX_HTML_CLIPBOARD_BYTES = Constants.MAX_HTML_CLIPBOARD_BYTES || 8 * 1024 * 1024;
-  const MAX_TILE_CANVAS_AREA = Constants.MAX_TILE_CANVAS_AREA || 67108864;
+  const { MESSAGE_TYPES, CLIPBOARD_STATUS, CAPTURE_SESSION_TTL_MS, MAX_HTML_CLIPBOARD_BYTES, MAX_TILE_CANVAS_AREA } = Constants;
   const state = {
     captureSession: null,
   };
@@ -244,7 +241,7 @@
   // url は offscreen が URL.createObjectURL した chrome-extension:// 配下の Blob URL で、
   // content script は同一拡張機能 origin で動作するため fetch でこの URL を読める。
   async function copyClipboardFromUrl(url) {
-    if (typeof url !== 'string' || !url) {
+    if (typeof url !== 'string' || !url || !url.startsWith('blob:')) {
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     }
     try {
@@ -274,7 +271,7 @@
     if (navigator.clipboard?.write && typeof ClipboardItem === 'function') {
       try {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        return { ok: true, clipboardStatus: 'copied' };
+        return { ok: true, clipboardStatus: Constants.CLIPBOARD_STATUS.COPIED };
       } catch (error) {
         // focus 喪失などで失敗した場合も、旧 API の HTML コピーを最後に試す。
         console.warn('EvidenceShot: async clipboard write failed in content', error?.name, error?.message);
@@ -336,7 +333,7 @@
       editable.select();
       const commandSucceeded = document.execCommand('copy');
       return commandSucceeded && copied
-        ? { ok: true, clipboardStatus: 'copied_html_fallback' }
+        ? { ok: true, clipboardStatus: Constants.CLIPBOARD_STATUS.COPIED_HTML_FALLBACK }
         : { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     } finally {
       document.removeEventListener('copy', onCopy, true);

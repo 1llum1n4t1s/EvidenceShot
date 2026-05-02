@@ -5,6 +5,7 @@
     CAPTURE_MODE_OPTIONS,
     FORMAT_OPTIONS,
     MESSAGE_TYPES,
+    CLIPBOARD_STATUS,
   } = globalThis.EvidenceShotConstants;
   const Shared = globalThis.EvidenceShotShared;
   const t = Shared.t;
@@ -170,7 +171,7 @@
         const clipboardObjectUrl = result.clipboardObjectUrl;
         try {
           const writeResult = await writeClipboardFromUrl(clipboardObjectUrl);
-          result.clipboardStatus = writeResult.ok ? 'copied' : 'failed';
+          result.clipboardStatus = writeResult.ok ? CLIPBOARD_STATUS.COPIED : CLIPBOARD_STATUS.FAILED;
           result.clipboardError = writeResult.error || null;
         } finally {
           // 成否に関わらず blob URL は不要。offscreen 側の 60 秒タイマーは保険にする。
@@ -259,7 +260,7 @@
   }
 
   function buildSuccessStatus(result) {
-    if (result?.clipboardStatus === 'copied') {
+    if (result?.clipboardStatus === CLIPBOARD_STATUS.COPIED || result?.clipboardStatus === CLIPBOARD_STATUS.COPIED_HTML_FALLBACK) {
       return {
         message: t(
           'popupStatusSavedAndCopied',
@@ -270,7 +271,7 @@
       };
     }
 
-    if (result?.clipboardStatus === 'failed') {
+    if (result?.clipboardStatus === CLIPBOARD_STATUS.FAILED) {
       return {
         message: t(
           'popupStatusSavedCopyFailed',
@@ -281,7 +282,7 @@
       };
     }
 
-    if (result?.clipboardStatus === 'skipped_multipart') {
+    if (result?.clipboardStatus === CLIPBOARD_STATUS.SKIPPED_MULTIPART) {
       return {
         message: t(
           'popupStatusSavedCopySkippedMultipart',

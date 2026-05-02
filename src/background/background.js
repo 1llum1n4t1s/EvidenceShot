@@ -13,6 +13,7 @@ const {
   CAPTURE_LOCK_KEY,
   MAX_CAPTURE_DATA_URL_LENGTH,
   MESSAGE_TYPES,
+  CLIPBOARD_STATUS,
 } = globalThis.EvidenceShotConstants;
 const Shared = globalThis.EvidenceShotShared;
 const t = Shared.t;
@@ -181,7 +182,7 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   // (popup 経由では popup 自身が書込を担当し、このパスは通らない)
   if (result?.clipboardObjectUrl && tab?.id) {
     const clipResult = await delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl);
-    result.clipboardStatus = clipResult.ok ? (clipResult.clipboardStatus || 'copied') : 'failed';
+    result.clipboardStatus = clipResult.ok ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED) : CLIPBOARD_STATUS.FAILED;
     result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
     await revokeOffscreenDownloadUrl(result.clipboardObjectUrl).catch(() => undefined);
     result.clipboardObjectUrl = null;
@@ -249,7 +250,7 @@ async function appendCaptureHistory(entry) {
 }
 
 async function runCaptureWorkflow(tabId) {
-  if (!tabId) {
+  if (!Number.isInteger(tabId) || tabId < 0) {
     return { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
   }
 
@@ -326,8 +327,8 @@ async function runCaptureWorkflow(tabId) {
     const downloadedFiles = [];
     const downloadIds = [];
     let clipboardStatus = settings.copyToClipboard
-      ? (tiles.length === 1 ? 'pending' : 'skipped_multipart')
-      : 'disabled';
+      ? (tiles.length === 1 ? CLIPBOARD_STATUS.PENDING : CLIPBOARD_STATUS.SKIPPED_MULTIPART)
+      : CLIPBOARD_STATUS.DISABLED;
     let clipboardError = null;
     // popup へ伝搬する PNG blob URL。popup 側で fetch + clipboard.write する。
     // offscreen / content script では document.hasFocus() が常に false で書込失敗するため、
@@ -617,7 +618,7 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
 
   try {
     const downloadId = await downloadCapture(downloadUrl, result.fileName);
-    if (result.clipboardStatus === 'failed') {
+    if (result.clipboardStatus === CLIPBOARD_STATUS.FAILED) {
       // offscreen 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
       console.warn('EvidenceShot: clipboard prepare failed in offscreen', result.clipboardError);
     }
@@ -626,7 +627,7 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
       fileName: result.fileName,
       savedAsFormat: result.savedAsFormat,
       downloadStatus: 'started',
-      clipboardStatus: result.clipboardStatus || 'disabled',
+      clipboardStatus: result.clipboardStatus || CLIPBOARD_STATUS.DISABLED,
       clipboardError: result.clipboardError || null,
       // 'pending_in_content' のとき、SW (runCaptureWorkflow) が content script にコピー依頼するための URL。
       clipboardObjectUrl: result.clipboardObjectUrl || null,
@@ -734,25 +735,25 @@ async function isOffscreenDocumentCompatible() {
 async function recreateOffscreenDocument() {
   if (!creatingOffscreenDocumentPromise) {
     creatingOffscreenDocumentPromise = (async () => {
-      if ('closeDocument' in chrome.offscreen) {
-        try {
-          await chrome.offscreen.closeDocument();
-        } catch (error) {
-          if (!String(error?.message || '').includes('No document')) {
-            console.warn('EvidenceShot: failed to recreate offscreen document:', error.message);
+      try {
+        if ('closeDocument' in chrome.offscreen) {
+          try {
+            await chrome.offscreen.closeDocument();
+          } catch (error) {
+            if (!String(error?.message || '').includes('No document')) {
+              console.warn('EvidenceShot: failed to recreate offscreen document:', error.message);
+            }
           }
         }
-      }
 
-      await createOffscreenDocument();
+        await createOffscreenDocument();
+      } finally {
+        creatingOffscreenDocumentPromise = null;
+      }
     })();
   }
 
-  try {
-    await creatingOffscreenDocumentPromise;
-  } finally {
-    creatingOffscreenDocumentPromise = null;
-  }
+  await creatingOffscreenDocumentPromise;
 }
 
 async function createOffscreenDocument() {
@@ -871,7 +872,7 @@ async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
       payload: { url: clipboardObjectUrl },
     });
     if (response?.ok) {
-      return { ok: true, clipboardStatus: response.clipboardStatus || 'copied' };
+      return { ok: true, clipboardStatus: response.clipboardStatus || CLIPBOARD_STATUS.COPIED };
     }
     return {
       ok: false,

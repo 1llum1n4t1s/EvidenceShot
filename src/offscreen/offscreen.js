@@ -3,9 +3,10 @@
   const StampRenderer = globalThis.EvidenceShotStampRenderer;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
-  const { MAX_CANVAS_EDGE, MAX_TILE_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.EvidenceShotConstants;
+  const { MAX_CANVAS_EDGE, MAX_TILE_CANVAS_AREA, OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES, CLIPBOARD_STATUS } = globalThis.EvidenceShotConstants;
   const captureSessions = new Map();
   const downloadUrlRevokeTimers = new Map();
+  const textEncoder = new TextEncoder();
   const MIN_TOKEN_LENGTH = 24;
   // Chrome 拡張機能の SW (background) が offscreen を createDocument する際、
   // URL クエリ `?token=...` で channelToken を埋め込む。offscreen は起動直後に
@@ -128,6 +129,11 @@
       releaseCanvas(session?.canvas);
     }
     captureSessions.clear();
+    for (const [url, timer] of downloadUrlRevokeTimers) {
+      clearTimeout(timer);
+      try { URL.revokeObjectURL(url); } catch { /* no-op */ }
+    }
+    downloadUrlRevokeTimers.clear();
   }
 
   function beginCaptureSession(sessionId, sessionSecret, meta) {
@@ -298,7 +304,7 @@
       // status は 'pending_in_content' (content script で書込予定) を返す。
       let clipboardBlob = null;
       let clipboardObjectUrl = null;
-      let clipboardResult = { status: settings.copyToClipboard ? 'pending_in_content' : 'disabled', error: null };
+      let clipboardResult = { status: settings.copyToClipboard ? CLIPBOARD_STATUS.PENDING_IN_CONTENT : CLIPBOARD_STATUS.DISABLED, error: null };
       if (settings.copyToClipboard) {
         try {
           const rawClip = await canvasToBlob(canvas, 'image/png');
@@ -311,7 +317,7 @@
           clipboardBlob = null;
           clipboardObjectUrl = null;
           clipboardResult = {
-            status: 'failed',
+            status: CLIPBOARD_STATUS.FAILED,
             error: normalizeUserMessage(
               error?.message,
               'errClipboardWriteFailed',
@@ -418,6 +424,9 @@
   }
 
   async function createImageBitmapFromDataUrl(dataUrl) {
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      throw new Error(t('errCaptureDataInvalid', '撮影データが不正です。'));
+    }
     const response = await fetch(dataUrl);
     const blob = await response.blob();
     return createImageBitmap(blob);
@@ -638,9 +647,8 @@
 
   // PNG iTXt チャンク: keyword \0 [compFlag][compMethod] \0 \0 text(UTF-8)
   function buildPngITextChunk(keyword, text) {
-    const encoder = new TextEncoder();
-    const keywordBytes = encoder.encode(keyword);
-    const textBytes = encoder.encode(text);
+    const keywordBytes = textEncoder.encode(keyword);
+    const textBytes = textEncoder.encode(text);
     const data = new Uint8Array(keywordBytes.length + 5 + textBytes.length);
     let off = 0;
     data.set(keywordBytes, off); off += keywordBytes.length;
@@ -654,7 +662,7 @@
   }
 
   function buildPngChunk(type, data) {
-    const typeBytes = new TextEncoder().encode(type);
+    const typeBytes = textEncoder.encode(type);
     const buf = new Uint8Array(8 + data.length + 4);
     const dv = new DataView(buf.buffer);
     dv.setUint32(0, data.length);

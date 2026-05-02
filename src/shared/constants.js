@@ -31,6 +31,15 @@
       REVOKE_DOWNLOAD_URL: 'WTS_REVOKE_DOWNLOAD_URL',
       REVOKE_OBJECT_URL_FROM_POPUP: 'WTS_REVOKE_OBJECT_URL_FROM_POPUP',
     }),
+    CLIPBOARD_STATUS: Object.freeze({
+      COPIED: 'copied',
+      COPIED_HTML_FALLBACK: 'copied_html_fallback',
+      FAILED: 'failed',
+      SKIPPED_MULTIPART: 'skipped_multipart',
+      DISABLED: 'disabled',
+      PENDING: 'pending',
+      PENDING_IN_CONTENT: 'pending_in_content',
+    }),
     CONTENT_SCRIPT_FILES: [
       'src/shared/constants.js',
       'src/shared/utils.js',
