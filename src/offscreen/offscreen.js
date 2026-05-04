@@ -447,6 +447,7 @@
 
     const size = Math.max(18, Math.min(34, Math.round(24 * position.devicePixelRatio)));
     const scale = size / 24;
+    const cursorStyle = plan.cursor?.cursorStyle;
 
     context.save();
     context.translate(position.x, position.y);
@@ -455,15 +456,30 @@
     context.shadowBlur = 3;
     context.shadowOffsetX = 1;
     context.shadowOffsetY = 2;
+
     context.beginPath();
-    context.moveTo(1, 1);
-    context.lineTo(1, 20);
-    context.lineTo(6.4, 14.8);
-    context.lineTo(9.9, 22.6);
-    context.lineTo(14.2, 20.7);
-    context.lineTo(10.7, 13);
-    context.lineTo(18.2, 13);
+    if (cursorStyle === 'pointer') {
+      context.moveTo(1, 1);
+      context.quadraticCurveTo(3, -0.5, 5, 1);
+      context.lineTo(5.5, 10);
+      context.quadraticCurveTo(10, 9, 12, 11);
+      context.quadraticCurveTo(14, 14, 12, 18);
+      context.quadraticCurveTo(10, 22, 4, 22);
+      context.quadraticCurveTo(-1, 22, -2, 17);
+      context.quadraticCurveTo(-3, 13, -1, 11);
+      context.lineTo(0.5, 11);
+      context.lineTo(0.5, 10);
+    } else {
+      context.moveTo(1, 1);
+      context.lineTo(1, 20);
+      context.lineTo(6.4, 14.8);
+      context.lineTo(9.9, 22.6);
+      context.lineTo(14.2, 20.7);
+      context.lineTo(10.7, 13);
+      context.lineTo(18.2, 13);
+    }
     context.closePath();
+
     context.fillStyle = '#ffffff';
     context.fill();
     context.shadowColor = 'transparent';
@@ -606,9 +622,11 @@
 
       // chrome.runtime.getManifest() は offscreen document では未提供 (TypeError)。
       // SW 側で解決した値を meta.extensionVersion 経由で受け取る。
+      const now = new Date();
       const fields = [
         ['EvidenceShot:Version', String(meta?.extensionVersion || '')],
-        ['EvidenceShot:Timestamp', new Date().toISOString()],
+        ['EvidenceShot:Timestamp', now.toISOString()],
+        ['EvidenceShot:TimezoneOffset', formatTimezoneOffset(now)],
         ['EvidenceShot:URL', redactEvidenceUrl(meta?.url)],
         ['EvidenceShot:Title', truncateMetadataField(meta?.title, 512)],
         ['EvidenceShot:IdatHashSha256', hashHex],
@@ -626,6 +644,15 @@
       console.warn('EvidenceShot: failed to embed PNG metadata', error);
       return blob;
     }
+  }
+
+  function formatTimezoneOffset(date) {
+    const offsetMin = -date.getTimezoneOffset();
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const abs = Math.abs(offsetMin);
+    const h = String(Math.floor(abs / 60)).padStart(2, '0');
+    const m = String(abs % 60).padStart(2, '0');
+    return `${sign}${h}:${m}`;
   }
 
   function redactEvidenceUrl(rawUrl) {

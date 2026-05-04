@@ -532,7 +532,7 @@ async function runCaptureWorkflow(tabId) {
     }
 
     // Web Locks ベースのロック解放。release は idempotent。
-    try { acquireResult.release(); } catch { /* no-op */ }
+    try { acquireResult?.release?.(); } catch { /* no-op */ }
   }
 }
 

@@ -109,9 +109,6 @@
   "popupLabelCaptureMode": {
     "message": "Capture Area"
   },
-  "popupNoteCaptureModeDiff": {
-    "message": "\"Full page (with layout)\" stitches the entire viewport including side columns. \"Main content only\" prioritizes the center feed/article area."
-  },
   "popupStatusInitFailed": {
     "message": "Initialization failed."
   },

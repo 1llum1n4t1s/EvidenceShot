@@ -162,6 +162,9 @@
   }
 
   function buildTimestamp(date = new Date()) {
+    const offsetMin = -date.getTimezoneOffset();
+    const tzSign = offsetMin >= 0 ? '+' : '-';
+    const tzAbs = Math.abs(offsetMin);
     return {
       year: date.getFullYear(),
       shortYear: String(date.getFullYear()).slice(-2),
@@ -170,6 +173,7 @@
       hours: pad2(date.getHours()),
       minutes: pad2(date.getMinutes()),
       seconds: pad2(date.getSeconds()),
+      timezone: `${tzSign}${pad2(Math.floor(tzAbs / 60))}:${pad2(tzAbs % 60)}`,
     };
   }
 

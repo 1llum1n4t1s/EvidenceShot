@@ -210,14 +210,15 @@
   // shared utils ではなく stamp-renderer 側で持つ。
   function buildTimestampText(style, date = new Date()) {
     const stamp = Shared.buildTimestamp(date);
+    const tz = stamp.timezone;
     switch (style) {
       case 'film':
-        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
+        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
       case 'minimal':
-        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
+        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
       case 'japanese':
       default:
-        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds}`;
+        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
     }
   }
 

@@ -65,9 +65,8 @@
 html,
 body {
   margin: 0;
-  min-width: 380px;
-  max-width: 380px;
-  min-height: 620px;
+  min-width: 480px;
+  max-width: 480px;
 }
 
 body {
@@ -121,15 +120,26 @@ select {
   gap: 6px;
 }
 
+.field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .field + .field,
 .field + .toggle,
 .toggle + .field,
-.toggle + .toggle {
+.toggle + .toggle,
+.field-pair + .field,
+.field-pair + .toggle,
+.field + .field-pair,
+.toggle + .field-pair {
   margin-top: 10px;
 }
 
 .note + .field,
-.note + .toggle {
+.note + .toggle,
+.note + .field-pair {
   margin-top: 10px;
 }
 

@@ -109,9 +109,6 @@
   "popupLabelCaptureMode": {
     "message": "撮影範囲"
   },
-  "popupNoteCaptureModeDiff": {
-    "message": "「ページ全体（レイアウト込み）」は左右カラムを含む画面全体を連結します。「中央本文のみ（主カラム）」は中央の投稿・記事エリアを優先して連結します。"
-  },
   "popupStatusInitFailed": {
     "message": "初期化に失敗しました。"
   },

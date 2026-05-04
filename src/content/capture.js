@@ -7,7 +7,8 @@
   // を active tab の content script で実行するため) で 4 → 5。
   // HTTP ページ向け execCommand fallback 追加で 5 → 6。
   // fallback のサイズ上限と状態分離で 6 → 7。
-  const CONTROLLER_VERSION = 7;
+  // カーソルスタイル (pointer/text/default) のヒューリスティック推定追加で 7 → 8。
+  const CONTROLLER_VERSION = 8;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -241,7 +242,8 @@
   // url は offscreen が URL.createObjectURL した chrome-extension:// 配下の Blob URL で、
   // content script は同一拡張機能 origin で動作するため fetch でこの URL を読める。
   async function copyClipboardFromUrl(url) {
-    if (typeof url !== 'string' || !url || !url.startsWith('blob:')) {
+    const expectedOrigin = `blob:chrome-extension://${chrome.runtime.id}/`;
+    if (typeof url !== 'string' || !url || !url.startsWith(expectedOrigin)) {
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     }
     try {
@@ -722,7 +724,8 @@
   }
 
   function updatePointerPosition(event) {
-    const cursor = buildCursorPosition(event.clientX, event.clientY, 'event');
+    const style = inferCursorStyle(event.target);
+    const cursor = buildCursorPosition(event.clientX, event.clientY, 'event', style);
     if (cursor) {
       lastPointerPosition = {
         ...cursor,
@@ -742,11 +745,27 @@
     return buildCursorPosition(
       lastPointerPosition.viewportX,
       lastPointerPosition.viewportY,
-      lastPointerPosition.source
+      lastPointerPosition.source,
+      lastPointerPosition.cursorStyle
     );
   }
 
-  function buildCursorPosition(clientX, clientY, source) {
+  function inferCursorStyle(target) {
+    if (!target || target.nodeType !== Node.ELEMENT_NODE) {
+      return 'default';
+    }
+    try {
+      const computed = getComputedStyle(target).cursor;
+      if (computed && computed !== 'auto' && computed !== 'default') {
+        return computed;
+      }
+    } catch {
+      /* cross-origin iframe 等で SecurityError になりうる */
+    }
+    return 'default';
+  }
+
+  function buildCursorPosition(clientX, clientY, source, cursorStyle) {
     if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
       return null;
     }
@@ -765,6 +784,7 @@
       pageX: Math.round(clientX + window.scrollX),
       pageY: Math.round(clientY + window.scrollY),
       source,
+      cursorStyle: cursorStyle || 'default',
     };
   }
 

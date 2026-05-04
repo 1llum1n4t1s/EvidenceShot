@@ -12,6 +12,12 @@
         <div class="section-head">
           <h2 data-i18n="popupSectionCaptureNow">今すぐ撮影</h2>
         </div>
+
+        <label class="field">
+          <span data-i18n="popupLabelCaptureMode">撮影範囲</span>
+          <select id="capture-mode"></select>
+        </label>
+
         <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">このタブを撮影する</button>
         <p class="status" id="status-text"></p>
         <p class="note" id="shortcut-note" data-i18n="popupNoteShortcutChecking">ショートカットを確認中です。</p>
@@ -72,15 +78,16 @@
           <input id="include-cursor" type="checkbox" />
         </label>
 
-        <label class="field">
-          <span data-i18n="popupLabelTimestampStyle">日付デザイン</span>
-          <select id="timestamp-style"></select>
-        </label>
-
-        <label class="field">
-          <span data-i18n="popupLabelTimestampSize">文字サイズ</span>
-          <select id="timestamp-size"></select>
-        </label>
+        <div class="field-pair">
+          <label class="field">
+            <span data-i18n="popupLabelTimestampStyle">日付デザイン</span>
+            <select id="timestamp-style"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="popupLabelTimestampSize">文字サイズ</span>
+            <select id="timestamp-size"></select>
+          </label>
+        </div>
 
         <label class="field">
           <span data-i18n="popupLabelFooterText">左下固定テキスト</span>
@@ -94,11 +101,6 @@
         </label>
         <p class="note" data-i18n="popupNoteFooterLinked">左下の文字は、日付デザインと文字サイズに連動します。</p>
 
-        <label class="field">
-          <span data-i18n="popupLabelCaptureMode">撮影範囲</span>
-          <select id="capture-mode"></select>
-        </label>
-        <p class="note" data-i18n="popupNoteCaptureModeDiff">`ページ全体（レイアウト込み）` は左右カラムを含む画面全体を連結します。`中央本文のみ（主カラム）` は中央の投稿・記事エリアを優先して連結します。</p>
       </section>
 
     </main>
