@@ -337,21 +337,10 @@ async function runCaptureWorkflow(tabId) {
     let lastCapturedAt = 0;
     let lastCapture = null;
     let captureDone = false;
-    let cursorAssignedToTile = false;
 
     for (const tile of tiles) {
       if (captureDone && (!lastCapture || lastCapture.index !== tile.startIndex)) {
         break;
-      }
-
-      const tileCursor = resolveCursorForTile(
-        plan.cursor,
-        tile,
-        plan.scrollingMode,
-        cursorAssignedToTile
-      );
-      if (tileCursor) {
-        cursorAssignedToTile = true;
       }
 
       const tilePlan = {
@@ -359,7 +348,6 @@ async function runCaptureWorkflow(tabId) {
         canvasHeight: tile.cssHeight,
         pageHeight: tile.cssHeight,
         tileStartY: tile.startY,
-        cursor: tileCursor,
       };
       const tileSettings = {
         ...settings,
@@ -534,23 +522,6 @@ async function runCaptureWorkflow(tabId) {
     // Web Locks ベースのロック解放。release は idempotent。
     try { acquireResult?.release?.(); } catch { /* no-op */ }
   }
-}
-
-function resolveCursorForTile(cursor, tile, scrollingMode, cursorAlreadyAssigned) {
-  if (!cursor || cursorAlreadyAssigned) {
-    return null;
-  }
-  if (!scrollingMode) {
-    return cursor;
-  }
-  if (typeof cursor.pageY !== 'number') {
-    return null;
-  }
-
-  const tileTop = Number(tile.startY) || 0;
-  const tileHeight = Number(tile.cssHeight) || 0;
-  const tileBottom = tileTop + tileHeight;
-  return cursor.pageY >= tileTop && cursor.pageY <= tileBottom ? cursor : null;
 }
 
 async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab, settings, part) {

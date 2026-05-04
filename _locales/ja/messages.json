@@ -62,12 +62,6 @@
   "popupNoteTimestampEnabled": {
     "message": "右下に昔のフィルムカメラ風の日時を焼き込みます。"
   },
-  "popupLabelIncludeCursor": {
-    "message": "マウスカーソルを含める"
-  },
-  "popupNoteIncludeCursor": {
-    "message": "撮影時の直近カーソル位置を取得できた場合に画像へ描き込みます。スクロール撮影では1回だけ表示します。"
-  },
   "popupNoteShortcutChecking": {
     "message": "ショートカットを確認中です。"
   },

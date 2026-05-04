@@ -284,10 +284,6 @@
         context = trimmedContext;
       }
 
-      if (settings.includeCursor) {
-        drawMouseCursor(context, canvas, plan);
-      }
-
       if (settings.timestampEnabled) {
         StampRenderer.drawTimestamp(context, canvas, settings.timestampStyle, settings.timestampSize);
       }
@@ -437,94 +433,6 @@
       return createImageBitmap(capture.blob);
     }
     return createImageBitmapFromDataUrl(capture.dataUrl);
-  }
-
-  function drawMouseCursor(context, canvas, plan) {
-    const position = resolveCursorCanvasPosition(canvas, plan);
-    if (!position) {
-      return;
-    }
-
-    const size = Math.max(18, Math.min(34, Math.round(24 * position.devicePixelRatio)));
-    const scale = size / 24;
-    const cursorStyle = plan.cursor?.cursorStyle;
-
-    context.save();
-    context.translate(position.x, position.y);
-    context.scale(scale, scale);
-    context.shadowColor = 'rgba(0, 0, 0, 0.35)';
-    context.shadowBlur = 3;
-    context.shadowOffsetX = 1;
-    context.shadowOffsetY = 2;
-
-    context.beginPath();
-    if (cursorStyle === 'pointer') {
-      context.moveTo(1, 1);
-      context.quadraticCurveTo(3, -0.5, 5, 1);
-      context.lineTo(5.5, 10);
-      context.quadraticCurveTo(10, 9, 12, 11);
-      context.quadraticCurveTo(14, 14, 12, 18);
-      context.quadraticCurveTo(10, 22, 4, 22);
-      context.quadraticCurveTo(-1, 22, -2, 17);
-      context.quadraticCurveTo(-3, 13, -1, 11);
-      context.lineTo(0.5, 11);
-      context.lineTo(0.5, 10);
-    } else {
-      context.moveTo(1, 1);
-      context.lineTo(1, 20);
-      context.lineTo(6.4, 14.8);
-      context.lineTo(9.9, 22.6);
-      context.lineTo(14.2, 20.7);
-      context.lineTo(10.7, 13);
-      context.lineTo(18.2, 13);
-    }
-    context.closePath();
-
-    context.fillStyle = '#ffffff';
-    context.fill();
-    context.shadowColor = 'transparent';
-    context.lineWidth = 1.6;
-    context.strokeStyle = '#111827';
-    context.stroke();
-    context.restore();
-  }
-
-  function resolveCursorCanvasPosition(canvas, plan) {
-    const cursor = plan?.cursor;
-    if (
-      !cursor ||
-      typeof cursor.viewportX !== 'number' ||
-      typeof cursor.viewportY !== 'number'
-    ) {
-      return null;
-    }
-
-    const devicePixelRatio = Math.max(1, Number(plan.devicePixelRatio) || 1);
-    const cropX = Number(plan.cropX) || 0;
-    const cropY = Number(plan.cropY) || 0;
-    const cropWidth = Number(plan.cropWidth) || Number(plan.viewportWidth) || canvas.width / devicePixelRatio;
-    const canvasHeightCss = Number(plan.canvasHeight) || canvas.height / devicePixelRatio;
-    const xCss = cursor.viewportX - cropX;
-    const yCss = plan.scrollingMode
-      ? Number(cursor.pageY) - (Number(plan.tileStartY) || 0)
-      : cursor.viewportY - cropY;
-
-    if (
-      !Number.isFinite(xCss) ||
-      !Number.isFinite(yCss) ||
-      xCss < 0 ||
-      yCss < 0 ||
-      xCss > cropWidth ||
-      yCss > canvasHeightCss
-    ) {
-      return null;
-    }
-
-    return {
-      x: Math.round(xCss * devicePixelRatio),
-      y: Math.round(yCss * devicePixelRatio),
-      devicePixelRatio,
-    };
   }
 
   async function buildOutputBlob(canvas, requestedFormat) {

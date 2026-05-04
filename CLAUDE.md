@@ -11,7 +11,7 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 
 - 表示領域撮影 / スクロール連結撮影 (撮影開始時点のスクロール範囲の末尾まで) / 中央本文のみ抽出
 - PNG / JPEG / WEBP 保存
-- タイムスタンプ、左下固定テキスト、直近カーソル位置の任意付与
+- タイムスタンプ、左下固定テキストの任意付与
 - 撮影後の任意クリップボードコピー (PNG)
 - ブラウザテーマに連動するポップアップのライト / ダーク自動切替
 - フローティングボタンなし、常時 `<all_urls>` 権限なし
@@ -65,8 +65,8 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (SW)
 - `manifest.json` — 権限・コマンド・CSP
 - `src/popup/popup.{html,js,css}` — 設定 UI と撮影開始
 - `src/background/background.js` — 撮影オーケストレーション、Web Locks 制御、`chrome.downloads.download` による保存
-- `src/content/capture.js` — スクロール制御、固定要素 (Shadow DOM 含む) の一時退避、撮影計画生成、カーソル位置取得
-- `src/offscreen/offscreen.js` — Canvas 合成、カーソル描画、PNG `iTXt` メタデータ埋込、クリップボードコピー
+- `src/content/capture.js` — スクロール制御、固定要素 (Shadow DOM 含む) の一時退避、撮影計画生成
+- `src/offscreen/offscreen.js` — Canvas 合成、PNG `iTXt` メタデータ埋込、クリップボードコピー
 - `src/offscreen/stamp-renderer.js` — タイムスタンプ / 左下固定テキストのスタイル定義と描画 (`globalThis.EvidenceShotStampRenderer` に export)
 - `src/shared/constants.js` — 既定設定・メッセージ種別・スタイル定義 (`globalThis.EvidenceShotConstants`)
 - `src/shared/utils.js` — 設定正規化・保存・i18n・`respondAsync` 等の共通ヘルパ (`globalThis.EvidenceShotShared`)
@@ -104,6 +104,24 @@ node docs/verify-evidence.js path/to/screenshot.png
 ```
 
 `IdatHashSha256` と再計算したハッシュの一致 / 不一致で判定する。Photoshop で再保存すると IDAT が再エンコードされるため不一致になり「素人改変」を検知できる。完全な改ざん耐性ではない (TSA 連携は今後の課題)。
+
+## 証跡改ざん回避ポリシー (恒久遵守) ⚠️
+
+**ブラウザがレンダリングしていないピクセルを Canvas で合成して画像へ焼き込む行為は、本拡張機能が PNG iTXt で売りにしている「改ざん検知」の存在意義と矛盾するため、いかなる理由でも追加してはならない**。
+
+具体的に **禁止** する追加機能:
+
+- マウスカーソル / ポインタの独自描画 (`chrome.tabs.captureVisibleTab` は OS カーソルを撮影しないが、Canvas 描画でそれを補完するのは合成画像であり証跡ではない)
+- 撮影後に「ハイライト枠」「丸囲み」「矢印」等を Canvas に追加する注釈機能
+- ブラー処理・モザイク処理 (元ピクセルの可逆性を失わせるため証跡として無効化)
+- 任意 SVG / PNG オーバーレイ
+
+**例外として許可**するもの (= 撮影者が「これを足した」と自己申告する性質のもの):
+
+- タイムスタンプ (撮影者の選択で上書きする旨が iTXt に Timestamp として記録される)
+- 左下固定テキスト (撮影者が任意で挿入したと明示できる)
+
+これらの境界は v1.0.13 でカーソル描画機能を全削除した際に明文化された。過去 (v1.0.3〜v1.0.12) はカーソル描画機能を持っていたが、Canvas 合成 = 改ざん相当という整理で撤去。**未来の自分・LLM へ**: 「カーソルがあると便利だから戻そう」「ここだけ Canvas で足そう」は禁断の坂道。提案された場合は本セクションを根拠に断ること。
 
 ## リリースフロー
 

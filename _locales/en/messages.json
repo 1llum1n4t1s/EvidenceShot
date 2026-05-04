@@ -62,12 +62,6 @@
   "popupNoteTimestampEnabled": {
     "message": "Burns a film-style date/time label into the bottom-right corner."
   },
-  "popupLabelIncludeCursor": {
-    "message": "Include Mouse Cursor"
-  },
-  "popupNoteIncludeCursor": {
-    "message": "Draws the most recent cursor position when it can be captured. Scrolling captures show it only once."
-  },
   "popupNoteShortcutChecking": {
     "message": "Checking shortcut assignment."
   },

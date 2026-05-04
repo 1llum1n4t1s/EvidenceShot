@@ -16,7 +16,6 @@
     fileNamePrefix: document.getElementById('file-name-prefix'),
     copyToClipboard: document.getElementById('copy-to-clipboard'),
     timestampEnabled: document.getElementById('timestamp-enabled'),
-    includeCursor: document.getElementById('include-cursor'),
     timestampStyle: document.getElementById('timestamp-style'),
     timestampSize: document.getElementById('timestamp-size'),
     footerText: document.getElementById('footer-text'),
@@ -62,10 +61,6 @@
     });
 
     elements.timestampEnabled.addEventListener('change', async () => {
-      settings = await persistPopupSettings();
-    });
-
-    elements.includeCursor.addEventListener('change', async () => {
       settings = await persistPopupSettings();
     });
 
@@ -122,7 +117,6 @@
     elements.fileNamePrefix.value = settings.fileNamePrefix;
     elements.copyToClipboard.checked = settings.copyToClipboard;
     elements.timestampEnabled.checked = settings.timestampEnabled;
-    elements.includeCursor.checked = settings.includeCursor;
     elements.timestampStyle.value = settings.timestampStyle;
     elements.timestampSize.value = settings.timestampSize;
     elements.footerText.value = settings.footerText;
@@ -198,7 +192,6 @@
       fileNamePrefix: elements.fileNamePrefix.value,
       copyToClipboard: elements.copyToClipboard.checked,
       timestampEnabled: elements.timestampEnabled.checked,
-      includeCursor: elements.includeCursor.checked,
       timestampStyle: elements.timestampStyle.value,
       timestampSize: elements.timestampSize.value,
       footerText: elements.footerText.value,

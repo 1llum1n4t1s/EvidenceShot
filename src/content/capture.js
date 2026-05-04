@@ -1,14 +1,10 @@
 (function initializeCaptureController() {
   const CONTROLLER_KEY = '__evidenceShotCaptureControllerV2';
   // CONTROLLER_VERSION: 旧 inject 済みインスタンスとの不整合検知用。
-  // collectFixedElements の Shadow DOM 走査追加 / グローバル名前空間リネーム /
-  // moveToCaptureStep の動的ロード警告で挙動変化があったため 3 → 4 にインクリメント。
-  // CLIPBOARD_COPY_FROM_URL ハンドラ追加 (ショートカット経由のクリップボードコピー
-  // を active tab の content script で実行するため) で 4 → 5。
-  // HTTP ページ向け execCommand fallback 追加で 5 → 6。
-  // fallback のサイズ上限と状態分離で 6 → 7。
-  // カーソルスタイル (pointer/text/default) のヒューリスティック推定追加で 7 → 8。
-  const CONTROLLER_VERSION = 8;
+  // 8 → 9: マウスカーソル独自描画機能を削除 (Canvas 合成カーソルは証跡改ざん相当の
+  // ため、PNG iTXt 改ざん検知メタデータの存在意義と矛盾するため撤去)。pointer
+  // イベントリスナーと cursorStyle 取得ロジックも併せて除去。
+  const CONTROLLER_VERSION = 9;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -28,9 +24,6 @@
   const MAX_MAIN_COLUMN_SCAN_NODES = 1800;
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
-  const POINTER_POSITION_MAX_AGE_MS = 30_000;
-  const pointerPositionEvents = ['pointermove', 'pointerdown', 'mousemove', 'mousedown'];
-  let lastPointerPosition = null;
 
   const messageHandler = (message, sender, sendResponse) => {
     if (!message?.type) {
@@ -66,22 +59,11 @@
   const respondAsync = Shared.respondAsync;
 
   chrome.runtime.onMessage.addListener(messageHandler);
-  pointerPositionEvents.forEach((eventName) => {
-    document.addEventListener(eventName, updatePointerPosition, {
-      capture: true,
-      passive: true,
-    });
-  });
 
   globalThis[CONTROLLER_KEY] = {
     version: CONTROLLER_VERSION,
     dispose() {
       chrome.runtime.onMessage.removeListener(messageHandler);
-      pointerPositionEvents.forEach((eventName) => {
-        document.removeEventListener(eventName, updatePointerPosition, {
-          capture: true,
-        });
-      });
       restoreCaptureState(state.captureSession?.sessionId);
     },
   };
@@ -103,7 +85,6 @@
 
     try {
       const plan = buildCapturePlan(normalizedSettings.captureMode);
-      plan.cursor = normalizedSettings.includeCursor ? resolveCursorPosition() : null;
       state.captureSession = {
         sessionId,
         settings: normalizedSettings,
@@ -721,71 +702,6 @@
         delete element.dataset.evidenceShotHideFixed;
       }
     });
-  }
-
-  function updatePointerPosition(event) {
-    const style = inferCursorStyle(event.target);
-    const cursor = buildCursorPosition(event.clientX, event.clientY, 'event', style);
-    if (cursor) {
-      lastPointerPosition = {
-        ...cursor,
-        capturedAt: Date.now(),
-      };
-    }
-  }
-
-  function resolveCursorPosition() {
-    if (
-      !lastPointerPosition ||
-      Date.now() - lastPointerPosition.capturedAt > POINTER_POSITION_MAX_AGE_MS
-    ) {
-      return null;
-    }
-
-    return buildCursorPosition(
-      lastPointerPosition.viewportX,
-      lastPointerPosition.viewportY,
-      lastPointerPosition.source,
-      lastPointerPosition.cursorStyle
-    );
-  }
-
-  function inferCursorStyle(target) {
-    if (!target || target.nodeType !== Node.ELEMENT_NODE) {
-      return 'default';
-    }
-    try {
-      const computed = getComputedStyle(target).cursor;
-      if (computed && computed !== 'auto' && computed !== 'default') {
-        return computed;
-      }
-    } catch {
-      /* cross-origin iframe 等で SecurityError になりうる */
-    }
-    return 'default';
-  }
-
-  function buildCursorPosition(clientX, clientY, source, cursorStyle) {
-    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
-      return null;
-    }
-    if (
-      clientX < 0 ||
-      clientY < 0 ||
-      clientX > window.innerWidth ||
-      clientY > window.innerHeight
-    ) {
-      return null;
-    }
-
-    return {
-      viewportX: Math.round(clientX),
-      viewportY: Math.round(clientY),
-      pageX: Math.round(clientX + window.scrollX),
-      pageY: Math.round(clientY + window.scrollY),
-      source,
-      cursorStyle: cursorStyle || 'default',
-    };
   }
 
   function getSemanticBoost(element) {
