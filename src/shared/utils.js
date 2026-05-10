@@ -48,6 +48,10 @@
       timestampSize: VALID_TIMESTAMP_SIZES.has(candidate.timestampSize)
         ? candidate.timestampSize
         : base.timestampSize,
+      timestampIncludeTimezone:
+        typeof candidate.timestampIncludeTimezone === 'boolean'
+          ? candidate.timestampIncludeTimezone
+          : base.timestampIncludeTimezone,
       footerText:
         typeof candidate.footerText === 'string'
           // 制御文字 (C0/DEL) と zero-width / RTL/LTR 制御 (U+200B-U+200F, U+202A-U+202E)

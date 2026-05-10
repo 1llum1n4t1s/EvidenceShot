@@ -14,6 +14,9 @@
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
+  "popupHeaderTagline": {
+    "message": "Evidence-grade screenshots"
+  },
   "popupSectionCaptureNow": {
     "message": "Capture Now"
   },
@@ -62,6 +65,12 @@
   "popupNoteTimestampEnabled": {
     "message": "Burns a film-style date/time label into the bottom-right corner."
   },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "Include time zone"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "Append the time zone (e.g. +09:00) to the timestamp text (only when \"Burn timestamp\" is on)."
+  },
   "popupNoteShortcutChecking": {
     "message": "Checking shortcut assignment."
   },
@@ -99,6 +108,12 @@
   },
   "popupNoteFooterLinked": {
     "message": "Bottom-left text follows the timestamp style and text size."
+  },
+  "popupPreviewTimestampOff": {
+    "message": "(Timestamp OFF)"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "(Bottom-left fixed text not set)"
   },
   "popupLabelCaptureMode": {
     "message": "Capture Area"

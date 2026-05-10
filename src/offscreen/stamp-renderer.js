@@ -178,8 +178,8 @@
     context.restore();
   }
 
-  function drawTimestamp(context, canvas, style, size = 'md') {
-    const timestamp = buildTimestampText(resolveTimestampTextStyle(style), new Date());
+  function drawTimestamp(context, canvas, style, size = 'md', includeTimezone = true) {
+    const timestamp = buildTimestampText(resolveTimestampTextStyle(style), new Date(), includeTimezone);
     drawStampOverlay(context, canvas, timestamp, style, size, 'right');
   }
 
@@ -208,17 +208,17 @@
 
   // 旧 utils.buildTimestampText から移設。スタンプ描画固有のテキスト整形は
   // shared utils ではなく stamp-renderer 側で持つ。
-  function buildTimestampText(style, date = new Date()) {
+  function buildTimestampText(style, date = new Date(), includeTimezone = true) {
     const stamp = Shared.buildTimestamp(date);
-    const tz = stamp.timezone;
+    const tz = includeTimezone ? ` ${stamp.timezone}` : '';
     switch (style) {
       case 'film':
-        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
+        return `${stamp.shortYear} ${stamp.month} ${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}${tz}`;
       case 'minimal':
-        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
+        return `${stamp.year}.${stamp.month}.${stamp.day}  ${stamp.hours}:${stamp.minutes}:${stamp.seconds}${tz}`;
       case 'japanese':
       default:
-        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds} ${tz}`;
+        return `${stamp.year}/${stamp.month}/${stamp.day} ${stamp.hours}:${stamp.minutes}:${stamp.seconds}${tz}`;
     }
   }
 

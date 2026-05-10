@@ -285,7 +285,13 @@
       }
 
       if (settings.timestampEnabled) {
-        StampRenderer.drawTimestamp(context, canvas, settings.timestampStyle, settings.timestampSize);
+        StampRenderer.drawTimestamp(
+          context,
+          canvas,
+          settings.timestampStyle,
+          settings.timestampSize,
+          settings.timestampIncludeTimezone
+        );
       }
 
       if (settings.footerText) {

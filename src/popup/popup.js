@@ -8,6 +8,7 @@
     CLIPBOARD_STATUS,
   } = globalThis.EvidenceShotConstants;
   const Shared = globalThis.EvidenceShotShared;
+  const StampRenderer = globalThis.EvidenceShotStampRenderer;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
 
@@ -24,6 +25,9 @@
     statusText: document.getElementById('status-text'),
     shortcutNote: document.getElementById('shortcut-note'),
     shortcutSetup: document.getElementById('shortcut-setup'),
+    timestampIncludeTimezone: document.getElementById('timestamp-include-timezone'),
+    timestampSampleCanvas: document.getElementById('timestamp-sample-canvas'),
+    footerSampleCanvas: document.getElementById('footer-sample-canvas'),
   };
 
   let settings = Shared.cloneDefaultSettings();
@@ -64,6 +68,10 @@
       settings = await persistPopupSettings();
     });
 
+    elements.timestampIncludeTimezone.addEventListener('change', async () => {
+      settings = await persistPopupSettings();
+    });
+
     elements.timestampStyle.addEventListener('change', async () => {
       settings = await persistPopupSettings();
     });
@@ -74,6 +82,8 @@
 
     elements.footerText.addEventListener('input', () => {
       updateLinkedControlAvailability();
+      // 入力中もプレビューに反映 (保存は change で実行)。
+      renderPreview();
     });
 
     elements.footerText.addEventListener('change', async () => {
@@ -117,11 +127,138 @@
     elements.fileNamePrefix.value = settings.fileNamePrefix;
     elements.copyToClipboard.checked = settings.copyToClipboard;
     elements.timestampEnabled.checked = settings.timestampEnabled;
+    elements.timestampIncludeTimezone.checked = settings.timestampIncludeTimezone;
     elements.timestampStyle.value = settings.timestampStyle;
     elements.timestampSize.value = settings.timestampSize;
     elements.footerText.value = settings.footerText;
     elements.captureMode.value = settings.captureMode;
     updateLinkedControlAvailability();
+    renderPreview();
+  }
+
+  // 撮影オプションが画像にどう焼き込まれるかの「表示イメージ」をプレビュー描画する。
+  // 実際の撮影と同じ stamp-renderer を再利用するため、見た目の差異が最小化される。
+  // 入力中の値も反映するため、settings ではなくフォーム要素の現在値を使う点に注意。
+  function renderPreview() {
+    const timestampCanvas = elements.timestampSampleCanvas;
+    const footerCanvas = elements.footerSampleCanvas;
+    if (!timestampCanvas || !footerCanvas || !StampRenderer) {
+      return;
+    }
+
+    const timestampEnabled = elements.timestampEnabled.checked;
+    const timestampIncludeTimezone = elements.timestampIncludeTimezone.checked;
+    const timestampStyle = elements.timestampStyle.value || settings.timestampStyle;
+    const timestampSize = elements.timestampSize.value || settings.timestampSize;
+    const footerRaw = elements.footerText.value;
+    const footerText = typeof footerRaw === 'string' ? footerRaw.trim().slice(0, 80) : '';
+
+    // 仮想実画像 (1600x900) を 1 枚だけ確保し、タイムスタンプ用とフッター用で背景から描き直して再利用する。
+    // 同一 canvas に両方を同時描画すると、長いフッターが右下クロップ範囲まで侵入して
+    // 「日付デザインのサンプルに左下テキストが映り込む」事故が起きるため、サンプルごとに完全独立で描画する。
+    // stamp-renderer の baseFontSize は canvas.width 比例なので、合成側は実撮影に近い解像度が必要。
+    const FULL_WIDTH = 1600;
+    const FULL_HEIGHT = 900;
+    const CROP_WIDTH = 720;
+    const CROP_HEIGHT = 180;
+
+    const fullCanvas = document.createElement('canvas');
+    fullCanvas.width = FULL_WIDTH;
+    fullCanvas.height = FULL_HEIGHT;
+    const fullContext = fullCanvas.getContext('2d');
+    if (!fullContext) {
+      return;
+    }
+
+    // 1. 日付デザインのサンプル (タイムスタンプのみ描画 → 右下クロップ)
+    drawDummyBackground(fullContext, FULL_WIDTH, FULL_HEIGHT);
+    if (timestampEnabled) {
+      StampRenderer.drawTimestamp(
+        fullContext,
+        fullCanvas,
+        timestampStyle,
+        timestampSize,
+        timestampIncludeTimezone
+      );
+    }
+    drawCropFrom(
+      timestampCanvas,
+      fullCanvas,
+      FULL_WIDTH - CROP_WIDTH,
+      FULL_HEIGHT - CROP_HEIGHT,
+      CROP_WIDTH,
+      CROP_HEIGHT
+    );
+    if (!timestampEnabled) {
+      drawPlaceholderLabel(
+        timestampCanvas,
+        t('popupPreviewTimestampOff', '（タイムスタンプ OFF）')
+      );
+    }
+
+    // 2. 左下固定テキストのサンプル (フッターのみ描画 → 左下クロップ)。
+    //    同じ fullCanvas を背景から再描画して使い回す (前段の描画は完全に上書きされる)。
+    fullContext.clearRect(0, 0, FULL_WIDTH, FULL_HEIGHT);
+    drawDummyBackground(fullContext, FULL_WIDTH, FULL_HEIGHT);
+    if (footerText) {
+      StampRenderer.drawFooterLabel(fullContext, fullCanvas, footerText, timestampStyle, timestampSize);
+    }
+    drawCropFrom(footerCanvas, fullCanvas, 0, FULL_HEIGHT - CROP_HEIGHT, CROP_WIDTH, CROP_HEIGHT);
+    if (!footerText) {
+      drawPlaceholderLabel(
+        footerCanvas,
+        t('popupPreviewFooterEmpty', '（左下固定テキスト 未設定）')
+      );
+    }
+  }
+
+  // 仮想実画像の背景を描く。クロップに切り出された後に「実際の本文の上にスタンプが乗っている」
+  // 雰囲気が伝わる程度の薄いグラデ + 横線パターンに留め、合成画像と誤認させない。
+  function drawDummyBackground(context, width, height) {
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#fafbfd');
+    gradient.addColorStop(1, '#dde3eb');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+
+    // 本文を模した横線。スタンプが置かれる下端付近にも線が乗る前提で全面に描く。
+    context.fillStyle = '#cdd5df';
+    const lineHeight = 14;
+    const lineGap = 30;
+    const startY = 60;
+    for (let y = startY; y < height - 30; y += lineHeight + lineGap) {
+      const widthRatio = ((y / (lineHeight + lineGap)) | 0) % 4 === 3 ? 0.6 : 0.9;
+      context.fillRect(80, y, Math.round(width * widthRatio) - 80, lineHeight);
+    }
+  }
+
+  // 仮想実画像の指定領域を、表示用 canvas へ等倍で転送する。
+  // 表示 canvas の内部解像度を切り出しサイズと一致させ、CSS 側の width:100% で popup 幅まで拡大して見せる。
+  function drawCropFrom(targetCanvas, sourceCanvas, sx, sy, sw, sh) {
+    targetCanvas.width = sw;
+    targetCanvas.height = sh;
+    const context = targetCanvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    context.clearRect(0, 0, sw, sh);
+    context.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  }
+
+  // タイムスタンプ OFF / 左下テキスト未設定のときに、その canvas の中央に薄く案内文を載せる。
+  // クロップした背景の上に重ねるため、視認できる濃さで描く。
+  function drawPlaceholderLabel(canvas, text) {
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    context.save();
+    context.fillStyle = 'rgba(15, 23, 42, 0.55)';
+    context.font = '600 32px "Aptos", "Yu Gothic UI", sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+    context.restore();
   }
 
   async function onCaptureNow() {
@@ -192,6 +329,7 @@
       fileNamePrefix: elements.fileNamePrefix.value,
       copyToClipboard: elements.copyToClipboard.checked,
       timestampEnabled: elements.timestampEnabled.checked,
+      timestampIncludeTimezone: elements.timestampIncludeTimezone.checked,
       timestampStyle: elements.timestampStyle.value,
       timestampSize: elements.timestampSize.value,
       footerText: elements.footerText.value,
@@ -214,6 +352,8 @@
     const enableDecorations = elements.timestampEnabled.checked || hasFooterText;
     elements.timestampStyle.disabled = !enableDecorations;
     elements.timestampSize.disabled = !enableDecorations;
+    // 「タイムゾーンを含める」は日付描画自体が ON のときだけ意味がある (フッター単独使用には無関係)。
+    elements.timestampIncludeTimezone.disabled = !elements.timestampEnabled.checked;
   }
 
   async function writeClipboardFromUrl(url) {

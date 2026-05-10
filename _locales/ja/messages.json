@@ -14,6 +14,9 @@
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
+  "popupHeaderTagline": {
+    "message": "監査用スクリーンショット"
+  },
   "popupSectionCaptureNow": {
     "message": "今すぐ撮影"
   },
@@ -62,6 +65,12 @@
   "popupNoteTimestampEnabled": {
     "message": "右下に昔のフィルムカメラ風の日時を焼き込みます。"
   },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "タイムゾーンを含める"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "日時の末尾に「+09:00」のようなタイムゾーン表記を入れます（「日付を入れる」が有効なときのみ）。"
+  },
   "popupNoteShortcutChecking": {
     "message": "ショートカットを確認中です。"
   },
@@ -99,6 +108,12 @@
   },
   "popupNoteFooterLinked": {
     "message": "左下の文字は、日付デザインと文字サイズに連動します。"
+  },
+  "popupPreviewTimestampOff": {
+    "message": "（タイムスタンプ OFF）"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "（左下固定テキスト 未設定）"
   },
   "popupLabelCaptureMode": {
     "message": "撮影範囲"
