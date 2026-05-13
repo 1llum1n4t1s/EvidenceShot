@@ -25,6 +25,33 @@
   const VALID_CAPTURE_MODES = new Set(CAPTURE_MODE_OPTIONS.map(({ value }) => value));
   const VALID_FORMATS = new Set(FORMAT_OPTIONS.map(({ value }) => value));
 
+  // 旧スタイル名 → 新スタイル名のマイグレーションマップ。
+  // v1.0.14 以前は japanese / audit / document / monochrome / compact / minimal /
+  // film / polaroid / pastel / night / diary の 11 + ledger / blueprint だった。
+  // ストレージに残った旧名を新スタイルに寄せて、UI で「無効値 → デフォルト」に
+  // 落ちる体験を避ける (ユーザーの選択意図を可能な限り保持)。
+  const LEGACY_TIMESTAMP_STYLE_MAP = Object.freeze({
+    japanese:   'manuscript',
+    audit:      'manuscript',
+    document:   'manuscript',
+    monochrome: 'manuscript',
+    compact:    'manuscript',
+    minimal:    'manuscript',
+    film:       'microfiche',
+    polaroid:   'postit',
+    pastel:     'kraft',
+    night:      'terminal',
+    diary:      'typewriter',
+    // ledger / blueprint は新リストでも維持
+  });
+
+  function resolveTimestampStyle(value, fallback) {
+    if (VALID_TIMESTAMP_STYLES.has(value)) return value;
+    const migrated = LEGACY_TIMESTAMP_STYLE_MAP[value];
+    if (migrated && VALID_TIMESTAMP_STYLES.has(migrated)) return migrated;
+    return fallback;
+  }
+
   function cloneDefaultSettings() {
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   }
@@ -42,9 +69,7 @@
         typeof candidate.timestampEnabled === 'boolean'
           ? candidate.timestampEnabled
           : base.timestampEnabled,
-      timestampStyle: VALID_TIMESTAMP_STYLES.has(candidate.timestampStyle)
-        ? candidate.timestampStyle
-        : base.timestampStyle,
+      timestampStyle: resolveTimestampStyle(candidate.timestampStyle, base.timestampStyle),
       timestampSize: VALID_TIMESTAMP_SIZES.has(candidate.timestampSize)
         ? candidate.timestampSize
         : base.timestampSize,

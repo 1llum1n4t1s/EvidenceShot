@@ -49,6 +49,12 @@
     bindEvents();
     render();
     await renderShortcutInfo();
+
+    // 初回 renderPreview() がフォントロード前に走るとサンプル canvas が OS フォントで
+    // 描画されてしまうので、fonts.ready 後に 1 回だけ再描画して実撮影と見た目を揃える。
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => renderPreview()).catch(() => {});
+    }
   }
 
   function bindEvents() {
@@ -254,7 +260,7 @@
     }
     context.save();
     context.fillStyle = 'rgba(15, 23, 42, 0.55)';
-    context.font = '600 32px "Aptos", "Yu Gothic UI", sans-serif';
+    context.font = '700 32px "UDEVGothicJPDOC", "Yu Gothic UI", sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(text, canvas.width / 2, canvas.height / 2);

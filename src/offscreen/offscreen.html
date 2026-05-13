@@ -3,6 +3,37 @@
   <head>
     <meta charset="utf-8" />
     <title>EvidenceShot Offscreen</title>
+    <!--
+      SW 再起動で offscreen が作り直されるたびに UDEV Gothic JPDOC が再 fetch される。
+      <link rel="preload"> でブラウザ起動と並行 fetch させ、撮影完了直前の await fontsReady で
+      待たされる時間を最小化する。
+    -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="../shared/fonts/UDEVGothicJPDOC-Regular.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+          href="../shared/fonts/UDEVGothicJPDOC-Bold.woff2" />
+    <style>
+      /*
+       * popup.css と同じ仕組みで UDEV Gothic JPDOC をローカルバンドルから読み込む。
+       * offscreen document は表示されないが、@font-face を宣言した上で
+       * offscreen.js が document.fonts.load() を await することで
+       * Canvas へ確実にこのフォントで描画できる。
+       */
+      @font-face {
+        font-family: "UDEVGothicJPDOC";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("../shared/fonts/UDEVGothicJPDOC-Regular.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "UDEVGothicJPDOC";
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: url("../shared/fonts/UDEVGothicJPDOC-Bold.woff2") format("woff2");
+      }
+    </style>
   </head>
   <body>
     <script src="../shared/constants.js"></script>

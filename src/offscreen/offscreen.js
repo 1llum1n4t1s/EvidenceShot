@@ -8,6 +8,17 @@
   const downloadUrlRevokeTimers = new Map();
   const textEncoder = new TextEncoder();
   const MIN_TOKEN_LENGTH = 24;
+
+  // Canvas は未ロードフォントを黙って OS フォントにフォールバックするため、
+  // 描画前に document.fonts.load() で明示プリロードを発火しておく。
+  const fontsReady = document.fonts
+    ? Promise.all([
+        document.fonts.load('400 24px "UDEVGothicJPDOC"'),
+        document.fonts.load('700 24px "UDEVGothicJPDOC"'),
+      ]).catch((error) => {
+        console.warn('EvidenceShot: failed to preload UDEV Gothic JPDOC', error);
+      })
+    : Promise.resolve();
   // Chrome 拡張機能の SW (background) が offscreen を createDocument する際、
   // URL クエリ `?token=...` で channelToken を埋め込む。offscreen は起動直後に
   // URL から token を読み取り、以降の sendMessage は URL の token と完全一致
@@ -283,6 +294,9 @@
         canvas = trimmedCanvas;
         context = trimmedContext;
       }
+
+      // フォント未ロードでスタンプ描画すると OS フォントに無音フォールバックする。
+      await fontsReady;
 
       if (settings.timestampEnabled) {
         StampRenderer.drawTimestamp(

@@ -159,44 +159,50 @@
       }
     }
   },
-  "optionTimestampStyleJapanese": {
-    "message": "Business: Japanese Standard"
+  "optionTimestampStyleManuscript": {
+    "message": "Evidence: Official Document"
   },
-  "optionTimestampStyleAudit": {
-    "message": "Business: Audit Plate"
-  },
-  "optionTimestampStyleDocument": {
-    "message": "Business: Document Tag"
+  "optionTimestampStyleSeal": {
+    "message": "Evidence: Vermillion Seal"
   },
   "optionTimestampStyleLedger": {
-    "message": "Business: Ledger Line"
+    "message": "Evidence: Accounting Ledger"
   },
   "optionTimestampStyleBlueprint": {
-    "message": "Business: Blueprint"
+    "message": "Evidence: Blueprint"
   },
-  "optionTimestampStyleMonochrome": {
-    "message": "Business: Monochrome Band"
+  "optionTimestampStyleTerminal": {
+    "message": "Evidence: Terminal CLI"
   },
-  "optionTimestampStyleCompact": {
-    "message": "Business: Compact Label"
+  "optionTimestampStyleReceipt": {
+    "message": "Evidence: Thermal Receipt"
   },
-  "optionTimestampStyleFilm": {
-    "message": "Personal: Film Orange"
+  "optionTimestampStyleKraft": {
+    "message": "Evidence: Kraft Paper Tag"
   },
-  "optionTimestampStyleMinimal": {
-    "message": "Personal: Minimal Badge"
+  "optionTimestampStyleCarbon": {
+    "message": "Evidence: Carbon Copy"
   },
-  "optionTimestampStylePolaroid": {
-    "message": "Personal: Polaroid"
+  "optionTimestampStyleStencil": {
+    "message": "Evidence: Stencil"
   },
-  "optionTimestampStyleDiary": {
-    "message": "Personal: Diary"
+  "optionTimestampStyleWaxSeal": {
+    "message": "Evidence: Wax Seal"
   },
-  "optionTimestampStylePastel": {
-    "message": "Personal: Pastel Label"
+  "optionTimestampStyleMicrofiche": {
+    "message": "Evidence: Microfiche"
   },
-  "optionTimestampStyleNight": {
-    "message": "Personal: Night Glow"
+  "optionTimestampStylePostit": {
+    "message": "Personal: Sticky Note"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "Personal: Blackboard Chalk"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "Personal: Typewriter"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "Personal: Neon Sign"
   },
   "optionTimestampSizeXs": {
     "message": "Extra Small"

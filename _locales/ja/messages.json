@@ -159,44 +159,50 @@
       }
     }
   },
-  "optionTimestampStyleJapanese": {
-    "message": "業務: 和風標準"
+  "optionTimestampStyleManuscript": {
+    "message": "証跡: 公文書"
   },
-  "optionTimestampStyleAudit": {
-    "message": "業務: 監査プレート"
-  },
-  "optionTimestampStyleDocument": {
-    "message": "業務: ドキュメント札"
+  "optionTimestampStyleSeal": {
+    "message": "証跡: 朱印 (角印)"
   },
   "optionTimestampStyleLedger": {
-    "message": "業務: 台帳ライン"
+    "message": "証跡: 会計台帳"
   },
   "optionTimestampStyleBlueprint": {
-    "message": "業務: ブループリント"
+    "message": "証跡: 青焼き図面"
   },
-  "optionTimestampStyleMonochrome": {
-    "message": "業務: モノクロ帯"
+  "optionTimestampStyleTerminal": {
+    "message": "証跡: ターミナル"
   },
-  "optionTimestampStyleCompact": {
-    "message": "業務: コンパクト票"
+  "optionTimestampStyleReceipt": {
+    "message": "証跡: 感熱レシート"
   },
-  "optionTimestampStyleFilm": {
-    "message": "私用: フィルム橙"
+  "optionTimestampStyleKraft": {
+    "message": "証跡: クラフト紙タグ"
   },
-  "optionTimestampStyleMinimal": {
-    "message": "私用: ミニマルバッジ"
+  "optionTimestampStyleCarbon": {
+    "message": "証跡: カーボン複写"
   },
-  "optionTimestampStylePolaroid": {
-    "message": "私用: ポラロイド"
+  "optionTimestampStyleStencil": {
+    "message": "証跡: ステンシル"
   },
-  "optionTimestampStyleDiary": {
-    "message": "私用: ダイアリー"
+  "optionTimestampStyleWaxSeal": {
+    "message": "証跡: 蝋封スタンプ"
   },
-  "optionTimestampStylePastel": {
-    "message": "私用: パステルラベル"
+  "optionTimestampStyleMicrofiche": {
+    "message": "証跡: マイクロフィルム"
   },
-  "optionTimestampStyleNight": {
-    "message": "私用: ナイトグロー"
+  "optionTimestampStylePostit": {
+    "message": "私用: 黄色付箋"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "私用: 黒板チョーク"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "私用: タイプライター"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "私用: ネオンサイン"
   },
   "optionTimestampSizeXs": {
     "message": "極小"
