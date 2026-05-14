@@ -4,7 +4,11 @@
   // 8 → 9: マウスカーソル独自描画機能を削除 (Canvas 合成カーソルは証跡改ざん相当の
   // ため、PNG iTXt 改ざん検知メタデータの存在意義と矛盾するため撤去)。pointer
   // イベントリスナーと cursorStyle 取得ロジックも併せて除去。
-  const CONTROLLER_VERSION = 9;
+  // 9 → 10: buildCapturePlan のスクロールロック事前判定 (isDocumentScrollLocked) を
+  // 廃止し、maxScrollY > 0 のみで scrollingMode を判定するよう簡素化。CSS viewport
+  // propagation で `body { overflow: hidden }` が `<html>` 側に伝播するため、
+  // 普通の長文サイトやモダン SPA でも誤って viewport に降格していたバグの修正。
+  const CONTROLLER_VERSION = 10;
 
   if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
     return;
@@ -345,34 +349,18 @@
   }
 
 
-  // body または html が overflow: hidden/clip になっているとウィンドウスクロールが
-  // 効かず、スクロール連結撮影が同一位置の繰り返し撮影になる（モーダル開放中の
-  // Gmail / Linear 等で発生）。ここで検知し、scrollingMode を viewport にフォールバック。
-  function isDocumentScrollLocked() {
-    const root = document.documentElement;
-    const body = document.body;
-    if (!root || !body) {
-      return false;
-    }
-    const rootStyle = window.getComputedStyle(root);
-    const bodyStyle = window.getComputedStyle(body);
-    const lockedValues = new Set(['hidden', 'clip']);
-    const rootY = rootStyle.overflowY || rootStyle.overflow;
-    const bodyY = bodyStyle.overflowY || bodyStyle.overflow;
-    return lockedValues.has(rootY) || lockedValues.has(bodyY);
-  }
-
   function buildCapturePlan(captureMode) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const pageHeight = getDocumentHeight();
     const maxScrollY = Math.max(0, pageHeight - viewportHeight);
     const dpr = window.devicePixelRatio || 1;
-    let scrollingMode = captureMode !== 'viewport';
-    // スクロールロック中は自前で viewport に降格（重複撮影と無限ループを防ぐ）。
-    if (scrollingMode && isDocumentScrollLocked()) {
-      scrollingMode = false;
-    }
+    // ページが viewport より大きい時のみスクロール連結する。
+    // 旧実装は computed `overflow-y: hidden/clip` を検知して viewport に降格していたが、
+    // CSS の viewport propagation (`body { overflow: hidden }` が `<html>` に伝播) により
+    // 普通の長文サイトやモダン SPA でも誤発火していた。内部 div スクロールで window.scrollTo
+    // が効かないページは moveToCaptureStep の lastCapturedScrollY 判定で早期終了する。
+    const scrollingMode = captureMode !== 'viewport' && maxScrollY > 0;
     const overlap = scrollingMode ? Math.min(200, Math.max(96, Math.round(viewportHeight * 0.12))) : 0;
     const stride = Math.max(1, viewportHeight - overlap);
     const maxCanvasCssEdge = Math.max(1, Math.floor(Constants.MAX_CANVAS_EDGE / Math.max(dpr, 1)));
