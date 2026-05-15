@@ -125,9 +125,15 @@ jobs:
             echo "::error::AMO_JWT_ISSUER / AMO_JWT_SECRET の GitHub Secrets が未設定です"
             exit 1
           fi
+          # --approval-timeout 0 で AMO 人手レビューの承認待ちを行わず即 exit する。
+          # AMO listed channel は数時間〜数日のレビューが必要で、デフォルト 900s だと
+          # 必ずタイムアウト失敗する。submission 自体は成功しているので、レビュー結果は
+          # AMO Developer Hub (https://addons.mozilla.org/developers/addon/evidenceshot/)
+          # で確認する運用に統一する。
           npx --no-install web-ext sign \
             --source-dir=firefox-build \
             --artifacts-dir=web-ext-artifacts \
             --channel=listed \
-            --amo-metadata=amo-metadata.json
+            --amo-metadata=amo-metadata.json \
+            --approval-timeout 0
           echo "🦊 Firefox AMO への submission を送信したよ〜 (レビュー待ち)"
