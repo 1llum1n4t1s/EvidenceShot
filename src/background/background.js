@@ -1,7 +1,22 @@
-importScripts(
-  '../shared/constants.js',
-  '../shared/utils.js'
-);
+// EvidenceShot Background
+// Chrome (MV3 service worker) と Firefox (MV3 event page = background.html 経由) の
+// 両方で動く。両者の主な差分は「Canvas 合成・PNG 出力をどこで実行するか」:
+//   - Chrome: chrome.offscreen で offscreen document を起動し、そこで合成
+//   - Firefox: offscreen API 非対応のため、event page 自身に DOM があるので
+//             同一コンテキストで globalThis.EvidenceShotComposer を直接呼ぶ
+// この差分は createComposer() の中に閉じ込めてあり、以降の撮影ワークフローは
+// 共通の composer インターフェースだけを使う。
+
+// Chrome service worker パスでは importScripts で共通モジュールを読み込む。
+// Firefox event page は importScripts 自体が存在しないので、background.html 内の
+// <script> タグで constants.js / utils.js / stamp-renderer.js / composer.js が先に
+// 読み込まれている前提。
+if (typeof importScripts === 'function') {
+  importScripts(
+    '../shared/constants.js',
+    '../shared/utils.js'
+  );
+}
 
 const {
   CONTENT_SCRIPT_FILES,
@@ -18,10 +33,8 @@ const {
 const Shared = globalThis.EvidenceShotShared;
 const t = Shared.t;
 const normalizeUserMessage = Shared.normalizeUserMessage;
-let creatingOffscreenDocumentPromise = null;
-const OFFSCREEN_READY_RETRY_COUNT = 20;
-const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
-const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
+// respondAsync は Shared に移管 (capture.js と重複定義していたため統合)
+const respondAsync = Shared.respondAsync;
 
 const pendingDownloadUrls = new Map();
 
@@ -34,6 +47,226 @@ chrome.downloads.onChanged.addListener((delta) => {
   }
 });
 
+// ===== Composer 選択 (Chrome offscreen / Firefox event page) =====
+// chrome.offscreen が存在する環境 (= Chrome) では offscreen document 経由で
+// Canvas 合成・PNG 出力を行う。Firefox には offscreen API が無く、代わりに
+// background.html (event page) 自身に DOM があるので、同一文脈で
+// globalThis.EvidenceShotComposer を直接呼ぶ。
+const composer = createComposer();
+
+function createComposer() {
+  if (typeof chrome !== 'undefined' && chrome.offscreen) {
+    return createOffscreenComposerAdapter();
+  }
+  if (globalThis.EvidenceShotComposer) {
+    return globalThis.EvidenceShotComposer;
+  }
+  throw new Error('EvidenceShot composer is not available in this context');
+}
+
+// Chrome 用 Composer adapter: offscreen document を起動して sendMessage 経由で操作する。
+// 旧 background.js 内の ensureOffscreenDocument / sendOffscreenMessageWithTimeout 系を
+// このクロージャに閉じ込め、外部からは Composer インターフェース (begin/addSlice/...) で見える。
+function createOffscreenComposerAdapter() {
+  let creatingOffscreenDocumentPromise = null;
+  const OFFSCREEN_READY_RETRY_COUNT = 20;
+  const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
+  const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
+  const OFFSCREEN_MESSAGE_TIMEOUT_MS = 30_000;
+
+  // offscreen のドキュメント URL に channelToken をクエリで埋め込み、
+  // offscreen 側は URL から直接 expectedChannelToken を読む（TOFU 廃止）。
+  function buildOffscreenDocumentUrl() {
+    return `${OFFSCREEN_DOCUMENT_PATH}?token=${OFFSCREEN_CHANNEL_TOKEN}`;
+  }
+
+  function buildFullOffscreenDocumentUrl() {
+    return chrome.runtime.getURL(buildOffscreenDocumentUrl());
+  }
+
+  function buildOffscreenMessage(payload) {
+    return {
+      ...payload,
+      target: 'offscreen',
+      channelToken: OFFSCREEN_CHANNEL_TOKEN,
+    };
+  }
+
+  // offscreen が応答しないケース（ハング）での無限 await を防ぐためのタイムアウトラッパ。
+  // 呼び出し元は従来通り `.catch(() => undefined)` を付ければ同じ挙動になる。
+  function sendOffscreenMessageWithTimeout(payload, timeoutMs = OFFSCREEN_MESSAGE_TIMEOUT_MS) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')));
+      }, timeoutMs);
+    });
+    return Promise.race([
+      chrome.runtime.sendMessage(payload),
+      timeoutPromise,
+    ]).finally(() => {
+      clearTimeout(timeoutHandle);
+    });
+  }
+
+  async function isCurrentOffscreenCompatible() {
+    try {
+      // PING は応答が早い想定なので短めのタイムアウトで判定（ハング検出）。
+      const response = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+        type: MESSAGE_TYPES.OFFSCREEN_PING,
+      }), 3_000);
+      return response?.ok && response.interfaceVersion === OFFSCREEN_INTERFACE_VERSION;
+    } catch {
+      return false;
+    }
+  }
+
+  async function isOffscreenDocumentCompatible() {
+    const fullUrl = buildFullOffscreenDocumentUrl();
+    if ('getContexts' in chrome.runtime) {
+      // documentUrls フィルタは完全一致なので、違うトークンで立ち上がった古い
+      // offscreen は match しない → false → 作り直しに進む。
+      const contexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT'],
+        documentUrls: [fullUrl],
+      });
+      if (contexts.length === 0) {
+        return false;
+      }
+    } else {
+      const clientsList = await clients.matchAll();
+      const hasDocument = clientsList.some((client) => client.url === fullUrl);
+      if (!hasDocument) {
+        return false;
+      }
+    }
+    return isCurrentOffscreenCompatible();
+  }
+
+  async function createOffscreenDocument() {
+    await chrome.offscreen.createDocument({
+      url: buildOffscreenDocumentUrl(),
+      reasons: ['BLOBS', 'CLIPBOARD'],
+      justification: 'スクリーンショット画像を合成し、保存とクリップボードコピーを行うため',
+    });
+    await waitForOffscreenDocumentReady();
+  }
+
+  async function waitForOffscreenDocumentReady() {
+    for (let attempt = 0; attempt < OFFSCREEN_READY_RETRY_COUNT; attempt += 1) {
+      if (await isOffscreenDocumentCompatible()) {
+        return;
+      }
+      await Shared.sleep(OFFSCREEN_READY_RETRY_DELAY_MS);
+    }
+    throw new Error(
+      t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')
+    );
+  }
+
+  async function ensureOffscreenDocument() {
+    // 同時呼び出しの二重生成を防ぐため、最初に creatingOffscreenDocumentPromise を
+    // **同期的に** チェック→セットする。await を挟むと両 awaiter が null チェックを
+    // 通過して chrome.offscreen.createDocument が 2 回呼ばれるレースになる。
+    if (!creatingOffscreenDocumentPromise) {
+      creatingOffscreenDocumentPromise = (async () => {
+        try {
+          if (await isOffscreenDocumentCompatible()) {
+            return;
+          }
+          if ('closeDocument' in chrome.offscreen) {
+            try {
+              await chrome.offscreen.closeDocument();
+            } catch (error) {
+              if (!String(error?.message || '').includes('No document')) {
+                console.warn('EvidenceShot: failed to close offscreen document:', error.message);
+              }
+            }
+          }
+          await createOffscreenDocument();
+        } finally {
+          // 完了後に null に戻すことで次回呼び出しが新規作成できるようにする。
+          // await している awaiter は Promise の参照を持っているため、null 化しても解決は受け取れる。
+          creatingOffscreenDocumentPromise = null;
+        }
+      })();
+    }
+    await creatingOffscreenDocumentPromise;
+  }
+
+  async function recreateOffscreenDocument() {
+    if (!creatingOffscreenDocumentPromise) {
+      creatingOffscreenDocumentPromise = (async () => {
+        try {
+          if ('closeDocument' in chrome.offscreen) {
+            try {
+              await chrome.offscreen.closeDocument();
+            } catch (error) {
+              if (!String(error?.message || '').includes('No document')) {
+                console.warn('EvidenceShot: failed to recreate offscreen document:', error.message);
+              }
+            }
+          }
+          await createOffscreenDocument();
+        } finally {
+          creatingOffscreenDocumentPromise = null;
+        }
+      })();
+    }
+    await creatingOffscreenDocumentPromise;
+  }
+
+  return {
+    async begin(sessionId, sessionSecret, meta) {
+      await ensureOffscreenDocument();
+      const request = buildOffscreenMessage({
+        type: MESSAGE_TYPES.BEGIN_CAPTURE_SESSION,
+        sessionId,
+        sessionSecret,
+        meta,
+      });
+      let result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
+      if (!result?.ok) {
+        // offscreen 側が version mismatch / 死んでいる等で失敗していたら作り直してリトライ
+        await recreateOffscreenDocument();
+        result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
+      }
+      return result || { ok: false };
+    },
+    addSlice(sessionId, sessionSecret, capture) {
+      return sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+        type: MESSAGE_TYPES.ADD_CAPTURE_SLICE,
+        sessionId,
+        sessionSecret,
+        capture,
+      }));
+    },
+    finalize(sessionId, sessionSecret) {
+      return sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+        type: MESSAGE_TYPES.FINALIZE_CAPTURE_SESSION,
+        sessionId,
+        sessionSecret,
+      }));
+    },
+    abort(sessionId, sessionSecret) {
+      return sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+        type: MESSAGE_TYPES.ABORT_CAPTURE_SESSION,
+        sessionId,
+        sessionSecret,
+      })).catch(() => undefined);
+    },
+    async revokeDownloadUrl(downloadUrl) {
+      if (typeof downloadUrl !== 'string' || !downloadUrl) {
+        return;
+      }
+      await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+        type: MESSAGE_TYPES.REVOKE_DOWNLOAD_URL,
+        downloadUrl,
+      }), 3_000).catch(() => undefined);
+    },
+  };
+}
+
 // ===== 撮影排他制御 (Web Locks API) =====
 // 旧実装は chrome.storage.session に「ロック中タブ ID 配列」を書いて TTL で
 // 幽霊検知していたが、SW 再起動跨ぎで競合検知が複雑化していた。
@@ -43,7 +276,8 @@ const TAB_LOCK_PREFIX = 'evidenceshot-capture-tab-';
 const GLOBAL_LOCK_NAME = 'evidenceshot-capture-global';
 
 // 旧 chrome.storage.session 由来の幽霊データを起動時に一括クリア (旧実装からの migration)。
-chrome.storage.session.remove(CAPTURE_LOCK_KEY).catch(() => undefined);
+// Firefox の background event page では session storage が無いケースがあるので optional chain。
+chrome.storage.session?.remove(CAPTURE_LOCK_KEY).catch(() => undefined);
 
 // navigator.locks.request の callback は「ロック保持中ずっと走る Promise」を返す形なので、
 // 取得時点で外側に release 関数を渡し、release 呼び出しで内部 Promise を解決して callback を抜ける。
@@ -134,8 +368,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       respondAsync(runCaptureWorkflowWithHistory(message.tabId), sendResponse);
       return true;
     case MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP:
+      // Firefox 側 composer.revokeDownloadUrl は void 返り値 (sync) / Chrome adapter は Promise を返す。
+      // Promise.resolve でラップして両モードに対応する。
       respondAsync(
-        revokeOffscreenDownloadUrl(message.downloadUrl).then(() => ({ ok: true })),
+        Promise.resolve(composer.revokeDownloadUrl(message.downloadUrl)).then(() => ({ ok: true })),
         sendResponse
       );
       return true;
@@ -144,14 +380,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// respondAsync は Shared に移管 (capture.js と重複定義していたため統合)
-const respondAsync = Shared.respondAsync;
-
 if (chrome.commands?.onCommand) {
   // Chrome 117+ では onCommand コールバックの第二引数に「ショートカット押下時点の
   // アクティブタブ」が渡る。chrome.tabs.query で取り直す経路は数ミリ秒の async ギャップで
-  // 別タブが返る競合があるため、tab 引数を最優先で使う。レガシー Chrome 用のフォールバックとして
-  // captureActiveTabFromCommand 内で query も残す。
+  // 別タブが返る競合があるため、tab 引数を最優先で使う。レガシー Chrome / Firefox の
+  // フォールバックとして captureActiveTabFromCommand 内で query も残す。
   chrome.commands.onCommand.addListener((command, tab) => {
     if (command !== 'capture-active-tab') {
       return;
@@ -178,13 +411,13 @@ async function captureActiveTabFromCommand(tabFromCommand) {
 
   // ショートカット経由は popup を開かないため web page が focus を保ったままになる。
   // この条件下では active タブの content script で navigator.clipboard.write が成功するため、
-  // SW から content script へクリップボード書込を委譲する。
+  // background から content script へクリップボード書込を委譲する。
   // (popup 経由では popup 自身が書込を担当し、このパスは通らない)
   if (result?.clipboardObjectUrl && tab?.id) {
     const clipResult = await delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl);
     result.clipboardStatus = clipResult.ok ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED) : CLIPBOARD_STATUS.FAILED;
     result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
-    await revokeOffscreenDownloadUrl(result.clipboardObjectUrl).catch(() => undefined);
+    await Promise.resolve(composer.revokeDownloadUrl(result.clipboardObjectUrl)).catch(() => undefined);
     result.clipboardObjectUrl = null;
   }
 
@@ -290,7 +523,7 @@ async function runCaptureWorkflow(tabId) {
 
   let sessionId = null;
   let sessionSecret = null;
-  let offscreenSessionStarted = false;
+  let composerSessionStarted = false;
 
   try {
     const settings = await Shared.loadSettings();
@@ -331,8 +564,8 @@ async function runCaptureWorkflow(tabId) {
       : CLIPBOARD_STATUS.DISABLED;
     let clipboardError = null;
     // popup へ伝搬する PNG blob URL。popup 側で fetch + clipboard.write する。
-    // offscreen / content script では document.hasFocus() が常に false で書込失敗するため、
-    // user activation を保持する popup context に書込を一本化している。
+    // offscreen / event page / content script では document.hasFocus() が常に false で
+    // 書込失敗するため、user activation を保持する popup context に書込を一本化している。
     let clipboardObjectUrl = null;
     let lastCapturedAt = 0;
     let lastCapture = null;
@@ -353,18 +586,27 @@ async function runCaptureWorkflow(tabId) {
         ...settings,
         copyToClipboard: Boolean(settings.copyToClipboard && tiles.length === 1),
       };
-      const beginResult = await beginOffscreenCaptureSession(
-        sessionId,
-        sessionSecret,
-        tilePlan,
-        tab,
-        tileSettings,
-        { index: tile.index, count: tiles.length }
-      );
-      if (!beginResult.ok) {
-        return beginResult;
+      const beginResult = await composer.begin(sessionId, sessionSecret, {
+        plan: tilePlan,
+        settings: tileSettings,
+        url: tab.url,
+        title: tab.title || '',
+        part: { index: tile.index, count: tiles.length },
+        // chrome.runtime.getManifest() は offscreen / event page では提供形態が安定しないため、
+        // background 側で解決して meta に積む。
+        extensionVersion: chrome.runtime.getManifest().version,
+      });
+      if (!beginResult?.ok) {
+        return {
+          ok: false,
+          error: normalizeUserMessage(
+            beginResult?.error,
+            'errSavePrepareFailed',
+            '保存処理の準備に失敗しました。'
+          ),
+        };
       }
-      offscreenSessionStarted = true;
+      composerSessionStarted = true;
 
       let slicesAdded = 0;
 
@@ -429,16 +671,11 @@ async function runCaptureWorkflow(tabId) {
           lastCapture = activeCapture;
         }
 
-        const pushResult = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-          type: MESSAGE_TYPES.ADD_CAPTURE_SLICE,
-          sessionId,
-          sessionSecret,
-          capture: {
-            index: idx,
-            scrollY: activeCapture.scrollY - tile.startY,
-            dataUrl: activeCapture.dataUrl,
-          },
-        }));
+        const pushResult = await composer.addSlice(sessionId, sessionSecret, {
+          index: idx,
+          scrollY: activeCapture.scrollY - tile.startY,
+          dataUrl: activeCapture.dataUrl,
+        });
 
         if (!pushResult?.ok) {
           throw new Error(
@@ -453,16 +690,16 @@ async function runCaptureWorkflow(tabId) {
       }
 
       if (slicesAdded === 0) {
-        await abortOffscreenCaptureSession(sessionId, sessionSecret);
-        offscreenSessionStarted = false;
+        await composer.abort(sessionId, sessionSecret);
+        composerSessionStarted = false;
         continue;
       }
 
-      const finalizeResult = await finalizeOffscreenCaptureSession(sessionId, sessionSecret);
+      const finalizeResult = await finalizeComposerCaptureSession(sessionId, sessionSecret);
       if (!finalizeResult.ok) {
         return finalizeResult;
       }
-      offscreenSessionStarted = false;
+      composerSessionStarted = false;
       downloadedFiles.push(finalizeResult.fileName);
       if (finalizeResult.clipboardStatus) {
         clipboardStatus = finalizeResult.clipboardStatus;
@@ -498,7 +735,7 @@ async function runCaptureWorkflow(tabId) {
       downloadIds,
     };
   } catch (error) {
-    // 失敗の真因を SW コンソールに必ず残す。normalizeUserMessage が英語エラーを
+    // 失敗の真因を コンソールに必ず残す。normalizeUserMessage が英語エラーを
     // 「撮影に失敗しました。」へ畳み込むため、ここで握りつぶすと UI から原因追跡できなくなる。
     console.error('EvidenceShot: capture workflow failed', error);
     return {
@@ -506,8 +743,8 @@ async function runCaptureWorkflow(tabId) {
       error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
     };
   } finally {
-    if (offscreenSessionStarted && sessionId && sessionSecret) {
-      await abortOffscreenCaptureSession(sessionId, sessionSecret);
+    if (composerSessionStarted && sessionId && sessionSecret) {
+      await composer.abort(sessionId, sessionSecret);
     }
 
     if (sessionId) {
@@ -524,49 +761,8 @@ async function runCaptureWorkflow(tabId) {
   }
 }
 
-async function beginOffscreenCaptureSession(sessionId, sessionSecret, plan, tab, settings, part) {
-  await ensureOffscreenDocument();
-
-  const request = buildOffscreenMessage({
-    type: MESSAGE_TYPES.BEGIN_CAPTURE_SESSION,
-    sessionId,
-    sessionSecret,
-    meta: {
-      plan,
-      settings,
-      url: tab.url,
-      title: tab.title || '',
-      part: part || null,
-      // chrome.runtime.getManifest() は offscreen document では提供されない
-      // (TypeError: not a function) ため、SW 側で解決して meta に積む。
-      extensionVersion: chrome.runtime.getManifest().version,
-    },
-  });
-
-  let result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
-  if (!result?.ok) {
-    await recreateOffscreenDocument();
-    result = await sendOffscreenMessageWithTimeout(request).catch(() => undefined);
-  }
-
-  return result?.ok
-    ? { ok: true }
-    : {
-        ok: false,
-        error: normalizeUserMessage(
-          result?.error,
-          'errSavePrepareFailed',
-          '保存処理の準備に失敗しました。'
-        ),
-      };
-}
-
-async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
-  const result = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: MESSAGE_TYPES.FINALIZE_CAPTURE_SESSION,
-    sessionId,
-    sessionSecret,
-  })).catch(() => undefined);
+async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
+  const result = await composer.finalize(sessionId, sessionSecret).catch(() => undefined);
 
   if (!result?.ok) {
     return {
@@ -590,8 +786,8 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
   try {
     const downloadId = await downloadCapture(downloadUrl, result.fileName);
     if (result.clipboardStatus === CLIPBOARD_STATUS.FAILED) {
-      // offscreen 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
-      console.warn('EvidenceShot: clipboard prepare failed in offscreen', result.clipboardError);
+      // composer 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
+      console.warn('EvidenceShot: clipboard prepare failed in composer', result.clipboardError);
     }
     return {
       ok: true,
@@ -600,12 +796,12 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
       downloadStatus: 'started',
       clipboardStatus: result.clipboardStatus || CLIPBOARD_STATUS.DISABLED,
       clipboardError: result.clipboardError || null,
-      // 'pending_in_content' のとき、SW (runCaptureWorkflow) が content script にコピー依頼するための URL。
+      // 'pending_in_content' のとき、background (runCaptureWorkflow) が content script にコピー依頼するための URL。
       clipboardObjectUrl: result.clipboardObjectUrl || null,
       downloadId,
     };
   } catch (error) {
-    await revokeOffscreenDownloadUrl(downloadUrl).catch(() => undefined);
+    await Promise.resolve(composer.revokeDownloadUrl(downloadUrl)).catch(() => undefined);
     return {
       ok: false,
       error: normalizeUserMessage(
@@ -615,180 +811,7 @@ async function finalizeOffscreenCaptureSession(sessionId, sessionSecret) {
       ),
     };
   }
-  // Blob URL の revoke は downloads.onChanged で早期通知し、offscreen 側の 60 秒 timer を保険にする。
-}
-
-async function abortOffscreenCaptureSession(sessionId, sessionSecret) {
-  await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: MESSAGE_TYPES.ABORT_CAPTURE_SESSION,
-    sessionId,
-    sessionSecret,
-  })).catch(() => undefined);
-}
-
-async function revokeOffscreenDownloadUrl(downloadUrl) {
-  if (typeof downloadUrl !== 'string' || !downloadUrl) {
-    return;
-  }
-  await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-    type: MESSAGE_TYPES.REVOKE_DOWNLOAD_URL,
-    downloadUrl,
-  }), 3_000).catch(() => undefined);
-}
-
-// offscreen のドキュメント URL に channelToken をクエリで埋め込み、
-// offscreen 側は URL から直接 expectedChannelToken を読む（TOFU 廃止）。
-function buildOffscreenDocumentUrl() {
-  return `${OFFSCREEN_DOCUMENT_PATH}?token=${OFFSCREEN_CHANNEL_TOKEN}`;
-}
-
-function buildFullOffscreenDocumentUrl() {
-  return chrome.runtime.getURL(buildOffscreenDocumentUrl());
-}
-
-async function ensureOffscreenDocument() {
-  // 同時呼び出しの二重生成を防ぐため、最初に creatingOffscreenDocumentPromise を
-  // **同期的に** チェック→セットする。await を挟むと両 awaiter が null チェックを
-  // 通過して chrome.offscreen.createDocument が 2 回呼ばれるレースになる。
-  if (!creatingOffscreenDocumentPromise) {
-    creatingOffscreenDocumentPromise = (async () => {
-      try {
-        if (await isOffscreenDocumentCompatible()) {
-          return;
-        }
-
-        if ('closeDocument' in chrome.offscreen) {
-          try {
-            await chrome.offscreen.closeDocument();
-          } catch (error) {
-            if (!String(error?.message || '').includes('No document')) {
-              console.warn('EvidenceShot: failed to close offscreen document:', error.message);
-            }
-          }
-        }
-
-        await createOffscreenDocument();
-      } finally {
-        // 完了後に null に戻すことで次回呼び出しが新規作成できるようにする。
-        // await している awaiter は Promise の参照を持っているため、null 化しても解決は受け取れる。
-        creatingOffscreenDocumentPromise = null;
-      }
-    })();
-  }
-
-  await creatingOffscreenDocumentPromise;
-}
-
-async function isOffscreenDocumentCompatible() {
-  const fullUrl = buildFullOffscreenDocumentUrl();
-  if ('getContexts' in chrome.runtime) {
-    // documentUrls フィルタは完全一致なので、違うトークンで立ち上がった古い
-    // offscreen は match しない → false → 作り直しに進む。
-    const contexts = await chrome.runtime.getContexts({
-      contextTypes: ['OFFSCREEN_DOCUMENT'],
-      documentUrls: [fullUrl],
-    });
-
-    if (contexts.length === 0) {
-      return false;
-    }
-  } else {
-    const clientsList = await clients.matchAll();
-    const hasDocument = clientsList.some((client) => client.url === fullUrl);
-    if (!hasDocument) {
-      return false;
-    }
-  }
-
-  return isCurrentOffscreenCompatible();
-}
-
-async function recreateOffscreenDocument() {
-  if (!creatingOffscreenDocumentPromise) {
-    creatingOffscreenDocumentPromise = (async () => {
-      try {
-        if ('closeDocument' in chrome.offscreen) {
-          try {
-            await chrome.offscreen.closeDocument();
-          } catch (error) {
-            if (!String(error?.message || '').includes('No document')) {
-              console.warn('EvidenceShot: failed to recreate offscreen document:', error.message);
-            }
-          }
-        }
-
-        await createOffscreenDocument();
-      } finally {
-        creatingOffscreenDocumentPromise = null;
-      }
-    })();
-  }
-
-  await creatingOffscreenDocumentPromise;
-}
-
-async function createOffscreenDocument() {
-  await chrome.offscreen.createDocument({
-    url: buildOffscreenDocumentUrl(),
-    reasons: ['BLOBS', 'CLIPBOARD'],
-    justification: 'スクリーンショット画像を合成し、保存とクリップボードコピーを行うため',
-  });
-
-  await waitForOffscreenDocumentReady();
-}
-
-async function waitForOffscreenDocumentReady() {
-  for (let attempt = 0; attempt < OFFSCREEN_READY_RETRY_COUNT; attempt += 1) {
-    if (await isOffscreenDocumentCompatible()) {
-      return;
-    }
-
-    await Shared.sleep(OFFSCREEN_READY_RETRY_DELAY_MS);
-  }
-
-  throw new Error(
-    t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')
-  );
-}
-
-async function isCurrentOffscreenCompatible() {
-  try {
-    // PING は応答が早い想定なので短めのタイムアウトで判定（ハング検出）。
-    const response = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
-      type: MESSAGE_TYPES.OFFSCREEN_PING,
-    }), 3_000);
-
-    return response?.ok && response.interfaceVersion === OFFSCREEN_INTERFACE_VERSION;
-  } catch (error) {
-    return false;
-  }
-}
-
-function buildOffscreenMessage(payload) {
-  return {
-    ...payload,
-    target: 'offscreen',
-    channelToken: OFFSCREEN_CHANNEL_TOKEN,
-  };
-}
-
-const OFFSCREEN_MESSAGE_TIMEOUT_MS = 30_000;
-
-// offscreen が応答しないケース（ハング）での無限 await を防ぐためのタイムアウトラッパ。
-// 呼び出し元は従来通り `.catch(() => undefined)` を付ければ同じ挙動になる。
-function sendOffscreenMessageWithTimeout(payload, timeoutMs = OFFSCREEN_MESSAGE_TIMEOUT_MS) {
-  let timeoutHandle;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(new Error(t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')));
-    }, timeoutMs);
-  });
-  return Promise.race([
-    chrome.runtime.sendMessage(payload),
-    timeoutPromise,
-  ]).finally(() => {
-    clearTimeout(timeoutHandle);
-  });
+  // Blob URL の revoke は downloads.onChanged で早期通知し、composer 側の 60 秒 timer を保険にする。
 }
 
 function generateSecureToken(byteLength = 16) {
@@ -854,7 +877,7 @@ async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
       ),
     };
   } catch (error) {
-    // sendMessage 失敗 (タブ閉鎖、content script 不在 等) は SW コンソールへ原文を残す。
+    // sendMessage 失敗 (タブ閉鎖、content script 不在 等) は コンソールへ原文を残す。
     console.warn('EvidenceShot: clipboard delegation failed', error?.message);
     return {
       ok: false,
@@ -928,5 +951,5 @@ function revokePendingDownloadUrl(downloadId) {
     return;
   }
   pendingDownloadUrls.delete(downloadId);
-  revokeOffscreenDownloadUrl(downloadUrl).catch(() => undefined);
+  composer.revokeDownloadUrl(downloadUrl);
 }

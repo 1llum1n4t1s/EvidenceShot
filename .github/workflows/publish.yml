@@ -1,4 +1,4 @@
-name: Publish to Chrome Web Store
+name: Publish to Chrome Web Store & Firefox AMO
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish:
-    name: Chrome Web Store 公開
+    name: Chrome Web Store & Firefox AMO 公開
     runs-on: ubuntu-latest
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -98,3 +98,35 @@ jobs:
             --refresh-token "$CWS_REFRESH_TOKEN" \
             --auto-publish
           echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
+
+      - name: Firefox 用ビルドディレクトリを生成
+        # Chrome step が失敗 (同 version 再 upload 等) しても Firefox AMO は独立して
+        # 実行する必要があるので、success() に加え failure() の場合も実行する
+        # (cancelled 時は skip)。
+        if: ${{ success() || failure() }}
+        run: |
+          node scripts/build-firefox.js
+          echo "📦 Firefox source dir contents:"
+          ls -la firefox-build
+
+      - name: Firefox AMO に submission API でアップロード
+        # Chrome 失敗時も実行する (前 step の Firefox ディレクトリ準備が success なら OK)。
+        if: ${{ success() || failure() }}
+        env:
+          # web-ext は WEB_EXT_API_KEY / WEB_EXT_API_SECRET を環境変数から読む。
+          # AMO API キーは https://addons.mozilla.org/developers/addon/api/key/ で発行。
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        # web-ext はローカル devDep にインストール済 (package.json で固定)。
+        # Chrome 側と同じく `npx --no-install` で node_modules 内のローカル版を呼ぶ。
+        # web-ext 10+ では submission API がデフォルト動作のため --use-submission-api フラグは不要。
+        run: |
+          if [ -z "$WEB_EXT_API_KEY" ] || [ -z "$WEB_EXT_API_SECRET" ]; then
+            echo "::error::AMO_JWT_ISSUER / AMO_JWT_SECRET の GitHub Secrets が未設定です"
+            exit 1
+          fi
+          npx --no-install web-ext sign \
+            --source-dir=firefox-build \
+            --artifacts-dir=web-ext-artifacts \
+            --channel=listed
+          echo "🦊 Firefox AMO への submission を送信したよ〜 (レビュー待ち)"

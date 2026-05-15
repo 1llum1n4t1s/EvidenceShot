@@ -1,10 +1,10 @@
 # EvidenceShot
 
-EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chrome 拡張機能です。
+EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chrome / Firefox 拡張機能です。
 
 ## バージョン
 
-1.0.16
+1.0.17
 
 ## 撮影画像の改ざん検知
 
@@ -36,13 +36,13 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 ## 使い方
 
-1. Chrome の拡張機能アイコンから EvidenceShot を開く
+1. ブラウザ (Chrome / Firefox) の拡張機能アイコンから EvidenceShot を開く
 2. 保存形式や撮影オプションを選ぶ
 3. `このタブを撮影する` を押す
-4. 画像が Chrome の既定ダウンロードフォルダに保存され、設定に応じてクリップボードにもコピーされる
+4. 画像がブラウザの既定ダウンロードフォルダに保存され、設定に応じてクリップボードにもコピーされる
 
 ショートカット撮影の既定候補は `Ctrl+Shift+Y`（macOS は `Command+Shift+Y`）です。
-実際の割り当てはポップアップまたは Chrome の拡張機能ショートカット設定で確認・変更できます。
+実際の割り当てはポップアップまたはブラウザの拡張機能ショートカット設定で確認・変更できます。
 
 ## 撮影範囲
 
@@ -58,4 +58,9 @@ node docs/verify-evidence.js path/to/screenshot.png
 - 撮影開始はポップアップまたはショートカットキーから行います。
 - `http` / `https` ページのみ撮影できます。
 - 常時の `<all_urls>` 権限やフローティングボタンは使用しません。
-- 画像は offscreen document で逐次合成します。
+- 画像合成は Chrome では offscreen document、Firefox では event page (`background.html`) で行います。両者ともに同じ `src/shared/composer.js` を共有しています。
+
+## ブラウザ別ビルド
+
+- Chrome (Web Store): リポジトリ直下の `manifest.json` をそのまま使用。`src/background/background.js` が Service Worker として動作し、`chrome.offscreen` 経由で Canvas 合成を行います。
+- Firefox (AMO): `npm run build:firefox` が `manifest.json` をベースに `firefox-build/` を生成します。Firefox には `chrome.offscreen` が無いため、`background.html` を持つ event page 内で `composer.js` を直接実行します。

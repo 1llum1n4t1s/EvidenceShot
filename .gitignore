@@ -2,7 +2,10 @@ node_modules/
 webstore/images/
 icons/icon-*.png
 temp-build/
+firefox-build/
+web-ext-artifacts/
 *.zip
+*.xpi
 
 # 秘密情報・環境変数
 .env

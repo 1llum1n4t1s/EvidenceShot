@@ -4,8 +4,8 @@ This file provides guidance to coding agents working in `C:\Users\szk\Work\Evide
 
 ## プロジェクト概要
 
-EvidenceShot は、現在のタブを証跡向けに撮影する Chrome 拡張機能です。  
-ユーザーはポップアップまたはショートカットキーから撮影を開始し、生成された画像は Chrome の既定ダウンロード先へ保存されます。
+EvidenceShot は、現在のタブを証跡向けに撮影する Chrome / Firefox 拡張機能です。  
+ユーザーはポップアップまたはショートカットキーから撮影を開始し、生成された画像はブラウザの既定ダウンロード先へ保存されます。
 
 ## 実装方針
 
@@ -109,8 +109,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chrome 拡張機能 (Manifest V3)。
-撮影はポップアップ または `chrome.commands` のショートカット (`Ctrl+Shift+Y` / mac は `Cmd+Shift+Y`) から開始し、保存先は Chrome 既定のダウンロードフォルダ。
+EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chrome / Firefox 拡張機能 (Manifest V3)。
+撮影はポップアップ または `chrome.commands` のショートカット (`Ctrl+Shift+Y` / mac は `Cmd+Shift+Y`) から開始し、保存先はブラウザ既定のダウンロードフォルダ。
 
 ## 主要仕様
 
@@ -126,7 +126,7 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 ## アーキテクチャ概観 (4 context)
 
 ```
-popup.js ── chrome.runtime.sendMessage ──▶ background.js (SW)
+popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / Firefox event page)
                                               │
                                               ├── chrome.scripting.executeScript
                                               │       ▼
@@ -134,11 +134,14 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (SW)
                                               │
                                               ├── chrome.tabs.captureVisibleTab  (各スライス)
                                               │
-                                              └── chrome.runtime.sendMessage ──▶ offscreen.js
-                                                                                   └─ stamp-renderer.js
-                                                                                   Canvas 合成 → PNG メタデータ埋込
-                                                                                   → Blob URL を background に返却
-                                                                                   → chrome.downloads.download
+                                              └── composer (createComposer() で実行時選択)
+                                                    ├ Chrome: offscreen.html 内の composer.js (background SW から sendMessage 経由)
+                                                    └ Firefox: background.html 内の composer.js (background event page が直接呼ぶ)
+                                                       │
+                                                       └─ stamp-renderer.js
+                                                          Canvas 合成 → PNG メタデータ埋込
+                                                          → Blob URL を background に返却
+                                                          → chrome.downloads.download
 ```
 
 重要な共通プロトコル:
@@ -167,14 +170,18 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (SW)
 
 ## 主要ファイル
 
-- `manifest.json` — 権限・コマンド・CSP
+- `manifest.json` — Chrome 用 (権限・コマンド・CSP)。Firefox 用は `scripts/build-firefox.js` が `firefox-build/manifest.json` を生成
 - `src/popup/popup.{html,js,css}` — 設定 UI と撮影開始
-- `src/background/background.js` — 撮影オーケストレーション、Web Locks 制御、`chrome.downloads.download` による保存
+- `src/background/background.js` — 撮影オーケストレーション、Web Locks 制御、`chrome.downloads.download` による保存。`createComposer()` で Chrome (offscreen 経由 adapter) / Firefox (composer.js 直接) を実行時切替
+- `src/background/background.html` — **Firefox 専用** event page。`composer.js` を `<script>` タグで読み込み、`chrome.offscreen` の代わりに event page 自身の DOM を使う
 - `src/content/capture.js` — スクロール制御、固定要素 (Shadow DOM 含む) の一時退避、撮影計画生成
-- `src/offscreen/offscreen.js` — Canvas 合成、PNG `iTXt` メタデータ埋込、クリップボードコピー
+- `src/offscreen/offscreen.html` — Chrome 専用 offscreen document の HTML エントリ
+- `src/offscreen/offscreen.js` — Chrome 専用 offscreen の thin adapter。SW からの sendMessage を `globalThis.EvidenceShotComposer` に転送するだけ
 - `src/offscreen/stamp-renderer.js` — タイムスタンプ / 左下固定テキストのスタイル定義と描画 (`globalThis.EvidenceShotStampRenderer` に export)
+- `src/shared/composer.js` — **Canvas 合成・PNG iTXt 埋込・クリップボード PNG 生成の本体**。`globalThis.EvidenceShotComposer` として export。Chrome (offscreen.html) と Firefox (background.html) の両方で読み込まれ、両ブラウザで同じロジックが動く
 - `src/shared/constants.js` — 既定設定・メッセージ種別・スタイル定義 (`globalThis.EvidenceShotConstants`)
 - `src/shared/utils.js` — 設定正規化・保存・i18n・`respondAsync` 等の共通ヘルパ (`globalThis.EvidenceShotShared`)
+- `scripts/build-firefox.js` — Chrome 用 `manifest.json` をベースに Firefox 用 `firefox-build/` を生成。`background.service_worker` → `background.page` 切替、`offscreen` permission 除去、`browser_specific_settings.gecko` 付与
 - `docs/verify-evidence.js` — 撮影 PNG の改ざん検知用 Node スクリプト
 - `_locales/{en,ja}/messages.json` — i18n メッセージ
 
@@ -189,6 +196,7 @@ npm install
 npm run generate-icons          # icons/ を生成
 npm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
 npm run build                   # 上記 2 つを連続実行
+npm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
 ```
 
 開発ループ:
@@ -238,7 +246,10 @@ node docs/verify-evidence.js path/to/screenshot.png
 4. **`release/**` への push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由で auto-publish
 5. **新権限を追加した版は CWS Developer Dashboard の「Privacy practices」タブの再記入が必要**: これを忘れると `400 Publish condition not met` で公開拒否される
 
-CI で必要な GitHub Secrets: `CWS_CLIENT_ID` / `CWS_CLIENT_SECRET` / `CWS_REFRESH_TOKEN` / `CWS_EXTENSION_ID`
+CI で必要な GitHub Secrets:
+
+- Chrome Web Store: `CWS_CLIENT_ID` / `CWS_CLIENT_SECRET` / `CWS_REFRESH_TOKEN` / `CWS_EXTENSION_ID`
+- Firefox AMO: `AMO_JWT_ISSUER` / `AMO_JWT_SECRET` (AMO の `addons.mozilla.org/developers/addon/api/key/` から発行した JWT credentials)
 
 ## リリース前 smoke test (必須)
 
