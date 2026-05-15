@@ -128,5 +128,6 @@ jobs:
           npx --no-install web-ext sign \
             --source-dir=firefox-build \
             --artifacts-dir=web-ext-artifacts \
-            --channel=listed
+            --channel=listed \
+            --amo-metadata=amo-metadata.json
           echo "🦊 Firefox AMO への submission を送信したよ〜 (レビュー待ち)"
