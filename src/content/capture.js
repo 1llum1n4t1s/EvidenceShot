@@ -276,15 +276,19 @@
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         return { ok: true, clipboardStatus: Constants.CLIPBOARD_STATUS.COPIED };
       } catch (error) {
-        // 「Document is not focused.」は OK バッジ前に別タブへ切替えた等で頻繁に発生する
-        // **予期された** failure。HTML fallback パスで全く同じ寸法の PNG をクリップボードに入れる
-        // (PNG IHDR の物理ピクセルを <img width/height> に明示) ので、ユーザー結果は変わらない。
-        // ノイズになるので warn は出さない。それ以外のエラー (権限不足・blob 不正等) は warn に出す。
+        // 「Document is not focused.」は OK バッジ前に別タブへ切替えた瞬間に発生する予期された
+        // failure。HTML fallback パスで全く同じ寸法の PNG をクリップボードに入れる (PNG IHDR の
+        // 物理ピクセルを <img width/height> に明示) ので、ユーザー結果は変わらない。
+        // ただし、本当に予期しない別エラー (権限不足・blob 不正・Chrome 仕様変更等) を調査時に
+        // 拾えるよう、文言で「expected / unexpected」を区別しつつ warn 自体は出す。
         const msg = String(error?.message || '');
-        const isExpectedFocusError = error?.name === 'NotAllowedError' && msg.includes('not focused');
-        if (!isExpectedFocusError) {
-          console.warn('EvidenceShot: async clipboard write failed in content', error?.name, error?.message);
-        }
+        const isFocusLoss = error?.name === 'NotAllowedError' && msg.includes('not focused');
+        console.warn(
+          isFocusLoss
+            ? 'EvidenceShot: clipboard.write skipped (focus lost, expected); switching to HTML fallback'
+            : 'EvidenceShot: clipboard.write failed unexpectedly; switching to HTML fallback',
+          error?.name, error?.message
+        );
       }
     }
 
