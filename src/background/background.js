@@ -724,6 +724,11 @@ async function runCaptureWorkflow(tabId) {
       composerSessionStarted = true;
 
       let slicesAdded = 0;
+      // 撮影ループの pipeline 化: 前 slice の composer.addSlice (sendMessage RTT + offscreen の
+      // drawImage / iTXt 蓄積 ~100-200ms/slice) を **次の chrome.tabs.captureVisibleTab と並列**
+      // に進める。drawImage の順序保証のため、次の addSlice 発火直前で前の Promise を await して
+      // 順序を維持する。中ページ (~11 slices) で合計 1-2 秒の wall time 削減効果。
+      let pendingAddSlice = null;
 
       for (let idx = tile.startIndex; idx <= tile.endIndex; idx += 1) {
         let activeCapture;
@@ -786,22 +791,46 @@ async function runCaptureWorkflow(tabId) {
           lastCapture = activeCapture;
         }
 
-        const pushResult = await composer.addSlice(sessionId, sessionSecret, {
+        // 前 slice の add (offscreen 側 drawImage) 完了を待ってから今 slice を投げる。
+        // 順序保証必須 (offscreen の Canvas drawImage は順序依存)。
+        if (pendingAddSlice) {
+          const prevResult = await pendingAddSlice;
+          pendingAddSlice = null;
+          if (!prevResult?.ok) {
+            throw new Error(
+              normalizeUserMessage(
+                prevResult?.error,
+                'errCaptureSliceTransferFailed',
+                '撮影データの受け渡しに失敗しました。'
+              )
+            );
+          }
+        }
+
+        // 今 slice の addSlice を fire-and-forget で発火 → 次の captureVisibleTab と並列に進む。
+        // catch で reject を握って Promise.resolve に正規化することで、await 側で例外でなく
+        // { ok: false } として受けられるようにする (= 既存のエラー処理経路と整合)。
+        pendingAddSlice = composer.addSlice(sessionId, sessionSecret, {
           index: idx,
           scrollY: activeCapture.scrollY - tile.startY,
           dataUrl: activeCapture.dataUrl,
-        });
+        }).catch((error) => ({ ok: false, error: error?.message }));
+        slicesAdded += 1;
+      }
 
-        if (!pushResult?.ok) {
+      // ループ終了後、最後の addSlice 完了を待つ (finalize 前に必須)。
+      if (pendingAddSlice) {
+        const lastResult = await pendingAddSlice;
+        pendingAddSlice = null;
+        if (!lastResult?.ok) {
           throw new Error(
             normalizeUserMessage(
-              pushResult?.error,
+              lastResult?.error,
               'errCaptureSliceTransferFailed',
               '撮影データの受け渡しに失敗しました。'
             )
           );
         }
-        slicesAdded += 1;
       }
 
       if (slicesAdded === 0) {
@@ -901,34 +930,36 @@ async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
     };
   }
 
-  try {
-    const downloadId = await downloadCapture(downloadUrl, result.fileName);
-    if (result.clipboardStatus === CLIPBOARD_STATUS.FAILED) {
-      // composer 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
-      console.warn('EvidenceShot: clipboard prepare failed in composer', result.clipboardError);
-    }
-    return {
-      ok: true,
-      fileName: result.fileName,
-      savedAsFormat: result.savedAsFormat,
-      downloadStatus: 'started',
-      clipboardStatus: result.clipboardStatus || CLIPBOARD_STATUS.DISABLED,
-      clipboardError: result.clipboardError || null,
-      // 'pending_in_content' のとき、background (runCaptureWorkflow) が content script にコピー依頼するための URL。
-      clipboardObjectUrl: result.clipboardObjectUrl || null,
-      downloadId,
-    };
-  } catch (error) {
-    await Promise.resolve(composer.revokeDownloadUrl(downloadUrl)).catch(() => undefined);
-    return {
-      ok: false,
-      error: normalizeUserMessage(
-        error?.message,
-        'errDownloadStartFailed',
-        'ダウンロードの開始に失敗しました。'
-      ),
-    };
+  if (result.clipboardStatus === CLIPBOARD_STATUS.FAILED) {
+    // composer 側で blob 生成段階のみで失敗したケース (clipboard.write は試行していない)。
+    console.warn('EvidenceShot: clipboard prepare failed in composer', result.clipboardError);
   }
+
+  // download を fire-and-forget で発火し、即時 return することで OK バッジ表示までの wall time を
+  // 短縮する。downloadCapture は chrome.downloads.download の callback 解決まで ~50-200ms 待つが、
+  // これは I/O 待ちで撮影成功判定には不要 (composer.finalize の return = PNG 生成完了で撮影は確定)。
+  // downloadId は async でトラッキング、失敗時のみ blob URL を即 revoke する。
+  downloadCapture(downloadUrl, result.fileName)
+    .then((downloadId) => {
+      if (Number.isInteger(downloadId)) {
+        trackDownloadUrl(downloadId, downloadUrl);
+      }
+    })
+    .catch(async (error) => {
+      console.warn('EvidenceShot: download failed (async)', error?.message);
+      try { await Promise.resolve(composer.revokeDownloadUrl(downloadUrl)); } catch { /* no-op */ }
+    });
+
+  return {
+    ok: true,
+    fileName: result.fileName,
+    savedAsFormat: result.savedAsFormat,
+    downloadStatus: 'started',
+    clipboardStatus: result.clipboardStatus || CLIPBOARD_STATUS.DISABLED,
+    clipboardError: result.clipboardError || null,
+    clipboardObjectUrl: result.clipboardObjectUrl || null,
+    downloadId: null, // async track のため、ここでは null
+  };
   // Blob URL の revoke は downloads.onChanged で早期通知し、composer 側の 60 秒 timer を保険にする。
 }
 

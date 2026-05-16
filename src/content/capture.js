@@ -103,7 +103,9 @@
         lastCapturedScrollY: null,
       };
 
-      await Shared.waitFrames(2);
+      // capture style の DOM 反映を 1 frame 待つ。旧実装は 2 frame だったが、Chrome では style
+      // の computed update は 1 frame で完了する。撮影 trigger → 黄 OK の wall time を 16〜33ms 短縮。
+      await Shared.waitFrames(1);
       return { ok: true, plan };
     } catch (error) {
       restoreCaptureState(sessionId);
