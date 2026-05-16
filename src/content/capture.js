@@ -276,8 +276,15 @@
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         return { ok: true, clipboardStatus: Constants.CLIPBOARD_STATUS.COPIED };
       } catch (error) {
-        // focus 喪失などで失敗した場合も、旧 API の HTML コピーを最後に試す。
-        console.warn('EvidenceShot: async clipboard write failed in content', error?.name, error?.message);
+        // 「Document is not focused.」は OK バッジ前に別タブへ切替えた等で頻繁に発生する
+        // **予期された** failure。HTML fallback パスで全く同じ寸法の PNG をクリップボードに入れる
+        // (PNG IHDR の物理ピクセルを <img width/height> に明示) ので、ユーザー結果は変わらない。
+        // ノイズになるので warn は出さない。それ以外のエラー (権限不足・blob 不正等) は warn に出す。
+        const msg = String(error?.message || '');
+        const isExpectedFocusError = error?.name === 'NotAllowedError' && msg.includes('not focused');
+        if (!isExpectedFocusError) {
+          console.warn('EvidenceShot: async clipboard write failed in content', error?.name, error?.message);
+        }
       }
     }
 
