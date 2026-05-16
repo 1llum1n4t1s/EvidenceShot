@@ -447,7 +447,7 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   if (isCopyPending) {
     // clipboard 書込みを fire-and-forget で進める。完了でバッジを最終状態 (緑 OK or 赤 ERR) に
     // 更新し、Blob URL を即時 revoke する。
-    delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl)
+    runClipboardDelegateWithRecovery(tab, result.clipboardObjectUrl)
       .then(async (clipResult) => {
         result.clipboardStatus = clipResult.ok
           ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED)
@@ -472,6 +472,34 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   // 計測完了。SW context (= background) の perf marks を chrome.storage.local に flush。
   // cxcx ranner が拡張機能 storage を読み出して .perf.json として保存する。
   try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
+}
+
+// content script の clipboard 書込みは navigator.clipboard.write も document.execCommand('copy')
+// もどちらも document.hasFocus() が true でないと動かない。OK バッジ表示前にユーザーが別タブや
+// Excel に切替えたり、DevTools が focus を奪っているケースで両経路とも失敗してクリップボードに
+// PNG が入らない問題が発生していた。
+//
+// 1 回目の delegate が失敗したら、`chrome.windows.update({focused:true}) + chrome.tabs.update(
+// {active:true})` で対象タブを active 化 → 80ms 待って再試行する。ユーザーが Excel に切替えていた
+// 場合は元のタブにフォーカスが戻る UX 副作用があるが、「クリップボードに必ず PNG が入る」確実性を
+// 優先する (ダウンロード保存だけでなくクリップボードも揃ってこそ「証跡 + 即貼付」が完結する)。
+async function runClipboardDelegateWithRecovery(tab, clipboardObjectUrl) {
+  let clipResult = await delegateClipboardCopyToContent(tab.id, clipboardObjectUrl);
+  if (clipResult.ok) {
+    return clipResult;
+  }
+  // 1 回目が失敗 = content が focus を持っていなかった可能性が高い。対象タブを active に
+  // 戻してから再試行する。
+  try {
+    if (typeof tab.windowId === 'number') {
+      await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
+    }
+    await chrome.tabs.update(tab.id, { active: true }).catch(() => {});
+    // focus 伝搬待ち。Chrome の Tab Activation イベント → renderer の focus 通知に約 1〜2 frame。
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  } catch { /* no-op */ }
+  clipResult = await delegateClipboardCopyToContent(tab.id, clipboardObjectUrl);
+  return clipResult;
 }
 
 const BADGE_STYLE_BY_STATE = {
