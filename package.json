@@ -10,7 +10,7 @@
     "build:firefox": "node scripts/build-firefox.js"
   },
   "devDependencies": {
-    "chrome-webstore-upload-cli": "^3.3.0",
+    "chrome-webstore-upload-cli": "^4.0.0",
     "puppeteer": "^24.43.0",
     "sharp": "^0.34.5",
     "web-ext": "^10.1.0"
