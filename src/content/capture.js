@@ -279,16 +279,24 @@
         // 「Document is not focused.」は OK バッジ前に別タブへ切替えた瞬間に発生する予期された
         // failure。HTML fallback パスで全く同じ寸法の PNG をクリップボードに入れる (PNG IHDR の
         // 物理ピクセルを <img width/height> に明示) ので、ユーザー結果は変わらない。
-        // ただし、本当に予期しない別エラー (権限不足・blob 不正・Chrome 仕様変更等) を調査時に
-        // 拾えるよう、文言で「expected / unexpected」を区別しつつ warn 自体は出す。
+        //
+        // ログ方針:
+        //   - 予期された focus loss → console.debug (DevTools デフォルト非表示、Verbose で表示)
+        //                              通常ユーザーのコンソールはクリーン、調査時のみ verbose で見える
+        //   - 予期しない失敗 (権限・blob 不正・Chrome 仕様変更) → console.warn (デフォルト表示)
         const msg = String(error?.message || '');
         const isFocusLoss = error?.name === 'NotAllowedError' && msg.includes('not focused');
-        console.warn(
-          isFocusLoss
-            ? 'EvidenceShot: clipboard.write skipped (focus lost, expected); switching to HTML fallback'
-            : 'EvidenceShot: clipboard.write failed unexpectedly; switching to HTML fallback',
-          error?.name, error?.message
-        );
+        if (isFocusLoss) {
+          console.debug(
+            'EvidenceShot: clipboard.write skipped (focus lost, expected); HTML fallback engaged',
+            error?.name, error?.message
+          );
+        } else {
+          console.warn(
+            'EvidenceShot: clipboard.write failed unexpectedly; HTML fallback engaged',
+            error?.name, error?.message
+          );
+        }
       }
     }
 
