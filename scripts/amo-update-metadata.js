@@ -117,7 +117,7 @@ async function patchListing() {
     homepage: { ja: homepage, 'en-US': homepage },
     support_url: { ja: supportUrl, 'en-US': supportUrl },
     // support_email も AMO 仕様では translated field (locale ごとに別アドレスを設定可能)
-    support_email: { ja: 'yuro.7878@gmail.com', 'en-US': 'yuro.7878@gmail.com' },
+    support_email: { ja: '1llum1n4t1@duck.com', 'en-US': '1llum1n4t1@duck.com' },
     has_privacy_policy: true,
     privacy_policy: { ja: privacyJa, 'en-US': privacyEn },
     categories: ['web-development'],
