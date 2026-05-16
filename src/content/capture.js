@@ -303,6 +303,14 @@
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     }
 
+    // PNG IHDR から物理ピクセルの width/height を読み取る。
+    // Excel / Word が <img> をクリップボードから貼り付ける際、width/height 属性が無いと
+    // 96 dpi 換算 (Retina 撮影の物理ピクセル ÷ 2 等) に縮められてサイズが変動する。
+    // 属性に物理ピクセルを明示することで、async clipboard.write (image/png) で貼り付けたときと
+    // 同じ寸法で Excel に貼り付けられる。HTML fallback でも UX 上の「サイズ変動」を解消する。
+    const dim = await readPngDimensions(blob);
+    const sizeAttr = dim ? ` width="${dim.width}" height="${dim.height}"` : '';
+
     const editable = document.createElement('textarea');
     editable.value = ' ';
     editable.setAttribute('readonly', 'readonly');
@@ -324,7 +332,7 @@
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      event.clipboardData.setData('text/html', `<img src="${dataUrl}" alt="">`);
+      event.clipboardData.setData('text/html', `<img src="${dataUrl}" alt=""${sizeAttr}>`);
       event.clipboardData.setData('text/plain', '');
       copied = true;
     };
@@ -362,6 +370,31 @@
       reader.onerror = () => reject(reader.error || new Error('Failed to read clipboard image.'));
       reader.readAsDataURL(blob);
     });
+  }
+
+  // PNG IHDR から physical pixel の width/height を抽出する。
+  // PNG 仕様: 8 byte signature → 4 byte length → 4 byte 'IHDR' → 4 byte width → 4 byte height → ...
+  // 最初の 24 byte を読めば width/height (big-endian uint32) が取れる。
+  // 失敗時は null を返す (HTML fallback の <img> に width/height 属性を付けずに従来動作)。
+  async function readPngDimensions(blob) {
+    try {
+      const buffer = await blob.slice(0, 24).arrayBuffer();
+      if (buffer.byteLength < 24) return null;
+      const bytes = new Uint8Array(buffer);
+      // signature: 89 50 4E 47 0D 0A 1A 0A
+      const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+      for (let i = 0; i < 8; i += 1) {
+        if (bytes[i] !== sig[i]) return null;
+      }
+      // 12-15: 'IHDR'
+      if (bytes[12] !== 0x49 || bytes[13] !== 0x48 || bytes[14] !== 0x44 || bytes[15] !== 0x52) {
+        return null;
+      }
+      const dv = new DataView(buffer);
+      return { width: dv.getUint32(16), height: dv.getUint32(20) };
+    } catch {
+      return null;
+    }
   }
 
 
