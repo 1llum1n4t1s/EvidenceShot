@@ -598,5 +598,8 @@
     abort: abortCaptureSession,
     revokeDownloadUrl,
     purgeAllSessions,
+    // Firefox event page では composer が既に常駐しているので warmup は no-op。
+    // Chrome の offscreen adapter 側でのみ実体 (ensureOffscreenDocument) を持つ。
+    warmup() { /* no-op */ },
   });
 })();
