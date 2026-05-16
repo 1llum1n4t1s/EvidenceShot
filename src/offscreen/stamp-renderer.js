@@ -126,7 +126,7 @@
   // 01 manuscript: 公文書 — 二重枠 + 朱の左罫 + 角の認印
   function drawManuscript(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.25, 0.78);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.98, 0.61);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#fbfaf6';
@@ -153,7 +153,7 @@
     context.font = font;
     context.fillStyle = '#1a1818';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.25, top + h / 2);
+    context.fillText(text, left + fontSize * 0.98, top + h / 2);
 
     // 右下に認印 (空円)
     context.strokeStyle = '#a3221a';
@@ -167,7 +167,7 @@
   // 02 seal: 朱印 (角印) — 二重角枠 + 擦れ
   function drawSeal(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.95);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.05, 0.78);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.82, 0.61);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     // 和紙風背景 (印影を浮き立たせる)
@@ -195,13 +195,13 @@
     context.font = font;
     context.fillStyle = seal;
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.05, top + h / 2);
+    context.fillText(text, left + fontSize * 0.82, top + h / 2);
   }
 
   // 03 ledger: 会計台帳 — アイボリー紙 + 深緑罫
   function drawLedger(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.92);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.1, 0.74);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.86, 0.58);
     const { left, top } = placeBox(canvas, margin, w, h, position);
     const accent = '#0d5440';
 
@@ -240,13 +240,13 @@
     context.font = font;
     context.fillStyle = accent;
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.1, top + h / 2);
+    context.fillText(text, left + fontSize * 0.86, top + h / 2);
   }
 
   // 04 blueprint: 青焼き図面 — 紺地 + L字コーナーマーク + 細格子
   function drawBlueprint(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.95);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.2, 0.76);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.94, 0.59);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#0d2840';
@@ -280,7 +280,7 @@
     context.font = font;
     context.fillStyle = '#bae8ff';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.2, top + h / 2);
+    context.fillText(text, left + fontSize * 0.94, top + h / 2);
   }
 
   function drawCornerL(context, x, y, len, dx, dy) {
@@ -296,7 +296,7 @@
     const font = fontDecl(700, baseSize * 0.92);
     const promptText = `$ ${text}`;
     // ブロックカーソル幅を含めた仮想の長文でボックスを測り、余裕を確保
-    const { w, h, fontSize } = measureBox(context, font, `${promptText}  ▮`, 0.95, 0.78);
+    const { w, h, fontSize } = measureBox(context, font, `${promptText}  ▮`, 0.74, 0.61);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#0c0c0d';
@@ -309,7 +309,7 @@
     context.font = font;
     context.fillStyle = '#5af778';
     context.textBaseline = 'middle';
-    const textX = left + fontSize * 0.9;
+    const textX = left + fontSize * 0.7;
     context.fillText(promptText, textX, top + h / 2);
 
     // ブロックカーソル ▮ を実描画 (フォント依存の差を回避するため矩形)
@@ -323,7 +323,7 @@
   function drawReceipt(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.88);
     const zig = 6;
-    const { w, h, fontSize } = measureBox(context, font, text, 1.2, 0.85);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.94, 0.66);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#e8e3d8';
@@ -352,18 +352,18 @@
     context.font = fontDecl(700, fontSize * 0.7);
     context.fillStyle = '#5a5752';
     context.textBaseline = 'middle';
-    context.fillText('✂', left + fontSize * 0.32, top + h / 2);
+    context.fillText('✂', left + fontSize * 0.25, top + h / 2);
 
     // 本文 (黒)
     context.font = font;
     context.fillStyle = '#1a1818';
-    context.fillText(text, left + fontSize * 1.2, top + h / 2);
+    context.fillText(text, left + fontSize * 0.94, top + h / 2);
   }
 
   // 07 kraft: クラフト紙タグ — 茶背景 + 紐穴 + 縦罫
   function drawKraft(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.92);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.25, 0.7);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.98, 0.55);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     const grad = context.createLinearGradient(left, top, left, top + h);
@@ -380,28 +380,28 @@
     // 紐穴
     context.fillStyle = '#3a2f24';
     context.beginPath();
-    context.arc(left + fontSize * 0.55, top + h / 2, Math.max(3, fontSize * 0.22), 0, Math.PI * 2);
+    context.arc(left + fontSize * 0.43, top + h / 2, Math.max(3, fontSize * 0.22), 0, Math.PI * 2);
     context.fill();
 
     // 紐穴の右側に縦罫
     context.strokeStyle = 'rgba(244, 234, 212, 0.45)';
     context.lineWidth = 0.8;
     context.beginPath();
-    context.moveTo(left + fontSize * 1.0, top + 6);
-    context.lineTo(left + fontSize * 1.0, top + h - 6);
+    context.moveTo(left + fontSize * 0.78, top + 6);
+    context.lineTo(left + fontSize * 0.78, top + h - 6);
     context.stroke();
 
     // 本文 (クリーム)
     context.font = font;
     context.fillStyle = '#fdf7e8';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.25, top + h / 2);
+    context.fillText(text, left + fontSize * 0.98, top + h / 2);
   }
 
   // 08 carbon: カーボン複写 — ベージュ紙 + 紫黒文字の複写ズレ
   function drawCarbon(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(400, baseSize * 0.95);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.05, 0.74);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.82, 0.58);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#e8dfc8';
@@ -419,16 +419,16 @@
     context.font = font;
     context.textBaseline = 'middle';
     context.fillStyle = 'rgba(70, 40, 90, 0.32)';
-    context.fillText(text, left + fontSize * 1.05 + 1.2, top + h / 2 + 0.8);
+    context.fillText(text, left + fontSize * 0.82 + 1.2, top + h / 2 + 0.8);
     // 本文
     context.fillStyle = '#2a1b3d';
-    context.fillText(text, left + fontSize * 1.05, top + h / 2);
+    context.fillText(text, left + fontSize * 0.82, top + h / 2);
   }
 
   // 09 stencil: ステンシル — 黒地 + 上下に黄ハザード斜めストライプ
   function drawStencil(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.92);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.2, 0.82);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.94, 0.64);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#101010';
@@ -442,7 +442,7 @@
     context.font = font;
     context.fillStyle = '#f7c100';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.2, top + h / 2);
+    context.fillText(text, left + fontSize * 0.94, top + h / 2);
   }
 
   function drawHazardStripe(context, x, y, w, h, color) {
@@ -467,7 +467,7 @@
   // 10 wax-seal: 蝋封 — 深紅丸 + 金枠 + 鋸歯
   function drawWaxSeal(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.85);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.1, 0.85);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.86, 0.66);
     const { left, top } = placeBox(canvas, margin, w, h, position);
     const cx = left + w / 2;
     const cy = top + h / 2;
@@ -520,13 +520,13 @@
     context.font = font;
     context.fillStyle = '#f5dba0';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.1, cy);
+    context.fillText(text, left + fontSize * 0.86, cy);
   }
 
   // 11 microfiche: マイクロフィルム — 黒地 + フィルム穴 + クロスヘア
   function drawMicrofiche(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.92);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.2, 0.85);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.94, 0.66);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#0d0d0e';
@@ -553,7 +553,7 @@
     context.font = font;
     context.fillStyle = '#d8a155';
     context.textBaseline = 'middle';
-    context.fillText(text, left + fontSize * 1.2, top + h / 2);
+    context.fillText(text, left + fontSize * 0.94, top + h / 2);
   }
 
   function drawCrosshair(context, cx, cy, size) {
@@ -566,7 +566,7 @@
   // 12 postit: 黄色付箋 — 微回転 + テープアクセント + 影
   function drawPostit(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.95);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.1, 0.9);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.86, 0.7);
     const { left, top } = placeBox(canvas, margin, w, h, position);
     const cx = left + w / 2;
     const cy = top + h / 2;
@@ -596,7 +596,7 @@
     context.font = font;
     context.fillStyle = '#1a1818';
     context.textBaseline = 'middle';
-    context.fillText(text, -w / 2 + fontSize * 1.1, 0);
+    context.fillText(text, -w / 2 + fontSize * 0.86, 0);
 
     context.restore();
   }
@@ -604,7 +604,7 @@
   // 13 chalk: 黒板チョーク — 黒板 + チョーク粉 + 白文字
   function drawChalk(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.95);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.15, 0.85);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.9, 0.66);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     // 黒板色 (緑寄り墨)
@@ -629,14 +629,14 @@
     context.textBaseline = 'middle';
     context.shadowColor = 'rgba(245, 242, 232, 0.32)';
     context.shadowBlur = 1.6;
-    context.fillText(text, left + fontSize * 1.15, top + h / 2);
+    context.fillText(text, left + fontSize * 0.9, top + h / 2);
     context.shadowColor = 'transparent';
   }
 
   // 14 typewriter: タイプライター — 紙地 + 文字毎 Y ズレ + インクにじみ
   function drawTypewriter(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize * 0.92);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.1, 0.78);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.86, 0.61);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#f4ead4';
@@ -658,7 +658,7 @@
     context.fillStyle = '#221813';
     context.textBaseline = 'middle';
 
-    let x = left + fontSize * 1.1;
+    let x = left + fontSize * 0.86;
     const cy = top + h / 2;
     const chars = Array.from(text);
     for (let i = 0; i < chars.length; i += 1) {
@@ -672,7 +672,7 @@
   // 15 neon: ネオン — 黒地 + ピンク&シアン二重グロー
   function drawNeon(context, canvas, text, baseSize, margin, position) {
     const font = fontDecl(700, baseSize);
-    const { w, h, fontSize } = measureBox(context, font, text, 1.25, 0.9);
+    const { w, h, fontSize } = measureBox(context, font, text, 0.98, 0.7);
     const { left, top } = placeBox(canvas, margin, w, h, position);
 
     context.fillStyle = '#0a0a14';
@@ -700,7 +700,7 @@
     // 合算で十分な発光感が出る)。
     context.font = font;
     context.textBaseline = 'middle';
-    const textX = left + fontSize * 1.25;
+    const textX = left + fontSize * 0.98;
     const textY = top + h / 2;
 
     context.fillStyle = '#3df0ff';
