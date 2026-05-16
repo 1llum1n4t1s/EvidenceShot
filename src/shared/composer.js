@@ -163,6 +163,9 @@
   }
 
   async function finalizeCaptureSession(sessionId, sessionSecret) {
+    // [PERF DEBUG] 計測ラベル付け。撮影完了→OK バッジまでの所要時間内訳を可視化する目的。
+    // 計測終了後は revert 予定。
+    globalThis.EvidenceShotPerf?.mark('composer.finalize:start');
     try {
       const session = captureSessions.get(sessionId);
       if (!session) {
@@ -185,6 +188,7 @@
 
       const usedCanvasHeight = Math.max(1, Math.min(canvas.height, session.usedCanvasHeight || canvas.height));
       if (usedCanvasHeight !== canvas.height) {
+        globalThis.EvidenceShotPerf?.mark('composer.finalize.trim_canvas:start');
         // GPU メモリの 2 倍ピーク回避: 先に元 Canvas の必要領域を ImageBitmap (CPU 側) に
         // 抽出し、元 Canvas の GPU バッファを **drawImage 前に** 解放する。
         // その後、新 Canvas を確保して bitmap を draw する流れにすることで
@@ -209,11 +213,15 @@
 
         canvas = trimmedCanvas;
         context = trimmedContext;
+        globalThis.EvidenceShotPerf?.mark('composer.finalize.trim_canvas:end');
       }
 
       // フォント未ロードでスタンプ描画すると OS フォントに無音フォールバックする。
+      globalThis.EvidenceShotPerf?.mark('composer.finalize.await_fonts:start');
       await fontsReady;
+      globalThis.EvidenceShotPerf?.mark('composer.finalize.await_fonts:end');
 
+      globalThis.EvidenceShotPerf?.mark('composer.finalize.stamp_draw:start');
       if (settings.timestampEnabled) {
         StampRenderer.drawTimestamp(
           context,
@@ -227,6 +235,7 @@
       if (settings.footerText) {
         StampRenderer.drawFooterLabel(context, canvas, settings.footerText, settings.timestampStyle, settings.timestampSize);
       }
+      globalThis.EvidenceShotPerf?.mark('composer.finalize.stamp_draw:end');
 
       // クリップボード書き込みは composer 自身からは行わない
       // (offscreen は document.hasFocus() が常に false / Firefox event page も同様で
@@ -237,8 +246,12 @@
       let clipboardResult = { status: settings.copyToClipboard ? CLIPBOARD_STATUS.PENDING_IN_CONTENT : CLIPBOARD_STATUS.DISABLED, error: null };
       if (settings.copyToClipboard) {
         try {
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.clip_canvasToBlob:start');
           const rawClip = await canvasToBlob(canvas, 'image/png');
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.clip_canvasToBlob:end');
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.clip_iTXt:start');
           clipboardBlob = await embedEvidenceMetadataIntoPng(rawClip, meta);
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.clip_iTXt:end');
           clipboardObjectUrl = URL.createObjectURL(clipboardBlob);
           // 書込側で fetch されないまま放置されるリスクに備えた保険 revoke。
           // SW / background 側は完了通知が来たら即 revoke を依頼する想定。
@@ -264,11 +277,17 @@
         blob = clipboardBlob;
         savedAsFormat = 'png';
       } else {
+        globalThis.EvidenceShotPerf?.mark('composer.finalize.save_blob:start');
         const built = await buildOutputBlob(canvas, settings.format);
+        globalThis.EvidenceShotPerf?.mark('composer.finalize.save_blob:end');
         // PNG なら保存ファイル側にも改ざん検知メタデータを埋める。JPEG/WEBP は対象外。
-        blob = built.savedAsFormat === 'png'
-          ? await embedEvidenceMetadataIntoPng(built.blob, meta)
-          : built.blob;
+        if (built.savedAsFormat === 'png') {
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.save_iTXt:start');
+          blob = await embedEvidenceMetadataIntoPng(built.blob, meta);
+          globalThis.EvidenceShotPerf?.mark('composer.finalize.save_iTXt:end');
+        } else {
+          blob = built.blob;
+        }
         savedAsFormat = built.savedAsFormat;
       }
       // Blob 抽出後は Canvas は不要。Object URL 生成の前に GPU バッファを解放。
@@ -293,6 +312,10 @@
       // 60 秒後にも自動 revoke する。
       scheduleDownloadUrlRevoke(downloadUrl);
 
+      globalThis.EvidenceShotPerf?.mark('composer.finalize:end');
+      // offscreen context では chrome.storage.local.set が silent fail するケースが観測されたため
+      // marks を return value にバケツリレーで載せて SW 側で storage に書く。
+      const perfMarksForRelay = globalThis.EvidenceShotPerf?.drainMarks?.() || [];
       return {
         ok: true,
         fileName,
@@ -302,6 +325,8 @@
         clipboardError: clipboardResult.error,
         // pending_in_content の場合のみ意味のある URL。content script で fetch して clipboard.write に渡す。
         clipboardObjectUrl,
+        _perfMarks: perfMarksForRelay,
+        _perfCtx: globalThis.EvidenceShotPerf?.context || null,
       };
     } catch (error) {
       return {

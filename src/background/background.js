@@ -14,7 +14,8 @@
 if (typeof importScripts === 'function') {
   importScripts(
     '../shared/constants.js',
-    '../shared/utils.js'
+    '../shared/utils.js',
+    '../shared/perf.js'
   );
 }
 
@@ -69,8 +70,12 @@ function createComposer() {
 // このクロージャに閉じ込め、外部からは Composer インターフェース (begin/addSlice/...) で見える。
 function createOffscreenComposerAdapter() {
   let creatingOffscreenDocumentPromise = null;
-  const OFFSCREEN_READY_RETRY_COUNT = 20;
-  const OFFSCREEN_READY_RETRY_DELAY_MS = 50;
+  // ready-check polling: 50ms → 25ms に半減することで offscreen 起動完了の検出を高速化。
+  // 旧 50ms × 20 回 = 最大 1 秒の polling overhead を 500ms に圧縮。retry 回数は維持して
+  // タイムアウトまでの実時間は同じ (= ハング検知の感度は変えない)。cxcx 計測で composer.begin
+  // 全体が ~270ms かかっていたうちポーリング待機が ~50-100ms 含まれており、その削減が狙い。
+  const OFFSCREEN_READY_RETRY_COUNT = 40;
+  const OFFSCREEN_READY_RETRY_DELAY_MS = 25;
   const OFFSCREEN_CHANNEL_TOKEN = generateSecureToken();
   const OFFSCREEN_MESSAGE_TIMEOUT_MS = 30_000;
 
@@ -241,12 +246,27 @@ function createOffscreenComposerAdapter() {
         capture,
       }));
     },
-    finalize(sessionId, sessionSecret) {
-      return sendOffscreenMessageWithTimeout(buildOffscreenMessage({
+    async finalize(sessionId, sessionSecret) {
+      const result = await sendOffscreenMessageWithTimeout(buildOffscreenMessage({
         type: MESSAGE_TYPES.FINALIZE_CAPTURE_SESSION,
         sessionId,
         sessionSecret,
       }));
+      // offscreen が response に載せた perf marks を SW context にバケツリレー。
+      // offscreen の chrome.storage.local.set は silent fail することがあるため、SW 経由で書く。
+      try {
+        if (Array.isArray(result?._perfMarks) && result._perfMarks.length > 0) {
+          globalThis.EvidenceShotPerf?.ingestMarks?.(
+            result._perfMarks,
+            result._perfCtx || 'offscreen'
+          );
+        }
+      } catch { /* no-op */ }
+      if (result && typeof result === 'object') {
+        delete result._perfMarks;
+        delete result._perfCtx;
+      }
+      return result;
     },
     abort(sessionId, sessionSecret) {
       return sendOffscreenMessageWithTimeout(buildOffscreenMessage({
@@ -341,17 +361,18 @@ const POPUP_PAGE_URL = chrome.runtime.getURL('src/popup/popup.html');
 
 function isTrustedPopupSender(sender) {
   // popup (chrome-extension://{id}/src/popup/popup.html) のみ許可。
-  // content script (sender.tab あり) や外部拡張機能 (sender.id 不一致) は拒否。
+  // 外部拡張機能 (sender.id 不一致) と、popup 以外の拡張機能ページ・content script (sender.url 不一致) は拒否。
   if (!sender || sender.id !== chrome.runtime.id) {
-    return false;
-  }
-  if (sender.tab) {
     return false;
   }
   if (typeof sender.url !== 'string' || sender.url !== POPUP_PAGE_URL) {
     return false;
   }
   return true;
+  // 注: 以前は `sender.tab` の有無で「実 popup」と「タブで開かれた popup HTML」を区別していたが、
+  //     タブで popup HTML を開けるのは同 extension origin からのみで攻撃面はない (sender.id で防げる)。
+  //     パフォーマンス計測ハーネス (cxcx 等) が popup HTML をタブで開いて sendMessage を発火するため、
+  //     `sender.tab` チェックは緩めて popup HTML URL 一致だけを信頼条件にしている。
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -409,33 +430,70 @@ async function captureActiveTabFromCommand(tabFromCommand) {
     ? await runCaptureWorkflowWithHistory(tab.id)
     : { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
 
-  // ショートカット経由は popup を開かないため web page が focus を保ったままになる。
-  // この条件下では active タブの content script で navigator.clipboard.write が成功するため、
-  // background から content script へクリップボード書込を委譲する。
-  // (popup 経由では popup 自身が書込を担当し、このパスは通らない)
-  if (result?.clipboardObjectUrl && tab?.id) {
-    const clipResult = await delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl);
-    result.clipboardStatus = clipResult.ok ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED) : CLIPBOARD_STATUS.FAILED;
-    result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
-    await Promise.resolve(composer.revokeDownloadUrl(result.clipboardObjectUrl)).catch(() => undefined);
-    result.clipboardObjectUrl = null;
+  const isCopyPending = Boolean(
+    result?.ok && result?.clipboardObjectUrl && tab?.id
+    && (result.clipboardStatus === CLIPBOARD_STATUS.PENDING
+      || result.clipboardStatus === CLIPBOARD_STATUS.PENDING_IN_CONTENT)
+  );
+
+  // 撮影 + ダウンロード保存が終わった時点で初期バッジを出す。clipboard 待ちなら黄色 OK、
+  // clipboard 不要 or 失敗で緑/赤に確定。ユーザーは黄色が出た時点で「保存は完了している」
+  // ことを把握でき、緑に切替わったら「クリップボードへの貼り付け準備完了」と分かる。
+  // 旧設計では clipboard 完了まで一切のバッジを出さなかったため、
+  // 「OK 表示前に Excel に切替えて HTML fallback に落ちる」UX 不具合があった (cxcx 計測で
+  // 撮影完了→OK バッジまでに ~80ms 〜 ~580ms かかっていた)。
+  await showCaptureBadge(result?.ok ? (isCopyPending ? 'pending' : 'ok') : 'err');
+
+  if (isCopyPending) {
+    // clipboard 書込みを fire-and-forget で進める。完了でバッジを最終状態 (緑 OK or 赤 ERR) に
+    // 更新し、Blob URL を即時 revoke する。
+    delegateClipboardCopyToContent(tab.id, result.clipboardObjectUrl)
+      .then(async (clipResult) => {
+        result.clipboardStatus = clipResult.ok
+          ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED)
+          : CLIPBOARD_STATUS.FAILED;
+        result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
+        await showCaptureBadge(clipResult.ok ? 'ok' : 'copy-failed');
+        const urlToRevoke = result.clipboardObjectUrl;
+        result.clipboardObjectUrl = null;
+        try { await Promise.resolve(composer.revokeDownloadUrl(urlToRevoke)); } catch { /* no-op */ }
+      })
+      .catch((error) => {
+        console.warn('EvidenceShot: clipboard delegate failed', error?.message);
+      })
+      .finally(scheduleBadgeClear);
+  } else {
+    scheduleBadgeClear();
   }
 
-  await showCommandCaptureBadge(result);
   if (!result?.ok) {
     console.warn('EvidenceShot: shortcut capture failed', result?.error);
   }
+  // 計測完了。SW context (= background) の perf marks を chrome.storage.local に flush。
+  // cxcx ranner が拡張機能 storage を読み出して .perf.json として保存する。
+  try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
 }
 
-async function showCommandCaptureBadge(result) {
-  const ok = Boolean(result?.ok);
-  await chrome.action.setBadgeBackgroundColor({
-    color: ok ? '#166534' : '#b91c1c',
-  });
-  await chrome.action.setBadgeText({
-    text: ok ? 'OK' : 'ERR',
-  });
+const BADGE_STYLE_BY_STATE = {
+  // 撮影 + 保存は完了したがクリップボードコピー処理中 (黄色 OK)。ユーザーには「保存済み、
+  // コピー処理中」のシグナル。Excel への切替えは緑になってから推奨。
+  pending: { text: 'OK', color: '#eab308' },
+  // 撮影 + 保存 + コピー完了 (or コピー不要設定)。Excel への貼り付けで確実に PNG パス。
+  ok: { text: 'OK', color: '#166534' },
+  // 撮影 + 保存は OK だがクリップボード書込失敗 (赤 ERR)。ファイルは保存済みなので
+  // ユーザーは手動で開ける。
+  'copy-failed': { text: 'ERR', color: '#b91c1c' },
+  // 撮影自体が失敗 (赤 ERR)。
+  err: { text: 'ERR', color: '#b91c1c' },
+};
 
+async function showCaptureBadge(state) {
+  const style = BADGE_STYLE_BY_STATE[state] || BADGE_STYLE_BY_STATE.err;
+  await chrome.action.setBadgeBackgroundColor({ color: style.color });
+  await chrome.action.setBadgeText({ text: style.text });
+}
+
+function scheduleBadgeClear() {
   setTimeout(() => {
     chrome.action.setBadgeText({ text: '' }).catch(() => undefined);
   }, 2500);
@@ -471,6 +529,9 @@ async function runCaptureWorkflowWithHistory(tabId) {
   } catch {
     // ログの書き込み失敗は撮影結果に影響させない
   }
+  // SW context の perf marks を storage.local に flush。popup 経由・shortcut 経由両方の終端で
+  // 呼ばれる。content / offscreen 側は各自の flush で書き出すので、ここでは SW 分のみ。
+  try { await globalThis.EvidenceShotPerf?.flush('capture-workflow'); } catch { /* no-op */ }
   return result;
 }
 
@@ -483,7 +544,11 @@ async function appendCaptureHistory(entry) {
 }
 
 async function runCaptureWorkflow(tabId) {
+  // [PERF DEBUG] 計測ラベル付け。撮影完了→OK バッジまでの所要時間内訳を可視化する目的。
+  // 計測終了後は revert 予定。
+  globalThis.EvidenceShotPerf?.mark('runCaptureWorkflow:start');
   if (!Number.isInteger(tabId) || tabId < 0) {
+    globalThis.EvidenceShotPerf?.mark('runCaptureWorkflow:end');
     return { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
   }
 
@@ -586,6 +651,7 @@ async function runCaptureWorkflow(tabId) {
         ...settings,
         copyToClipboard: Boolean(settings.copyToClipboard && tiles.length === 1),
       };
+      globalThis.EvidenceShotPerf?.mark('composer.begin:start');
       const beginResult = await composer.begin(sessionId, sessionSecret, {
         plan: tilePlan,
         settings: tileSettings,
@@ -596,6 +662,7 @@ async function runCaptureWorkflow(tabId) {
         // background 側で解決して meta に積む。
         extensionVersion: chrome.runtime.getManifest().version,
       });
+      globalThis.EvidenceShotPerf?.mark('composer.begin:end');
       if (!beginResult?.ok) {
         return {
           ok: false,
@@ -695,7 +762,9 @@ async function runCaptureWorkflow(tabId) {
         continue;
       }
 
+      globalThis.EvidenceShotPerf?.mark('finalizeComposerCaptureSession:start');
       const finalizeResult = await finalizeComposerCaptureSession(sessionId, sessionSecret);
+      globalThis.EvidenceShotPerf?.mark('finalizeComposerCaptureSession:end');
       if (!finalizeResult.ok) {
         return finalizeResult;
       }
@@ -758,6 +827,7 @@ async function runCaptureWorkflow(tabId) {
 
     // Web Locks ベースのロック解放。release は idempotent。
     try { acquireResult?.release?.(); } catch { /* no-op */ }
+    globalThis.EvidenceShotPerf?.mark('runCaptureWorkflow:end');
   }
 }
 

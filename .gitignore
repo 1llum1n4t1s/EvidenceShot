@@ -3,6 +3,8 @@ webstore/images/
 icons/icon-*.png
 temp-build/
 firefox-build/
+perf-build/
+cxcx-out/
 web-ext-artifacts/
 *.zip
 *.xpi

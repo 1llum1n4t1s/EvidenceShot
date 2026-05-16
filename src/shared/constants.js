@@ -43,6 +43,7 @@
     CONTENT_SCRIPT_FILES: [
       'src/shared/constants.js',
       'src/shared/utils.js',
+      'src/shared/perf.js',
       'src/content/capture.js',
     ],
     OFFSCREEN_DOCUMENT_PATH: 'src/offscreen/offscreen.html',
@@ -58,7 +59,12 @@
       fileNamePrefix: '',
       copyToClipboard: true,
     },
-    CAPTURE_INTERVAL_MS: 650,
+    // chrome.tabs.captureVisibleTab の MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND = 2
+    // (= 最短 500ms/shot) に対する安全マージン込みの最小値。旧 650ms は保守的に過大で、
+    // 中ページのスクロール連結 (30 slice 等) で 4 秒以上の rate-limit 待機が支配的だった。
+    // 520ms に短縮することで中ページ撮影を ~4 秒短縮できる (cxcx 計測実証済)。
+    // 万一の制限超過時は capture step で例外 → finally で abort されるので安全。
+    CAPTURE_INTERVAL_MS: 520,
     CAPTURE_SETTLE_MS: 180,
     MAX_CANVAS_EDGE: 65535,
     MAX_TILE_CANVAS_AREA: 67108864,

@@ -227,17 +227,30 @@
   // url は offscreen が URL.createObjectURL した chrome-extension:// 配下の Blob URL で、
   // content script は同一拡張機能 origin で動作するため fetch でこの URL を読める。
   async function copyClipboardFromUrl(url) {
+    // [PERF DEBUG] 計測ラベル付け。fetch / blob 化 / clipboard.write の内訳を可視化する目的。
+    // 計測終了後は revert 予定。
+    globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:start');
     const expectedOrigin = `blob:chrome-extension://${chrome.runtime.id}/`;
     if (typeof url !== 'string' || !url || !url.startsWith(expectedOrigin)) {
+      globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
+      try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     }
     try {
+      globalThis.EvidenceShotPerf?.mark('content.fetch_blob:start');
       const response = await fetch(url);
       if (!response.ok) {
+        globalThis.EvidenceShotPerf?.mark('content.fetch_blob:end');
+        globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
+      try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
         return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
       }
       const blob = await response.blob();
-      return await copyImageBlobToClipboard(blob);
+      globalThis.EvidenceShotPerf?.mark('content.fetch_blob:end');
+      globalThis.EvidenceShotPerf?.mark('content.clipboard_write:start');
+      const result = await copyImageBlobToClipboard(blob);
+      globalThis.EvidenceShotPerf?.mark('content.clipboard_write:end');
+      return result;
     } catch (error) {
       // DOMException など Chrome ネイティブの英語メッセージは normalizeUserMessage で
       // fallback 文言へ畳み込まれるため、原文は console.error に残す。
@@ -251,6 +264,9 @@
           'クリップボードへのコピーに失敗しました。'
         ),
       };
+    } finally {
+      globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
+      try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
     }
   }
 

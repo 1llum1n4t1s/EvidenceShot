@@ -1,0 +1,19 @@
+# EvidenceShot 用 cxcx シナリオ
+# Playwright の keyboard.press は Chrome の commands API ショートカットを発火できないため、
+# 拡張機能の popup を一瞬開いて chrome.runtime.sendMessage(WTS_CAPTURE_FROM_POPUP) を発火する
+# `extension_message` step で撮影 trigger をかける。
+# 撮影完了後、cxcx runner が拡張機能 chrome.storage.local._es_perf を読み取って .perf.json に保存する。
+
+- name: "EvidenceShot capture (short page)"
+  url: "https://example.com/"
+  steps:
+    - idle: 3000
+    - extension_message: { type: "WTS_CAPTURE_FROM_POPUP" }
+    - idle: 12000
+
+- name: "EvidenceShot capture (medium page, scroll-stitch)"
+  url: "https://en.wikipedia.org/wiki/JavaScript"
+  steps:
+    - idle: 4000
+    - extension_message: { type: "WTS_CAPTURE_FROM_POPUP" }
+    - idle: 25000
