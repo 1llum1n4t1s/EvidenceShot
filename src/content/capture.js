@@ -158,9 +158,14 @@
         const currentHeight = getDocumentHeight();
         if (currentHeight > planPageHeight * 1.2) {
           state.captureSession.dynamicGrowthWarned = true;
-          console.warn(
+          // 仕様通り「撮影開始時点のスクロール範囲」で完走するので撮影結果に欠陥は発生しないが、
+          // 動的ロード分は画像に含まれない。Reddit / Twitter 等の無限スクロールページで毎回発生
+          // するため、デフォルト表示する console.warn だと noise になる。Default Levels では
+          // 非表示、Verbose で見える console.debug に降格。撮影漏れの気付きが必要なら DevTools
+          // の Console Filter で Verbose を有効化する運用。
+          console.debug(
             `EvidenceShot: page height grew from ${planPageHeight}px to ${currentHeight}px after capture started. ` +
-            'Late-loaded content (infinite scroll / lazy components) may not appear in the screenshot.'
+            'Late-loaded content is intentionally excluded (design: capture targets the scroll range at start time).'
           );
         }
       }
