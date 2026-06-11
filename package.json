@@ -12,7 +12,7 @@
   "devDependencies": {
     "chrome-webstore-upload-cli": "^3.3.0",
     "puppeteer": "^24.43.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.0",
     "web-ext": "^10.1.0"
   },
   "keywords": [
