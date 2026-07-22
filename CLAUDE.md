@@ -1,111 +1,6 @@
-# AGENTS.md
-
-This file provides guidance to coding agents working in `C:\Users\szk\Work\EvidenceShot`.
-
-## プロジェクト概要
-
-EvidenceShot は、現在のタブを証跡向けに撮影する Chrome / Firefox 拡張機能です。  
-ユーザーはポップアップまたはショートカットキーから撮影を開始し、生成された画像はブラウザの既定ダウンロード先へ保存されます。
-
-## 実装方針
-
-- 撮影開始はポップアップまたは Chrome commands のショートカットキーから行う
-- フローティングボタンは存在しない
-- 常時広域サイト権限は使わない
-- スクロール連結撮影は、撮影開始時点のスクロール範囲の末尾までを対象にする
-- 画像は offscreen document で逐次合成する
-- クリップボードコピーは保存とは独立した補助機能で、失敗してもダウンロード保存は継続する
-
-## ディレクトリ構成
-
-```text
-EvidenceShot/
-├── manifest.json
-├── package.json
-├── icons/
-├── src/
-│   ├── background/
-│   │   └── background.js
-│   ├── content/
-│   │   └── capture.js
-│   ├── offscreen/
-│   │   ├── offscreen.html
-│   │   ├── offscreen.js
-│   │   └── stamp-renderer.js
-│   ├── popup/
-│   │   ├── popup.html
-│   │   ├── popup.css
-│   │   └── popup.js
-│   └── shared/
-│       ├── constants.js
-│       └── utils.js
-├── scripts/
-├── webstore/
-└── docs/
-```
-
-## アーキテクチャ
-
-- `src/popup/popup.js`
-  - 設定値を `chrome.storage.local` に保存
-  - `WTS_CAPTURE_FROM_POPUP` を background に送信
-- `src/background/background.js`
-  - Chrome commands のショートカットキーによる撮影開始
-  - offscreen singleton を前提にした拡張機能全体 1 件の排他制御
-  - content script 注入
-  - 各 slice の取得
-  - offscreen への逐次転送
-  - `chrome.downloads.download()` による保存
-- `src/content/capture.js`
-  - キャプチャ計画の生成
-  - スクロール位置制御
-  - 固定要素の退避 / 復元
-  - 直近カーソル位置の取得
-- `src/offscreen/offscreen.js`
-  - セッション単位の canvas 合成
-  - タイムスタンプ / 左下固定テキスト / カーソル描画
-  - クリップボード向け PNG コピー
-  - 合成結果を background に返却（実際のダウンロードは background 側）
-- `src/offscreen/stamp-renderer.js`
-  - タイムスタンプ／フッターラベルのスタイル定義と描画本体
-  - `globalThis.EvidenceShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export
-
-## 権限
-
-- `activeTab`
-- `storage`
-- `scripting`
-- `offscreen`
-- `downloads`
-- `clipboardWrite`
-
-## 開発コマンド
-
-```bash
-npm install
-npm run generate-icons
-npm run generate-screenshots
-npm run build
-```
-
-## リリース
-
-- `manifest.json` と `package.json` のバージョンを一致させること
-- `release/x.y.z` ブランチ名は manifest バージョンと一致させること
-
-## 注意点
-
-- multi-slice 撮影中は、対象タブがそのウィンドウの active tab であることを維持する前提
-- 同時撮影は offscreen singleton との整合性のため background 側で拡張機能全体 1 件に制限する
-- 画像断片は background に全保持せず、offscreen へ逐次送る
-
----
-
 # CLAUDE.md
 
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code and other coding agents working in this repository.
 
 ## プロジェクト概要
 
@@ -119,7 +14,8 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 - タイムスタンプ、左下固定テキストの任意付与
 - 撮影後の任意クリップボードコピー (PNG)
 - ブラウザテーマに連動するポップアップのライト / ダーク自動切替
-- フローティングボタンなし、常時 `<all_urls>` 権限なし
+- 撮影開始はポップアップ または `chrome.commands` ショートカットのみ（フローティングボタンは持たない）
+- 権限は最小に保ち、常時 `<all_urls>` 権限は持たない（撮影は `activeTab` で都度取得する）
 - **PNG 出力には改ざん検知メタデータ (`iTXt`) を埋め込み**: クエリとハッシュを除いた URL / タイムスタンプ / タイトル / 拡張機能バージョン / IDAT-SHA256
 - 文字サイズはタイムスタンプと左下固定テキストに連動し、極小が旧標準相当
 
@@ -146,11 +42,12 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 
 重要な共通プロトコル:
 
-- **メッセージ種別 (`MESSAGE_TYPES`)** は `src/shared/constants.js` に一元定義。文字列リテラルを散在させない。
-- **`OFFSCREEN_INTERFACE_VERSION`** は offscreen ↔ background のプロトコル変更時にインクリメント。SW 再起動時の世代不一致検出に使う。
-- **`OFFSCREEN_CHANNEL_TOKEN`** は SW 起動時に CSPRNG で生成し offscreen URL のクエリに埋込み。世代管理を兼ねる (セキュリティ境界の効果は限定的、`sender.id` + `sender.tab` チェックが主防御)。
-- **撮影排他制御は `navigator.locks` (Web Locks API)** を使用。`evidenceshot-capture-tab-<tabId>` (タブ単位) と `evidenceshot-capture-global` (拡張機能全体) の 2 段ロック。SW 死亡で自動解放されるため幽霊ロック判定は不要。
+- **メッセージ種別 (`MESSAGE_TYPES`)** は `src/shared/constants.js` に一元定義する。文字列リテラルは散在させず `MESSAGE_TYPES` を参照する。
+- **`OFFSCREEN_INTERFACE_VERSION`** は offscreen ↔ background のプロトコル変更時にインクリメントする。SW 再起動時の世代不一致検出に使う。
+- **`OFFSCREEN_CHANNEL_TOKEN`** は SW 起動時に CSPRNG で生成し offscreen URL のクエリに埋込み、世代管理を兼ねる (セキュリティ境界の効果は限定的、`sender.id` + `sender.tab` チェックが主防御)。
+- **撮影排他制御は `navigator.locks` (Web Locks API)** を使用する。`evidenceshot-capture-tab-<tabId>` (タブ単位) と `evidenceshot-capture-global` (拡張機能全体) の 2 段ロック。SW 死亡で自動解放されるため幽霊ロック判定は不要。
 - **`CONTROLLER_VERSION` (capture.js)** は content script のバージョン。挙動を変えたらインクリメントして旧 inject の dispose を強制する。
+- 画像断片は background に全保持せず、offscreen へ逐次送る（メモリピーク抑制）。
 
 ## クリップボード書込パス (PNG コピー) — 二経路ハイブリッド
 
@@ -177,7 +74,7 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 - `src/content/capture.js` — スクロール制御、固定要素 (Shadow DOM 含む) の一時退避、撮影計画生成
 - `src/offscreen/offscreen.html` — Chrome 専用 offscreen document の HTML エントリ
 - `src/offscreen/offscreen.js` — Chrome 専用 offscreen の thin adapter。SW からの sendMessage を `globalThis.EvidenceShotComposer` に転送するだけ
-- `src/offscreen/stamp-renderer.js` — タイムスタンプ / 左下固定テキストのスタイル定義と描画 (`globalThis.EvidenceShotStampRenderer` に export)
+- `src/offscreen/stamp-renderer.js` — タイムスタンプ / 左下固定テキストのスタイル定義と描画 (`globalThis.EvidenceShotStampRenderer` に `drawTimestamp` / `drawFooterLabel` を export)
 - `src/shared/composer.js` — **Canvas 合成・PNG iTXt 埋込・クリップボード PNG 生成の本体**。`globalThis.EvidenceShotComposer` として export。Chrome (offscreen.html) と Firefox (background.html) の両方で読み込まれ、両ブラウザで同じロジックが動く
 - `src/shared/constants.js` — 既定設定・メッセージ種別・スタイル定義 (`globalThis.EvidenceShotConstants`)
 - `src/shared/utils.js` — 設定正規化・保存・i18n・`respondAsync` 等の共通ヘルパ (`globalThis.EvidenceShotShared`)
@@ -192,11 +89,11 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 ## 開発コマンド
 
 ```bash
-npm install
-npm run generate-icons          # icons/ を生成
-npm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
-npm run build                   # 上記 2 つを連続実行
-npm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
+pnpm install
+pnpm run generate-icons          # icons/ を生成
+pnpm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
+pnpm run build                   # 上記 2 つを連続実行
+pnpm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
 ```
 
 開発ループ:
@@ -206,7 +103,7 @@ npm run build:firefox           # Firefox AMO 用に firefox-build/ ディレク
 3. ソース変更後は同画面の更新ボタンで再読込
 4. 手動確認用フィクスチャは `docs/manual-fixture.html`
 
-テストフレームワーク・lint は導入していない。挙動確認は手動。
+テストフレームワーク・lint は導入していない。挙動確認は手動で行う。
 
 ## 改ざん検知の検証
 
@@ -220,7 +117,7 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 ## 証跡改ざん回避ポリシー (恒久遵守) ⚠️
 
-**ブラウザがレンダリングしていないピクセルを Canvas で合成して画像へ焼き込む行為は、本拡張機能が PNG iTXt で売りにしている「改ざん検知」の存在意義と矛盾するため、いかなる理由でも追加してはならない**。
+**ブラウザがレンダリングしていないピクセルを Canvas で合成して画像へ焼き込む行為は禁止する**。本拡張機能が PNG iTXt で売りにしている「改ざん検知」の存在意義と矛盾するため、いかなる理由でも追加せず、撮影された実ピクセルだけを保存する。
 
 具体的に **禁止** する追加機能:
 
@@ -240,11 +137,11 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 `/vava` スキルでバージョンアップ〜リリースまで一括処理する。手動でやる場合の必須手順:
 
-1. **バージョン同期 (4 ファイル)**: `manifest.json` / `package.json` / `package-lock.json` / `README.md` を必ず揃える。`package-lock.json` は root 直下の `version` と `packages.""` 配下の `version` の 2 箇所。これを忘れると CI の `npm ci --ignore-scripts` が `EUSAGE` で落ち、後段の `package-lock.json` バージョン明示チェックでも弾かれる (v1.0.10 で踏んだ罠)
-2. **`release/x.y.z` ブランチ名 = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで一致を確認
+1. **バージョン同期 (3 ファイル)**: `manifest.json` / `package.json` / `README.md` を必ず揃える。これを揃え忘れると CI の検証ステップで `package.json` と `manifest.json` の不一致で弾かれる (v1.0.10 で踏んだ罠)。依存の lockfile は pnpm 化済み (`pnpm-lock.yaml`)。CI は `pnpm install --frozen-lockfile --ignore-scripts` でインストールするため、`package.json` を変更したら `pnpm install` で `pnpm-lock.yaml` を更新してコミットする (lockfile 不整合だと frozen install が落ちる)
+2. **`release/x.y.z` ブランチ名 = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで一致を確認する
 3. main にコミット → push → `release/x.y.z` ブランチを作成して push
 4. **`release/**` への push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由で auto-publish
-5. **新権限を追加した版は CWS Developer Dashboard の「Privacy practices」タブの再記入が必要**: これを忘れると `400 Publish condition not met` で公開拒否される
+5. **新権限を追加した版は CWS Developer Dashboard の「Privacy practices」タブを再記入する**: 記入し忘れると `400 Publish condition not met` で公開拒否される
 
 CI で必要な GitHub Secrets:
 
@@ -253,7 +150,7 @@ CI で必要な GitHub Secrets:
 
 ## リリース前 smoke test (必須)
 
-`/vava` も CI 自動公開もコードを実機で動かす検証は含まれない。リリースタグを切る前に必ず以下 2 経路で撮影成功を確認:
+`/vava` も CI 自動公開もコードを実機で動かす検証は含まれない。リリースタグを切る前に必ず以下 2 経路で撮影成功を確認する:
 
 1. **ポップアップ経由**: アクションアイコン → ポップアップ → 「このタブを撮影する」→ ダウンロード保存を目視
 2. **ショートカット経由**: `Ctrl+Shift+Y` (mac: `Cmd+Shift+Y`) → ダウンロード保存を目視
@@ -262,13 +159,13 @@ CI で必要な GitHub Secrets:
 
 ## デバッグの足場
 
-- **`Shared.normalizeUserMessage` の英語フィルタ**: 日本語 UI で英語のみのエラー (`Could not establish connection.` 等 Chrome ネイティブメッセージ) を fallback 文言「撮影に失敗しました。」に置換する。原文の真因を残すため、`runCaptureWorkflow` の catch では必ず `console.error` で原文も Service Worker コンソールへ出すこと (これを消すと SW コンソールに証拠が残らない)。
+- **`Shared.normalizeUserMessage` の英語フィルタ**: 日本語 UI で英語のみのエラー (`Could not establish connection.` 等 Chrome ネイティブメッセージ) を fallback 文言「撮影に失敗しました。」に置換する。原文の真因を残すため、`runCaptureWorkflow` の catch では必ず `console.error` で原文も Service Worker コンソールへ出す (これを消すと SW コンソールに証拠が残らない)。
 - **`isTrustedPopupSender` の URL 完全一致ゲート**: popup → background のメッセージは `sender.url === POPUP_PAGE_URL` (= `chrome.runtime.getURL('src/popup/popup.html')`) を要求。弾かれると `sendResponse` されず popup 側は `undefined` を受け取り fallback 「撮影に失敗しました」になる。リスナー側で sender を吐くと一発で見える。
 - **撮影履歴ストレージ**: `chrome.storage.local` の `captureHistory` に直近 50 件、成功・失敗とも永続化される。SW Console から `chrome.storage.local.get('captureHistory', console.log)` で全件読める。失敗エントリの `error` フィールドが UI 表示前の真の文言。
 - **MESSAGE_TYPES 文字列を参照置換するときの定石**: 各コンテキスト (popup / background / content / offscreen) は冒頭で `globalThis.EvidenceShotConstants` から `MESSAGE_TYPES` を分割代入している。リテラル `'WTS_FOO'` を `MESSAGE_TYPES.FOO` に置換するときは **使用箇所だけでなく該当ファイルの分割代入の `{ ... }` にも `MESSAGE_TYPES` を入れる**こと。動的言語のため分割代入漏れは実行時まで気づけない (これが v1.0.4 のバグ)。
 - **offscreen document の API 制約**:
   - `document.hasFocus()` が常に **false** → `navigator.clipboard.write` は永久に失敗する。書込みは popup または content script に委譲する (上の「クリップボード書込パス」参照)。
-  - `chrome.runtime.getManifest()` は **`TypeError: chrome.runtime.getManifest is not a function`** で失敗する。拡張機能バージョンが必要なら SW 側で取得して `meta.extensionVersion` 経由で渡すこと (これを忘れると PNG `iTXt` メタデータが空フィールドで埋まる v1.0.4〜v1.0.8 のバグになる)。
+  - `chrome.runtime.getManifest()` は **`TypeError: chrome.runtime.getManifest is not a function`** で失敗する。拡張機能バージョンが必要なら SW 側で取得して `meta.extensionVersion` 経由で渡す (渡し忘れると PNG `iTXt` メタデータが空フィールドで埋まる v1.0.4〜v1.0.8 のバグになる)。
 - **`ensureContentScriptOnTab` の inject 拒否**: Chrome Web Store (`chromewebstore.google.com`) / `chrome://` / `view-source:` 等は `chrome.scripting.executeScript` が拒否し `cannot be scripted` 等の英語例外を投げる。`isCapturableUrl` は protocol しか見ないので `https` の Chrome Web Store は事前に弾けない。`ensureContentScriptOnTab` 内で例外メッセージを文字列パターンマッチして `errPageNotCapturable` (日本語) に正規化することで「撮影に失敗しました」(原因不明) を回避している。
 - **ショートカットが Chrome 挙動で消える**: Chromium は unpacked 拡張機能のリロード時に `commands.suggested_key` を一時的にリセットすることがある (既知の Chromium 挙動)。一度外れると manifest 修正で自動復活しないため、popup の「ショートカットを設定する」ボタンから `chrome://extensions/shortcuts` へワンクリックでジャンプして再設定できる救済 UI を `popup.js` の `onOpenShortcutSettings` に置いている。
 
@@ -280,5 +177,5 @@ CI で必要な GitHub Secrets:
 - Canvas トリミング時の GPU メモリ 2 倍ピーク回避のため `createImageBitmap` 経由で元 Canvas を解放してから新 Canvas に転送する
 - DPR (デバイスピクセル比) 変動 (マルチモニタ間移動など) を撮影中に検知してエラーで中止する
 - Shadow DOM (open mode) の `position: fixed` 要素も退避対象 (closed mode は仕様上アクセス不能)
-- `position: sticky` は退避しない (Notion / GitHub の sticky テーブルヘッダ等が全スライスで消える事故を回避)
-
+- `position: sticky` は退避しない (Notion / GitHub の sticky テーブルヘッダ等が全スライスで消える事故を回避するため据え置く)
+- multi-slice 撮影中は、対象タブがそのウィンドウの active tab であることを維持する前提
