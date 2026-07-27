@@ -63,4 +63,4 @@ node docs/verify-evidence.js path/to/screenshot.png
 ## ブラウザ別ビルド
 
 - Chrome (Web Store): リポジトリ直下の `manifest.json` をそのまま使用。`src/background/background.js` が Service Worker として動作し、`chrome.offscreen` 経由で Canvas 合成を行います。
-- Firefox (AMO): `npm run build:firefox` が `manifest.json` をベースに `firefox-build/` を生成します。Firefox には `chrome.offscreen` が無いため、`background.html` を持つ event page 内で `composer.js` を直接実行します。
+- Firefox (AMO): `pnpm run build:firefox` が `manifest.json` をベースに `firefox-build/` を生成します。Firefox には `chrome.offscreen` が無いため、`background.html` を持つ event page 内で `composer.js` を直接実行します。

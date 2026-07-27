@@ -9,7 +9,7 @@ updates:
     commit-message:
       prefix: ci
 
-  # npm の devDependencies を自動更新
+  # devDependencies を自動更新（pnpm-lock.yaml を Dependabot の npm エコシステムが管理）
   - package-ecosystem: npm
     directory: /
     schedule:
