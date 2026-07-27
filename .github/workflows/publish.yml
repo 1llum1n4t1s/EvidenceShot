@@ -45,7 +45,10 @@ jobs:
       - name: Node をセットアップ
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          # pnpm 11 は Node.js 22.13+ を要求する (Node 20 では `pnpm store path` が
+          # node:sqlite 不在で ERR_UNKNOWN_BUILTIN_MODULE で落ちる)。
+          # ローカル開発環境と同じ Node 24 に合わせる。
+          node-version: '24'
           cache: 'pnpm'
 
       - name: 依存関係をインストール
