@@ -3,3 +3,10 @@ allowBuilds:
   puppeteer: true
   sharp: true
   spawn-sync: true
+
+# web-ext (devDependency) が内部で持つ eslint ツールチェーンの脆弱な推移的依存を、
+# 出荷物には含まれないことを確認した上でパッチ済み version へ固定する
+overrides:
+  brace-expansion@<1.1.18: '>=1.1.18'
+  fast-uri@>=3.0.0 <3.1.5: '>=3.1.5'
+  js-yaml@>=4.0.0 <4.3.1: '>=4.3.1'
