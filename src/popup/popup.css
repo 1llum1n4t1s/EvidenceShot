@@ -812,3 +812,19 @@ body::after {
     background: var(--glass-strong);
   }
 }
+
+/* ============================================================
+   Support footer
+   お問い合わせ / 評価ボタンは Kagayoi.Support の共通部品
+   <kagayoi-support-footer> が描画する。ここは配色の受け渡しだけ。
+   ============================================================ */
+
+.support-footer { margin-top: 4px; }
+
+kagayoi-support-footer {
+  --kgs-radius: var(--radius-sm);
+  --kgs-surface: var(--glass-soft);
+  --kgs-surface-hover: var(--glass);
+  --kgs-border: var(--glass-rim);
+  --kgs-accent: var(--accent);
+}

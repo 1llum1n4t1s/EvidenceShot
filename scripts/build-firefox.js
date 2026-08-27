@@ -64,14 +64,15 @@ function buildFirefoxManifest() {
   delete ff.minimum_chrome_version;
 
   // Firefox の拡張機能 ID と最小バージョン。
-  // data_collection_permissions は 2026 以降 AMO 必須化のため、現時点で
-  // 「データ収集なし」を明示しておく (本拡張機能は撮影画像をローカル保存のみ)。
+  // data_collection_permissions は 2026 以降 AMO 必須化。撮影画像はローカル保存のみだが、
+  // お問い合わせフォーム (Kagayoi Support) がメールアドレスと確認コードを送るため、
+  // personallyIdentifyingInfo と authenticationInfo を申告する。'none' は併記できない。
   ff.browser_specific_settings = {
     gecko: {
       id: GECKO_ID,
       strict_min_version: STRICT_MIN_VERSION,
       data_collection_permissions: {
-        required: ['none'],
+        required: ['personallyIdentifyingInfo', 'authenticationInfo'],
       },
     },
   };

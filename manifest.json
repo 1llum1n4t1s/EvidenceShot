@@ -39,6 +39,9 @@
     "downloads",
     "clipboardWrite"
   ],
+  "host_permissions": [
+    "https://support.kagayoi.com/*"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none';"
   }
