@@ -2,7 +2,7 @@
 
 ## Overview
 
-EvidenceShot does not sell or share personal data with external servers, and never transmits your captures or page content anywhere.
+EvidenceShot does not sell personal data or use it for advertising, and never transmits your captures or page content anywhere.
 
 All capture processing is performed locally inside the user's browser for the purpose of capturing the currently active tab and saving the resulting image to the user's local download destination.
 
@@ -58,6 +58,10 @@ Only when you press "Contact support" in the settings popup and submit the form 
 - Product ID, extension version, and locale
 
 On first use, the six-digit code delivered by email is sent to Kagayoi Support to verify you. After verification, Kagayoi Support stores the inquiry and replies so that you and support staff can access them. Your captures, the content of pages you browse, and your capture settings are never sent.
+
+## Chrome Web Store Limited Use requirements
+
+EvidenceShot's use of user data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. Use is limited to providing and maintaining the extension and to technical support explicitly requested by the user. The data is not used for advertising, profiling, or sale. Support staff access inquiry content only when the user chooses to submit it and only as needed to respond.
 
 ## Contact
 

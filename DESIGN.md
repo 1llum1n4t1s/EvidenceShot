@@ -23,7 +23,7 @@ EvidenceShot は、利用者が明示的に開始したときだけ現在のタ�
 
 Chrome の `manifest.json` は `background.service_worker` と `offscreen` permission を使います。`scripts/build-firefox.js` はこれを正本として Firefox 用成果物を生成し、background を非永続 event page へ切り替え、`offscreen` permission と `minimum_chrome_version` を除去して Gecko 固有設定を加えます。
 
-問い合わせ UI だけが `https://support.kagayoi.com/*` の host permission を使い、利用者が入力したメールアドレス、確認コード、問い合わせ内容を API へ送ります。撮影画像、撮影履歴、証跡メタデータはこの問い合わせ経路へ渡しません。Firefox 用 manifest は、この問い合わせ機能に対応する個人識別情報と認証情報の収集区分を Gecko 設定へ明示します。
+問い合わせ UI だけが `https://support.kagayoi.com/*` の host permission を使い、利用者が入力したメールアドレス、確認コード、問い合わせ内容を API へ送ります。撮影画像、撮影履歴、証跡メタデータはこの問い合わせ経路へ渡しません。Firefox 用 manifest は、この問い合わせ機能に対応する個人識別情報、認証情報、個人間通信の収集区分を Gecko 設定へ明示します。
 
 ## 撮影データフロー
 

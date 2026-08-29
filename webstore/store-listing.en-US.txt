@@ -6,8 +6,8 @@ Features
 - Stitch vertical screenshots up to the current scroll range end
 - Save as PNG / JPEG / WEBP
 - Optional timestamp and fixed bottom-left text overlays
-- Shows the most recent mouse cursor position once when it can be captured
 - Copies the captured image to the clipboard for pasting into Excel or other apps
+- Contact Kagayoi Support directly from the popup
 - Popup automatically follows the browser light / dark theme
 - Save to Chrome's default download folder
 

@@ -2,7 +2,7 @@
 
 ## 1. Basic Metadata
 - Extension Name: `EvidenceShot`
-- Version: `1.0.8`
+- Version: `1.0.21`
 - Suggested Category: `Developer Tools` or `Productivity`
 - Store Language: `English (United States)`
 
@@ -26,7 +26,7 @@
 - English: `docs/privacy-policy.md`
 - Japanese: `docs/privacy-policy-ja.md`
 - Public URL for submission:
-  - `TODO: Add hosted HTTPS URL`
+  - `https://evidenceshot.kagayoi.com/privacy`
 
 ## 5. Permission Justifications (for CWS form)
 - `activeTab`: Capture the current active tab after explicit user action
@@ -37,19 +37,19 @@
 - `clipboardWrite`: Copy the generated screenshot image to the clipboard when enabled by the user
 
 ## 6. Data Use Draft Answers
-- Personal data collection: `No`
-- Data sharing with third parties: `No`
+- Personal data collection: `Yes (email address, optional name, category, subject, message, and email verification code entered when contacting support)`
+- Data sharing with third parties: `Sent to Kagayoi Support (https://support.kagayoi.com) only when the user submits a support request`
 - Sale/advertising use: `No`
 - Tracking/analytics SDK: `None`
-- Processing location: `Local browser runtime only`
+- Processing location: `Screenshots and capture history remain local; only submitted support data is processed by Kagayoi Support`
 
-## 7. Publisher Support Info (fill before submit)
-- Support website URL: `TODO`
-- Support email: `TODO`
-- Developer/contact details: `TODO`
+## 7. Publisher Support Info
+- Support website URL: `https://support.kagayoi.com/`
+- Support email: Use the public contact address registered in CWS Developer Dashboard
+- Developer: `Kagayoi`
 
 ## 8. Final Checklist
 - [ ] Privacy policy URL is publicly reachable over HTTPS
-- [ ] Listing copy matches current functionality (WEBP, capture mode, footer text)
+- [ ] Listing copy matches current functionality (WEBP, capture mode, footer text, support entry point)
 - [ ] At least 5 screenshots uploaded
 - [ ] Permission explanations match manifest
