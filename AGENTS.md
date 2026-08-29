@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code and other coding agents working in this repository.
+このファイルは EvidenceShot で作業する coding agent 向けの規約です。システム構造、責務境界、データフロー、設計判断は [DESIGN.md](DESIGN.md) を正本とし、本書は変更時の制約と検証手順を扱います。
 
 ## プロジェクト概要
 
