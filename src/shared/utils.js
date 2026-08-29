@@ -231,6 +231,18 @@
     }
   }
 
+  function isExtensionObjectUrl(rawUrl) {
+    if (typeof rawUrl !== 'string' || !rawUrl) {
+      return false;
+    }
+
+    try {
+      return rawUrl.startsWith(`blob:${chrome.runtime.getURL('')}`);
+    } catch {
+      return false;
+    }
+  }
+
   function t(key, fallback = '', substitutions = undefined) {
     try {
       const message = chrome.i18n.getMessage(key, substitutions);
@@ -309,6 +321,7 @@
     buildTimestamp,
     buildFileName,
     isCapturableUrl,
+    isExtensionObjectUrl,
     t,
     normalizeUserMessage,
     respondAsync,

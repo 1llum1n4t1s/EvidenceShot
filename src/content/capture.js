@@ -8,11 +8,10 @@
   // 廃止し、maxScrollY > 0 のみで scrollingMode を判定するよう簡素化。CSS viewport
   // propagation で `body { overflow: hidden }` が `<html>` 側に伝播するため、
   // 普通の長文サイトやモダン SPA でも誤って viewport に降格していたバグの修正。
-  const CONTROLLER_VERSION = 10;
-
-  if (globalThis[CONTROLLER_KEY]?.version === CONTROLLER_VERSION) {
-    return;
-  }
+  // 10 → 11: 同一版の再 inject でも旧 controller を dispose し、SW の予期しない終了後に
+  // 残った撮影状態を即時復元する。Firefox Blob URL 判定と Shadow DOM 内 fixed 要素の
+  // 退避もブラウザ横断で正しく動作するよう修正。
+  const CONTROLLER_VERSION = 11;
 
   const previousController = globalThis[CONTROLLER_KEY];
   previousController?.dispose?.();
@@ -99,6 +98,7 @@
         plan,
         positions: plan.positions,
         fixedElements: plan.scrollingMode ? collectFixedElements() : [],
+        fixedElementStyles: new Map(),
         styleElement: installCaptureStyle(),
         lastCapturedScrollY: null,
       };
@@ -231,14 +231,13 @@
   // navigator.clipboard.write は document.hasFocus() が true ならば成功する。
   // ただし http:// ページでは secure context ではないため Async Clipboard が
   // 公開されない。そこで HTML 画像コピーの execCommand fallback も持つ。
-  // url は offscreen が URL.createObjectURL した chrome-extension:// 配下の Blob URL で、
+  // url は composer が URL.createObjectURL した拡張機能 origin 配下の Blob URL で、
   // content script は同一拡張機能 origin で動作するため fetch でこの URL を読める。
   async function copyClipboardFromUrl(url) {
     // [PERF DEBUG] 計測ラベル付け。fetch / blob 化 / clipboard.write の内訳を可視化する目的。
     // 計測終了後は revert 予定。
     globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:start');
-    const expectedOrigin = `blob:chrome-extension://${chrome.runtime.id}/`;
-    if (typeof url !== 'string' || !url || !url.startsWith(expectedOrigin)) {
+    if (!Shared.isExtensionObjectUrl(url)) {
       globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
       try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
@@ -744,10 +743,6 @@
         transition: none !important;
         caret-color: transparent !important;
       }
-
-      [data-evidence-shot-hide-fixed="true"] {
-        visibility: hidden !important;
-      }
     `;
     document.documentElement.appendChild(styleElement);
     return styleElement;
@@ -758,13 +753,37 @@
       return;
     }
 
+    const originalStyles = state.captureSession.fixedElementStyles;
     state.captureSession.fixedElements.forEach((element) => {
       if (hidden) {
-        element.dataset.evidenceShotHideFixed = 'true';
+        if (!originalStyles.has(element)) {
+          originalStyles.set(element, {
+            visibility: element.style.getPropertyValue('visibility'),
+            visibilityPriority: element.style.getPropertyPriority('visibility'),
+            transition: element.style.getPropertyValue('transition'),
+            transitionPriority: element.style.getPropertyPriority('transition'),
+          });
+        }
+        element.style.setProperty('transition', 'none', 'important');
+        element.style.setProperty('visibility', 'hidden', 'important');
       } else {
-        delete element.dataset.evidenceShotHideFixed;
+        const original = originalStyles.get(element);
+        if (!original) {
+          return;
+        }
+        restoreInlineProperty(element, 'visibility', original.visibility, original.visibilityPriority);
+        restoreInlineProperty(element, 'transition', original.transition, original.transitionPriority);
+        originalStyles.delete(element);
       }
     });
+  }
+
+  function restoreInlineProperty(element, property, value, priority) {
+    if (value) {
+      element.style.setProperty(property, value, priority);
+    } else {
+      element.style.removeProperty(property);
+    }
   }
 
   function getSemanticBoost(element) {

@@ -366,8 +366,7 @@
     if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
       return { ok: false, error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。') };
     }
-    const expectedOrigin = `blob:chrome-extension://${chrome.runtime.id}/`;
-    if (typeof url !== 'string' || !url.startsWith(expectedOrigin)) {
+    if (!Shared.isExtensionObjectUrl(url)) {
       return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
     }
     try {
