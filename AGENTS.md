@@ -62,7 +62,7 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 
 - popup 経由: `popup.js` の `writeClipboardFromUrl` が `result.clipboardObjectUrl` を fetch + `clipboard.write`
 - ショートカット経由: `background.js` の `delegateClipboardCopyToContent` が `MESSAGE_TYPES.CLIPBOARD_COPY_FROM_URL` を content script へ送る。content script の `copyClipboardFromUrl` が fetch + `clipboard.write` を優先し、`http://` など secure context でないページでは `document.execCommand('copy')` による HTML `<img>` コピーへ fallback する。
-- いずれも `chrome-extension://<id>/blob:...` を fetch するが、**同一拡張機能 origin** なので `web_accessible_resources` 不要
+- Chrome は `blob:chrome-extension://...`、Firefox は `blob:moz-extension://...` を fetch するが、いずれも**同一拡張機能 origin** なので `web_accessible_resources` 不要
 - 書込終了後の URL 解放は二段保証: (1) popup / SW (`captureActiveTabFromCommand`) が `MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP` 経由で **即時 revoke 依頼**、(2) offscreen 側の `scheduleDownloadUrlRevoke` が **60 秒タイマー** で保険 revoke。popup が閉じる等で (1) が届かなくても (2) で確実に解放される
 
 ## 主要ファイル
@@ -78,21 +78,24 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 - `src/shared/composer.js` — **Canvas 合成・PNG iTXt 埋込・クリップボード PNG 生成の本体**。`globalThis.EvidenceShotComposer` として export。Chrome (offscreen.html) と Firefox (background.html) の両方で読み込まれ、両ブラウザで同じロジックが動く
 - `src/shared/constants.js` — 既定設定・メッセージ種別・スタイル定義 (`globalThis.EvidenceShotConstants`)
 - `src/shared/utils.js` — 設定正規化・保存・i18n・`respondAsync` 等の共通ヘルパ (`globalThis.EvidenceShotShared`)
+- `src/shared/kagayoi-support-{popup,footer}.{js,css}`, `src/shared/kagayoi-support-form.css` — exact 固定した `kagayoi-support-extension` から同期する問い合わせ UI の同梱コピー。直接編集せず、正本側を更新して同期する
 - `scripts/build-firefox.js` — Chrome 用 `manifest.json` をベースに Firefox 用 `firefox-build/` を生成。`background.service_worker` → `background.page` 切替、`offscreen` permission 除去、`browser_specific_settings.gecko` 付与
 - `docs/verify-evidence.js` — 撮影 PNG の改ざん検知用 Node スクリプト
 - `_locales/{en,ja}/messages.json` — i18n メッセージ
 
 ## 権限
 
-`activeTab` / `storage` / `scripting` / `offscreen` / `downloads` / `clipboardWrite`
+`activeTab` / `storage` / `scripting` / `offscreen` / `downloads` / `clipboardWrite`。問い合わせ API に限り `https://support.kagayoi.com/*` の host permission を使う。Firefox 生成 manifest は `personallyIdentifyingInfo` / `authenticationInfo` / `personalCommunications` を required で申告する。
 
 ## 開発コマンド
 
 ```bash
 pnpm install
+pnpm run sync:support            # 共通問い合わせ UI の5ファイルを正本から同期
+pnpm exec kagayoi-support-sync --check # 同梱コピーと正本の一致だけを検証
 pnpm run generate-icons          # icons/ を生成
 pnpm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
-pnpm run build                   # 上記 2 つを連続実行
+pnpm run build                   # 問い合わせ UI 同期後、上記 2 つを連続実行
 pnpm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
 ```
 

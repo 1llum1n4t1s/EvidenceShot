@@ -19,7 +19,7 @@ EvidenceShot は、利用者が明示的に開始したときだけ現在のタ�
 | Chrome offscreen | `src/offscreen/offscreen.html`, `src/offscreen/offscreen.js` | DOM を持たない Service Worker に代わって Composer を実行する。`offscreen.js` は background メッセージと共通 Composer API の薄いアダプタに留める。 |
 | Firefox event page | `src/background/background.html` | `composer.js` と `background.js` を同じ DOM 文脈へ読み込み、offscreen API なしで共通 Composer を直接実行する。 |
 | 共通基盤 | `src/shared/constants.js`, `src/shared/utils.js`, `src/shared/perf.js`, `src/offscreen/stamp-renderer.js` | メッセージ契約、既定設定、設定正規化、i18n、計測、スタンプ描画を各コンテキストへ提供する。 |
-| 問い合わせ UI | `src/shared/kagayoi-support-popup.js`, `src/shared/kagayoi-support-footer.js` | ポップアップ内の問い合わせ導線、メール確認コードによる認証、チケット送信を担当する。撮影・画像保存のデータフローからは独立する。 |
+| 問い合わせ UI | `src/shared/kagayoi-support-popup.js`, `src/shared/kagayoi-support-footer.js` と3つの同梱CSS | ポップアップ内の問い合わせ導線、メール確認コードによる認証、チケット送信を担当する。exact 固定した `kagayoi-support-extension` の正本から5ファイルを同期し、製品固有の組み込みは `popup.html` の属性と読み込み順へ限定する。撮影・画像保存のデータフローからは独立する。 |
 
 Chrome の `manifest.json` は `background.service_worker` と `offscreen` permission を使います。`scripts/build-firefox.js` はこれを正本として Firefox 用成果物を生成し、background を非永続 event page へ切り替え、`offscreen` permission と `minimum_chrome_version` を除去して Gecko 固有設定を加えます。
 
