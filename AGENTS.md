@@ -151,9 +151,9 @@ CI で必要な GitHub Secrets:
 - Chrome Web Store: `CWS_CLIENT_ID` / `CWS_CLIENT_SECRET` / `CWS_REFRESH_TOKEN` / `CWS_EXTENSION_ID`
 - Firefox AMO: `AMO_JWT_ISSUER` / `AMO_JWT_SECRET` (AMO の `addons.mozilla.org/developers/addon/api/key/` から発行した JWT credentials)
 
-## リリース前 smoke test (必須)
+## リリース時の手動 smoke test
 
-`/vava` も CI 自動公開もコードを実機で動かす検証は含まれない。リリースタグを切る前に必ず以下 2 経路で撮影成功を確認する:
+`/vava` も CI 自動公開もコードを実機で動かす検証は含まれない。以下 2 経路はユーザーが Chrome 上で手動確認する。coding agent は、この確認のためにブラウザ連携、ブラウザ自動操作、Computer Use を起動・使用しない。確認結果が依頼内に示されていない場合もリリース作業を停止せず、最終報告で「手動 smoke test 未確認」と明記し、成功扱いにはしない。
 
 1. **ポップアップ経由**: アクションアイコン → ポップアップ → 「このタブを撮影する」→ ダウンロード保存を目視
 2. **ショートカット経由**: `Ctrl+Shift+Y` (mac: `Cmd+Shift+Y`) → ダウンロード保存を目視
