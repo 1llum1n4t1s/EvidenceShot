@@ -30,6 +30,7 @@
       OFFSCREEN_PING: 'WTS_OFFSCREEN_PING',
       REVOKE_DOWNLOAD_URL: 'WTS_REVOKE_DOWNLOAD_URL',
       REVOKE_OBJECT_URL_FROM_POPUP: 'WTS_REVOKE_OBJECT_URL_FROM_POPUP',
+      UPDATE_CAPTURE_HISTORY_FROM_POPUP: 'WTS_UPDATE_CAPTURE_HISTORY_FROM_POPUP',
     }),
     CLIPBOARD_STATUS: Object.freeze({
       COPIED: 'copied',
@@ -66,7 +67,9 @@
     // 万一の制限超過時は capture step で例外 → finally で abort されるので安全。
     CAPTURE_INTERVAL_MS: 520,
     CAPTURE_SETTLE_MS: 180,
-    MAX_CANVAS_EDGE: 65535,
+    // Chrome は 65535px まで扱えるが、strict_min_version で許容している旧 Firefox は
+    // 32767px 超で 2D context を失う。大きい出力は tile 分割するため共通安全上限を使う。
+    MAX_CANVAS_EDGE: 32767,
     MAX_TILE_CANVAS_AREA: 67108864,
     MAX_CAPTURE_DATA_URL_LENGTH: 60 * 1024 * 1024,
     MAX_HTML_CLIPBOARD_BYTES: 8 * 1024 * 1024,

@@ -35,6 +35,7 @@
 - `offscreen`: Compose and annotate images in a hidden document
 - `downloads`: Save generated screenshots through Chrome downloads
 - `clipboardWrite`: Copy the generated screenshot image to the clipboard when enabled by the user
+- `https://support.kagayoi.com/*`: Communicate with the Kagayoi Support API only when the user submits a support request from the popup
 
 ## 6. Data Use Draft Answers
 - Personal data collection: `Yes (email address, optional name, category, subject, message, and email verification code entered when contacting support)`

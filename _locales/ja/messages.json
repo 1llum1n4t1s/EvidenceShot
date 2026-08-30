@@ -128,7 +128,7 @@
     "message": "撮影に失敗しました。"
   },
   "popupStatusSaved": {
-    "message": "保存を開始しました: $FILENAME$",
+    "message": "保存しました: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -136,7 +136,7 @@
     }
   },
   "popupStatusSavedAndCopied": {
-    "message": "保存を開始し、クリップボードにもコピーしました: $FILENAME$",
+    "message": "保存し、クリップボードにもコピーしました: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -144,7 +144,7 @@
     }
   },
   "popupStatusSavedCopyFailed": {
-    "message": "保存を開始しましたが、クリップボードコピーに失敗しました: $FILENAME$",
+    "message": "保存しましたが、クリップボードコピーに失敗しました: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -152,7 +152,7 @@
     }
   },
   "popupStatusSavedCopySkippedMultipart": {
-    "message": "保存を開始しました。画像が分割されたためクリップボードコピーはスキップしました: $FILENAME$",
+    "message": "保存しました。画像が分割されたためクリップボードコピーはスキップしました: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -246,6 +246,9 @@
   "errCaptureStepAdjustFailed": {
     "message": "スクロール位置の調整に失敗しました。"
   },
+  "errCaptureScrollStalled": {
+    "message": "ページを次の撮影位置までスクロールできなかったため中止しました。"
+  },
   "errCaptureSliceTransferFailed": {
     "message": "撮影データの受け渡しに失敗しました。"
   },
@@ -270,8 +273,14 @@
   "errCaptureTabSwitched": {
     "message": "撮影中に別タブへ切り替わったため中止しました。対象タブを開いたまま再度お試しください。"
   },
+  "errCapturePageChanged": {
+    "message": "撮影中にページが移動したため中止しました。同じページを表示したままもう一度お試しください。"
+  },
   "errDownloadIdMissing": {
     "message": "ダウンロードIDを取得できませんでした。"
+  },
+  "errDownloadInterrupted": {
+    "message": "ダウンロードが完了する前に中断されました。"
   },
   "errCaptureSessionIdMissing": {
     "message": "撮影セッションIDがありません。"
@@ -326,6 +335,9 @@
   },
   "errDevicePixelRatioChanged": {
     "message": "ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。"
+  },
+  "errViewportSizeChanged": {
+    "message": "撮影中にウィンドウの表示領域が変わったため中止しました。ウィンドウサイズを変えずにもう一度お試しください。"
   },
   "errClipboardWriteFailed": {
     "message": "クリップボードへのコピーに失敗しました。"

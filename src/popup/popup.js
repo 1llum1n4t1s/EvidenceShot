@@ -310,11 +310,19 @@
           const writeResult = await writeClipboardFromUrl(clipboardObjectUrl);
           result.clipboardStatus = writeResult.ok ? CLIPBOARD_STATUS.COPIED : CLIPBOARD_STATUS.FAILED;
           result.clipboardError = writeResult.error || null;
+        } catch (error) {
+          result.clipboardStatus = CLIPBOARD_STATUS.FAILED;
+          result.clipboardError = normalizeUserMessage(
+            error?.message,
+            'errClipboardWriteFailed',
+            'クリップボードへのコピーに失敗しました。'
+          );
         } finally {
           // 成否に関わらず blob URL は不要。offscreen 側の 60 秒タイマーは保険にする。
           result.clipboardObjectUrl = null;
           await revokeOffscreenObjectUrl(clipboardObjectUrl);
         }
+        await updateCaptureHistoryClipboardResult(result);
       }
 
       const successStatus = buildSuccessStatus(result);
@@ -399,6 +407,22 @@
       type: MESSAGE_TYPES.REVOKE_OBJECT_URL_FROM_POPUP,
       downloadUrl: url,
     }).catch(() => undefined);
+  }
+
+  async function updateCaptureHistoryClipboardResult(result) {
+    if (typeof result?.historyId !== 'string' || !result?.clipboardStatus) {
+      return;
+    }
+    await chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.UPDATE_CAPTURE_HISTORY_FROM_POPUP,
+      payload: {
+        historyId: result.historyId,
+        clipboardStatus: result.clipboardStatus,
+        clipboardError: result.clipboardError || null,
+      },
+    }).catch((error) => {
+      console.warn('EvidenceShot: capture history clipboard update failed', error?.message);
+    });
   }
 
   function buildSuccessStatus(result) {

@@ -19,7 +19,12 @@
 
   const Shared = globalThis.EvidenceShotShared;
   const StampRenderer = globalThis.EvidenceShotStampRenderer;
-  const { MAX_CANVAS_EDGE, MAX_TILE_CANVAS_AREA, CLIPBOARD_STATUS } = globalThis.EvidenceShotConstants;
+  const {
+    MAX_CANVAS_EDGE,
+    MAX_TILE_CANVAS_AREA,
+    CAPTURE_SESSION_TTL_MS,
+    CLIPBOARD_STATUS,
+  } = globalThis.EvidenceShotConstants;
   const t = Shared.t;
   const normalizeUserMessage = Shared.normalizeUserMessage;
   const textEncoder = new TextEncoder();
@@ -50,17 +55,48 @@
     }
   }
 
+  function releaseImageBitmap(bitmap) {
+    try {
+      bitmap?.close?.();
+    } catch {
+      // 資源解放の失敗で本来の処理結果を上書きしない。
+    }
+  }
+
+  function clearCaptureSessionWatchdog(session) {
+    if (!session) return;
+    clearTimeout(session.watchdogTimer);
+    session.watchdogTimer = null;
+  }
+
+  function armCaptureSessionWatchdog(sessionId) {
+    const session = captureSessions.get(sessionId);
+    if (!session) return;
+
+    clearCaptureSessionWatchdog(session);
+    session.watchdogTimer = setTimeout(() => {
+      const currentSession = captureSessions.get(sessionId);
+      if (currentSession !== session) return;
+      clearCaptureSessionWatchdog(session);
+      releaseCanvas(session.canvas);
+      captureSessions.delete(sessionId);
+    }, CAPTURE_SESSION_TTL_MS);
+  }
+
+  function getDevicePixelSpan(offsetCss, lengthCss, devicePixelRatio) {
+    const start = Math.round(offsetCss * devicePixelRatio);
+    return Math.round((offsetCss + lengthCss) * devicePixelRatio) - start;
+  }
+
   // 新セッション開始時に残留セッション（SW 再起動で abort が届かなかったもの等）を掃除。
   function purgeAllSessions() {
     for (const [, session] of captureSessions) {
+      clearCaptureSessionWatchdog(session);
       releaseCanvas(session?.canvas);
     }
     captureSessions.clear();
-    for (const [url, timer] of downloadUrlRevokeTimers) {
-      clearTimeout(timer);
-      try { URL.revokeObjectURL(url); } catch { /* no-op */ }
-    }
-    downloadUrlRevokeTimers.clear();
+    // downloadUrlRevokeTimers はダウンロード側の所有物。セッション掃除では触らず、
+    // downloads.onChanged の完了通知または保険 timer だけに revoke を任せる。
   }
 
   function beginSession(sessionId, sessionSecret, meta) {
@@ -80,7 +116,11 @@
       purgeAllSessions();
     }
 
-    const canvasWidth = Math.round(meta.plan.canvasWidth * meta.plan.devicePixelRatio);
+    const canvasWidth = getDevicePixelSpan(
+      meta.plan.cropX || 0,
+      meta.plan.canvasWidth,
+      meta.plan.devicePixelRatio
+    );
     const canvasHeight = Math.round(meta.plan.canvasHeight * meta.plan.devicePixelRatio);
 
     if (
@@ -101,12 +141,22 @@
     canvas.height = canvasHeight;
 
     const context = canvas.getContext('2d', { alpha: false });
-    if (!context) {
+    if (!context || context.isContextLost?.()) {
+      releaseCanvas(canvas);
       return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
     }
 
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    try {
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    } catch {
+      releaseCanvas(canvas);
+      return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
+    }
+    if (context.isContextLost?.()) {
+      releaseCanvas(canvas);
+      return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
+    }
 
     captureSessions.set(sessionId, {
       meta,
@@ -114,7 +164,9 @@
       canvas,
       context,
       usedCanvasHeight: 0,
+      watchdogTimer: null,
     });
+    armCaptureSessionWatchdog(sessionId);
     return { ok: true };
   }
 
@@ -133,15 +185,51 @@
     ) {
       return { ok: false, error: t('errCaptureDataInvalid', '撮影データが不正です。') };
     }
+    armCaptureSessionWatchdog(sessionId);
 
     const bitmap = await createImageBitmapFromCapture(capture);
     try {
-      const cropX = Math.round((session.meta.plan.cropX || 0) * session.meta.plan.devicePixelRatio);
-      const cropY = Math.round((session.meta.plan.cropY || 0) * session.meta.plan.devicePixelRatio);
-      const cropWidth = Math.round((session.meta.plan.cropWidth || session.meta.plan.viewportWidth) * session.meta.plan.devicePixelRatio);
-      const cropHeight = Math.round((session.meta.plan.cropHeight || session.meta.plan.viewportHeight) * session.meta.plan.devicePixelRatio);
-      const drawY = session.meta.plan.scrollingMode
-        ? Math.round((capture.scrollY + (session.meta.plan.cropY || 0)) * session.meta.plan.devicePixelRatio)
+      if (captureSessions.get(sessionId) !== session) {
+        return { ok: false, error: t('errCaptureSessionNotFound', '撮影セッションが見つかりません。') };
+      }
+      const plan = session.meta.plan;
+      const expectedBitmapWidth = Math.round(plan.viewportWidth * plan.devicePixelRatio);
+      const expectedBitmapHeight = Math.round(plan.viewportHeight * plan.devicePixelRatio);
+      if (
+        Math.abs(bitmap.width - expectedBitmapWidth) > 1 ||
+        Math.abs(bitmap.height - expectedBitmapHeight) > 1
+      ) {
+        return {
+          ok: false,
+          error: t(
+            'errViewportSizeChanged',
+            '撮影中にウィンドウの表示領域が変わったため中止しました。ウィンドウサイズを変えずにもう一度お試しください。'
+          ),
+        };
+      }
+
+      const cropCssX = plan.cropX || 0;
+      const cropCssY = plan.cropY || 0;
+      const cropCssWidth = plan.cropWidth || plan.viewportWidth;
+      const cropCssHeight = plan.cropHeight || plan.viewportHeight;
+      const cropX = Math.round(cropCssX * plan.devicePixelRatio);
+      const cropY = Math.round(cropCssY * plan.devicePixelRatio);
+      const cropWidth = getDevicePixelSpan(cropCssX, cropCssWidth, plan.devicePixelRatio);
+      const cropHeight = Math.round((cropCssY + cropCssHeight) * plan.devicePixelRatio) - cropY;
+      if (
+        cropX < 0 ||
+        cropY < 0 ||
+        cropWidth < 1 ||
+        cropHeight < 1 ||
+        cropWidth !== session.canvas.width ||
+        cropX + cropWidth > bitmap.width ||
+        cropY + cropHeight > bitmap.height
+      ) {
+        return { ok: false, error: t('errCaptureDataInvalid', '撮影データが不正です。') };
+      }
+
+      const drawY = plan.scrollingMode
+        ? Math.round((capture.scrollY + (plan.cropY || 0)) * plan.devicePixelRatio)
         : 0;
 
       session.context.drawImage(
@@ -152,13 +240,13 @@
         cropHeight,
         0,
         drawY,
-        session.canvas.width,
+        cropWidth,
         cropHeight
       );
       session.usedCanvasHeight = Math.max(session.usedCanvasHeight, drawY + cropHeight);
       return { ok: true };
     } finally {
-      bitmap.close?.();
+      releaseImageBitmap(bitmap);
     }
   }
 
@@ -166,25 +254,27 @@
     // [PERF DEBUG] 計測ラベル付け。撮影完了→OK バッジまでの所要時間内訳を可視化する目的。
     // 計測終了後は revert 予定。
     globalThis.EvidenceShotPerf?.mark('composer.finalize:start');
-    try {
-      const session = captureSessions.get(sessionId);
-      if (!session) {
-        return {
-          ok: false,
-          error: t('errCaptureMetaLoadFailed', '撮影メタデータを取得できませんでした。'),
-        };
-      }
-      if (session.sessionSecret !== sessionSecret) {
-        return {
-          ok: false,
-          error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。'),
-        };
-      }
+    const session = captureSessions.get(sessionId);
+    if (!session) {
+      return {
+        ok: false,
+        error: t('errCaptureMetaLoadFailed', '撮影メタデータを取得できませんでした。'),
+      };
+    }
+    if (session.sessionSecret !== sessionSecret) {
+      return {
+        ok: false,
+        error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。'),
+      };
+    }
+    clearCaptureSessionWatchdog(session);
 
+    let canvas = session.canvas;
+    let context = session.context;
+    let sourceBitmap = null;
+    try {
       const { meta } = session;
       const { plan, settings } = meta;
-      let canvas = session.canvas;
-      let context = session.context;
 
       const usedCanvasHeight = Math.max(1, Math.min(canvas.height, session.usedCanvasHeight || canvas.height));
       if (usedCanvasHeight !== canvas.height) {
@@ -193,25 +283,26 @@
         // 抽出し、元 Canvas の GPU バッファを **drawImage 前に** 解放する。
         // その後、新 Canvas を確保して bitmap を draw する流れにすることで
         // 「元 Canvas + 新 Canvas が GPU 上で同時存在する」瞬間をなくす。
-        const sourceBitmap = await createImageBitmap(canvas, 0, 0, canvas.width, usedCanvasHeight);
+        const sourceCanvasWidth = canvas.width;
+        sourceBitmap = await createImageBitmap(canvas, 0, 0, sourceCanvasWidth, usedCanvasHeight);
         releaseCanvas(session.canvas);
 
         const trimmedCanvas = document.createElement('canvas');
-        trimmedCanvas.width = canvas.width;
+        canvas = trimmedCanvas;
+        trimmedCanvas.width = sourceCanvasWidth;
         trimmedCanvas.height = usedCanvasHeight;
 
         const trimmedContext = trimmedCanvas.getContext('2d', { alpha: false });
         if (!trimmedContext) {
-          sourceBitmap.close?.();
           throw new Error(t('errImageSaveFailed', '画像の保存に失敗しました。'));
         }
 
         trimmedContext.fillStyle = '#ffffff';
         trimmedContext.fillRect(0, 0, trimmedCanvas.width, trimmedCanvas.height);
         trimmedContext.drawImage(sourceBitmap, 0, 0);
-        sourceBitmap.close?.();
+        releaseImageBitmap(sourceBitmap);
+        sourceBitmap = null;
 
-        canvas = trimmedCanvas;
         context = trimmedContext;
         globalThis.EvidenceShotPerf?.mark('composer.finalize.trim_canvas:end');
       }
@@ -338,6 +429,11 @@
         ),
       };
     } finally {
+      releaseImageBitmap(sourceBitmap);
+      releaseCanvas(canvas);
+      if (session.canvas !== canvas) {
+        releaseCanvas(session.canvas);
+      }
       captureSessions.delete(sessionId);
     }
   }
@@ -351,6 +447,7 @@
       return { ok: false, error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。') };
     }
 
+    clearCaptureSessionWatchdog(session);
     releaseCanvas(session.canvas);
     captureSessions.delete(sessionId);
     return { ok: true };

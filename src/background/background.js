@@ -38,13 +38,19 @@ const normalizeUserMessage = Shared.normalizeUserMessage;
 const respondAsync = Shared.respondAsync;
 
 const pendingDownloadUrls = new Map();
+let captureHistoryMutationQueue = Promise.resolve();
+const FINAL_CLIPBOARD_HISTORY_STATUSES = new Set([
+  CLIPBOARD_STATUS.COPIED,
+  CLIPBOARD_STATUS.COPIED_HTML_FALLBACK,
+  CLIPBOARD_STATUS.FAILED,
+]);
 
 chrome.downloads.onChanged.addListener((delta) => {
   if (!delta?.state) {
     return;
   }
   if (delta.state.current === 'complete' || delta.state.current === 'interrupted') {
-    revokePendingDownloadUrl(delta.id);
+    settlePendingDownload(delta);
   }
 });
 
@@ -402,6 +408,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse
       );
       return true;
+    case MESSAGE_TYPES.UPDATE_CAPTURE_HISTORY_FROM_POPUP:
+      respondAsync(
+        updateCaptureHistoryClipboardResult(
+          message.payload?.historyId,
+          message.payload?.clipboardStatus,
+          message.payload?.clipboardError
+        ).then((updated) => ({ ok: true, updated })),
+        sendResponse
+      );
+      return true;
     default:
       return undefined;
   }
@@ -417,7 +433,7 @@ if (chrome.commands?.onCommand) {
       return;
     }
 
-    captureActiveTabFromCommand(tab).catch((error) => {
+    return captureActiveTabFromCommand(tab).catch((error) => {
       console.warn('EvidenceShot: shortcut capture failed', error);
     });
   });
@@ -448,7 +464,7 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   );
 
   // 撮影 + ダウンロード保存が終わった時点で初期バッジを出す。clipboard 待ちなら黄色 OK、
-  // clipboard 不要 or 失敗で緑/赤に確定。ユーザーは黄色が出た時点で「保存は完了している」
+  // clipboard 不要 or 失敗で緑/赤に確定。ユーザーは黄色が出た時点で「保存できた」
   // ことを把握でき、緑に切替わったら「クリップボードへの貼り付け準備完了」と分かる。
   // 旧設計では clipboard 完了まで一切のバッジを出さなかったため、
   // 「OK 表示前に Excel に切替えて HTML fallback に落ちる」UX 不具合があった (cxcx 計測で
@@ -456,23 +472,15 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   await showCaptureBadge(result?.ok ? (isCopyPending ? 'pending' : 'ok') : 'err');
 
   if (isCopyPending) {
-    // clipboard 書込みを fire-and-forget で進める。完了でバッジを最終状態 (緑 OK or 赤 ERR) に
-    // 更新し、Blob URL を即時 revoke する。
-    runClipboardDelegateWithRecovery(tab, result.clipboardObjectUrl)
-      .then(async (clipResult) => {
-        result.clipboardStatus = clipResult.ok
-          ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED)
-          : CLIPBOARD_STATUS.FAILED;
-        result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
-        await showCaptureBadge(clipResult.ok ? 'ok' : 'copy-failed');
-        const urlToRevoke = result.clipboardObjectUrl;
-        result.clipboardObjectUrl = null;
-        try { await Promise.resolve(composer.revokeDownloadUrl(urlToRevoke)); } catch { /* no-op */ }
-      })
-      .catch((error) => {
-        console.warn('EvidenceShot: clipboard delegate failed', error?.message);
-      })
-      .finally(scheduleBadgeClear);
+    // Firefox event page の寿命を clipboard URL の利用完了まで保持するため、ショートカット
+    // listener へ返す Promise の内側で待つ。完了後は Blob URL を即時 revoke し、履歴も更新する。
+    try {
+      await completePendingClipboardCopy(tab, result);
+    } catch (error) {
+      console.warn('EvidenceShot: clipboard delegate failed', error?.message);
+    } finally {
+      scheduleBadgeClear();
+    }
   } else {
     scheduleBadgeClear();
   }
@@ -483,6 +491,43 @@ async function captureActiveTabFromCommand(tabFromCommand) {
   // 計測完了。SW context (= background) の perf marks を chrome.storage.local に flush。
   // cxcx ranner が拡張機能 storage を読み出して .perf.json として保存する。
   try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
+}
+
+async function completePendingClipboardCopy(tab, result) {
+  const urlToRevoke = result.clipboardObjectUrl;
+  let clipResult;
+  try {
+    clipResult = await runClipboardDelegateWithRecovery(tab, urlToRevoke);
+  } catch (error) {
+    clipResult = {
+      ok: false,
+      error: normalizeUserMessage(
+        error?.message,
+        'errClipboardWriteFailed',
+        'クリップボードへのコピーに失敗しました。'
+      ),
+    };
+  }
+
+  result.clipboardStatus = clipResult.ok
+    ? (clipResult.clipboardStatus || CLIPBOARD_STATUS.COPIED)
+    : CLIPBOARD_STATUS.FAILED;
+  result.clipboardError = clipResult.ok ? null : (clipResult.error || null);
+  result.clipboardObjectUrl = null;
+
+  if (urlToRevoke) {
+    try { await Promise.resolve(composer.revokeDownloadUrl(urlToRevoke)); } catch { /* no-op */ }
+  }
+  try {
+    await updateCaptureHistoryClipboardResult(
+      result.historyId,
+      result.clipboardStatus,
+      result.clipboardError
+    );
+  } catch (error) {
+    console.warn('EvidenceShot: capture history clipboard update failed', error?.message);
+  }
+  await showCaptureBadge(clipResult.ok ? 'ok' : 'copy-failed');
 }
 
 // content script の clipboard 書込みは navigator.clipboard.write も document.execCommand('copy')
@@ -545,6 +590,7 @@ function scheduleBadgeClear() {
 // popup を閉じるとエラーメッセージが失われる問題を補完し、後から監査できるようにする。
 async function runCaptureWorkflowWithHistory(tabId) {
   const startedAt = Date.now();
+  const historyId = generateSecureToken(12);
   let result;
   try {
     result = await runCaptureWorkflow(tabId);
@@ -554,8 +600,10 @@ async function runCaptureWorkflowWithHistory(tabId) {
       error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
     };
   }
+  result.historyId = historyId;
   try {
     await appendCaptureHistory({
+      historyId,
       at: startedAt,
       ok: Boolean(result?.ok),
       fileName: result?.fileName || null,
@@ -578,11 +626,49 @@ async function runCaptureWorkflowWithHistory(tabId) {
 }
 
 async function appendCaptureHistory(entry) {
-  const stored = await chrome.storage.local.get(CAPTURE_HISTORY_KEY);
-  const existing = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY] : [];
-  // slice(-N) で末尾 N 件を取り出す。push + splice(0, N) より中間配列が 1 つ少ない。
-  const history = [...existing, entry].slice(-CAPTURE_HISTORY_MAX);
-  await chrome.storage.local.set({ [CAPTURE_HISTORY_KEY]: history });
+  return runCaptureHistoryMutation(async () => {
+    const stored = await chrome.storage.local.get(CAPTURE_HISTORY_KEY);
+    const existing = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY] : [];
+    // slice(-N) で末尾 N 件を取り出す。push + splice(0, N) より中間配列が 1 つ少ない。
+    const history = [...existing, entry].slice(-CAPTURE_HISTORY_MAX);
+    await chrome.storage.local.set({ [CAPTURE_HISTORY_KEY]: history });
+  });
+}
+
+async function updateCaptureHistoryClipboardResult(historyId, clipboardStatus, clipboardError) {
+  if (
+    typeof historyId !== 'string' ||
+    !/^[0-9a-f]{24}$/.test(historyId) ||
+    !FINAL_CLIPBOARD_HISTORY_STATUSES.has(clipboardStatus)
+  ) {
+    return false;
+  }
+
+  return runCaptureHistoryMutation(async () => {
+    const stored = await chrome.storage.local.get(CAPTURE_HISTORY_KEY);
+    const existing = Array.isArray(stored[CAPTURE_HISTORY_KEY]) ? stored[CAPTURE_HISTORY_KEY] : [];
+    const targetIndex = existing.findIndex((entry) => entry?.historyId === historyId);
+    if (targetIndex < 0) {
+      return false;
+    }
+
+    const history = existing.slice();
+    history[targetIndex] = {
+      ...history[targetIndex],
+      clipboardStatus,
+      clipboardError: clipboardStatus === CLIPBOARD_STATUS.FAILED
+        ? String(clipboardError || '') || null
+        : null,
+    };
+    await chrome.storage.local.set({ [CAPTURE_HISTORY_KEY]: history });
+    return true;
+  });
+}
+
+function runCaptureHistoryMutation(operation) {
+  const queued = captureHistoryMutationQueue.then(operation);
+  captureHistoryMutationQueue = queued.catch(() => undefined);
+  return queued;
 }
 
 async function runCaptureWorkflow(tabId) {
@@ -610,6 +696,7 @@ async function runCaptureWorkflow(tabId) {
       ),
     };
   }
+  const capturePageIdentity = getCapturePageIdentity(tab.url);
 
   const acquireResult = await tryAcquireCaptureSlot(tabId, tab.windowId);
   if (!acquireResult.ok) {
@@ -631,8 +718,12 @@ async function runCaptureWorkflow(tabId) {
   let sessionId = null;
   let sessionSecret = null;
   let composerSessionStarted = false;
+  let targetTabActivityGuard = null;
 
   try {
+    targetTabActivityGuard = createTargetTabActivityGuard(tabId, tab.windowId);
+    await ensureTargetTabStillActive(tabId, tab.windowId, targetTabActivityGuard, capturePageIdentity);
+
     const settings = await Shared.loadSettings();
     // sessionId の予測可能性を避けるため Math.random ではなく CSPRNG を用いる。
     sessionId = `capture-${Date.now()}-${generateSecureToken(8)}`;
@@ -666,6 +757,9 @@ async function runCaptureWorkflow(tabId) {
     }
 
     const plan = prepareResult.plan;
+    if (getCapturePageIdentity(plan?.url) !== capturePageIdentity) {
+      throw createCapturePageChangedError();
+    }
     const tiles = Array.isArray(plan.tiles) && plan.tiles.length > 0
       ? plan.tiles
       : [{ index: 0, startIndex: 0, endIndex: plan.positions.length - 1, startY: 0, cssHeight: plan.canvasHeight }];
@@ -682,13 +776,8 @@ async function runCaptureWorkflow(tabId) {
     let clipboardObjectUrl = null;
     let lastCapturedAt = 0;
     let lastCapture = null;
-    let captureDone = false;
 
     for (const tile of tiles) {
-      if (captureDone && (!lastCapture || lastCapture.index !== tile.startIndex)) {
-        break;
-      }
-
       const tilePlan = {
         ...plan,
         canvasHeight: tile.cssHeight,
@@ -736,9 +825,17 @@ async function runCaptureWorkflow(tabId) {
         if (lastCapture && lastCapture.index === idx) {
           activeCapture = lastCapture;
         } else {
-          if (captureDone) {
-            break;
+          // captureVisibleTab の呼出間隔待ちは、content 側が scroll / layout settle と
+          // 環境照合を終える前に消化する。settle 後に長く待つと、その間の遅延描画や
+          // ユーザー操作で stepResult.scrollY と実際の撮影ピクセルがずれ得る。
+          const waitForRateLimit = lastCapturedAt
+            ? Math.max(0, CAPTURE_INTERVAL_MS - (Date.now() - lastCapturedAt))
+            : 0;
+          if (waitForRateLimit > 0) {
+            await Shared.sleep(waitForRateLimit);
           }
+
+          await ensureTargetTabStillActive(tabId, tab.windowId, targetTabActivityGuard, capturePageIdentity);
 
           const stepResult = await chrome.tabs.sendMessage(tabId, {
             type: MESSAGE_TYPES.CAPTURE_STEP_V2,
@@ -755,22 +852,9 @@ async function runCaptureWorkflow(tabId) {
             );
           }
 
-          if (stepResult.done) {
-            captureDone = true;
-            break;
-          }
-
-          // captureVisibleTab はスロットリング待機後に1回呼ぶだけにし、
-          // 直前チェックは省く (待機中の切替を見抜けないため安全寄与が薄い)。
-          // 切替検知は captureVisibleTab 直後の事後チェックで行い、
-          // 例外が出れば finally の abort でセッション破棄 → ダウンロード/クリップボード書き込みは行われない。
-          const waitForRateLimit = lastCapturedAt
-            ? Math.max(0, CAPTURE_INTERVAL_MS - (Date.now() - lastCapturedAt))
-            : 0;
-          if (waitForRateLimit > 0) {
-            await Shared.sleep(waitForRateLimit);
-          }
-
+          // captureVisibleTab は window 内の「現在の active tab」しか指定できない。
+          // 前後の状態照合に加え、往復切替も activity guard が失効として保持する。
+          await ensureTargetTabStillActive(tabId, tab.windowId, targetTabActivityGuard, capturePageIdentity);
           const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
             format: 'png',
           });
@@ -781,7 +865,7 @@ async function runCaptureWorkflow(tabId) {
             ));
           }
           lastCapturedAt = Date.now();
-          await ensureTargetTabStillActive(tabId, tab.windowId);
+          await ensureTargetTabStillActive(tabId, tab.windowId, targetTabActivityGuard, capturePageIdentity);
 
           activeCapture = {
             index: idx,
@@ -839,6 +923,8 @@ async function runCaptureWorkflow(tabId) {
         continue;
       }
 
+      // 遅延して届いた onActivated も finalize 前に拾い、不正なスライスを保存しない。
+      await ensureTargetTabStillActive(tabId, tab.windowId, targetTabActivityGuard, capturePageIdentity);
       globalThis.EvidenceShotPerf?.mark('finalizeComposerCaptureSession:start');
       const finalizeResult = await finalizeComposerCaptureSession(sessionId, sessionSecret);
       globalThis.EvidenceShotPerf?.mark('finalizeComposerCaptureSession:end');
@@ -872,7 +958,7 @@ async function runCaptureWorkflow(tabId) {
       fileName: downloadedFiles[0],
       savedAsFormat: settings.format,
       partCount: downloadedFiles.length,
-      downloadStatus: 'started',
+      downloadStatus: 'complete',
       clipboardStatus,
       clipboardError,
       // pending_in_content のときに popup が fetch + clipboard.write する。null のときは書込なし。
@@ -889,6 +975,8 @@ async function runCaptureWorkflow(tabId) {
       error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
     };
   } finally {
+    targetTabActivityGuard?.dispose();
+
     if (composerSessionStarted && sessionId && sessionSecret) {
       await composer.abort(sessionId, sessionSecret);
     }
@@ -935,30 +1023,38 @@ async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
     console.warn('EvidenceShot: clipboard prepare failed in composer', result.clipboardError);
   }
 
-  // download を fire-and-forget で発火し、即時 return することで OK バッジ表示までの wall time を
-  // 短縮する。downloadCapture は chrome.downloads.download の callback 解決まで ~50-200ms 待つが、
-  // これは I/O 待ちで撮影成功判定には不要 (composer.finalize の return = PNG 生成完了で撮影は確定)。
-  // downloadId は async でトラッキング、失敗時のみ blob URL を即 revoke する。
-  downloadCapture(downloadUrl, result.fileName)
-    .then((downloadId) => {
-      if (Number.isInteger(downloadId)) {
-        trackDownloadUrl(downloadId, downloadUrl);
-      }
-    })
-    .catch(async (error) => {
-      console.warn('EvidenceShot: download failed (async)', error?.message);
-      try { await Promise.resolve(composer.revokeDownloadUrl(downloadUrl)); } catch { /* no-op */ }
-    });
+  // Blob URL は作成元 context が失われると無効になるため、downloadId の受付だけでなく
+  // complete / interrupted まで待つ。Firefox event page は呼出元 listener の Promise が
+  // pending の間維持され、Chrome offscreen も完了前に次のセッションへ進まない。
+  let downloadId;
+  try {
+    downloadId = await downloadCapture(downloadUrl, result.fileName);
+  } catch (error) {
+    console.warn('EvidenceShot: download start failed', error?.message);
+    const urlsToRevoke = [error?.downloadUrlRevoked ? null : downloadUrl, result.clipboardObjectUrl]
+      .filter((url, index, urls) => typeof url === 'string' && url.length > 0 && urls.indexOf(url) === index);
+    await Promise.allSettled(
+      urlsToRevoke.map((url) => Promise.resolve(composer.revokeDownloadUrl(url)))
+    );
+    return {
+      ok: false,
+      error: normalizeUserMessage(
+        error?.message,
+        'errDownloadStartFailed',
+        'ダウンロードの開始に失敗しました。'
+      ),
+    };
+  }
 
   return {
     ok: true,
     fileName: result.fileName,
     savedAsFormat: result.savedAsFormat,
-    downloadStatus: 'started',
+    downloadStatus: 'complete',
     clipboardStatus: result.clipboardStatus || CLIPBOARD_STATUS.DISABLED,
     clipboardError: result.clipboardError || null,
     clipboardObjectUrl: result.clipboardObjectUrl || null,
-    downloadId: null, // async track のため、ここでは null
+    downloadId,
   };
   // Blob URL の revoke は downloads.onChanged で早期通知し、composer 側の 60 秒 timer を保険にする。
 }
@@ -1043,20 +1139,91 @@ async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
   }
 }
 
-async function ensureTargetTabStillActive(tabId, windowId) {
-  const [activeTab] = await chrome.tabs.query({
-    active: true,
-    windowId,
-  });
+function createTargetTabActivityGuard(tabId, windowId) {
+  let invalidated = false;
+  let disposed = false;
 
-  if (activeTab?.id !== tabId) {
-    throw new Error(
-      t(
-        'errCaptureTabSwitched',
-        '撮影中に別タブへ切り替わったため中止しました。対象タブを開いたまま再度お試しください。'
-      )
-    );
+  const onActivated = (activeInfo) => {
+    if (activeInfo?.windowId === windowId && activeInfo.tabId !== tabId) {
+      invalidated = true;
+    }
+  };
+  const onDetached = (detachedTabId, detachInfo) => {
+    if (detachedTabId === tabId && detachInfo?.oldWindowId === windowId) {
+      invalidated = true;
+    }
+  };
+  const onRemoved = (removedTabId) => {
+    if (removedTabId === tabId) {
+      invalidated = true;
+    }
+  };
+
+  chrome.tabs.onActivated.addListener(onActivated);
+  chrome.tabs.onDetached.addListener(onDetached);
+  chrome.tabs.onRemoved.addListener(onRemoved);
+
+  return {
+    get invalidated() {
+      return invalidated;
+    },
+    dispose() {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      chrome.tabs.onActivated.removeListener(onActivated);
+      chrome.tabs.onDetached.removeListener(onDetached);
+      chrome.tabs.onRemoved.removeListener(onRemoved);
+    },
+  };
+}
+
+async function ensureTargetTabStillActive(tabId, windowId, activityGuard, capturePageIdentity) {
+  let targetTab;
+  try {
+    targetTab = await chrome.tabs.get(tabId);
+  } catch {
+    throw createCaptureTabSwitchedError();
   }
+
+  const [activeTab] = await chrome.tabs.query({ active: true, windowId });
+  if (
+    activityGuard?.invalidated ||
+    targetTab?.windowId !== windowId ||
+    targetTab?.active !== true ||
+    activeTab?.id !== tabId
+  ) {
+    throw createCaptureTabSwitchedError();
+  }
+  if (getCapturePageIdentity(targetTab.url) !== capturePageIdentity) {
+    throw createCapturePageChangedError();
+  }
+}
+
+function getCapturePageIdentity(value) {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+function createCapturePageChangedError() {
+  return new Error(t(
+    'errCapturePageChanged',
+    '撮影中にページが移動したため中止しました。同じページを表示したままもう一度お試しください。'
+  ));
+}
+
+function createCaptureTabSwitchedError() {
+  return new Error(
+    t(
+      'errCaptureTabSwitched',
+      '撮影中に別タブへ切り替わったため中止しました。対象タブを開いたまま再度お試しください。'
+    )
+  );
 }
 
 function downloadCapture(downloadUrl, fileName) {
@@ -1087,22 +1254,62 @@ function downloadCapture(downloadUrl, fileName) {
           return;
         }
 
-        trackDownloadUrl(downloadId, downloadUrl);
-        resolve(downloadId);
+        trackDownloadUrl(downloadId, downloadUrl).then(
+          () => resolve(downloadId),
+          reject
+        );
       }
     );
   });
 }
 
 function trackDownloadUrl(downloadId, downloadUrl) {
-  pendingDownloadUrls.set(downloadId, downloadUrl);
+  const completion = new Promise((resolve, reject) => {
+    pendingDownloadUrls.set(downloadId, {
+      downloadUrl,
+      reject,
+      resolve,
+    });
+  });
+  refreshPendingDownloadState(downloadId);
+  return completion;
 }
 
-function revokePendingDownloadUrl(downloadId) {
-  const downloadUrl = pendingDownloadUrls.get(downloadId);
-  if (!downloadUrl) {
+function refreshPendingDownloadState(downloadId) {
+  chrome.downloads.search({ id: downloadId }, (items) => {
+    if (chrome.runtime.lastError) {
+      return;
+    }
+    const current = items?.[0]?.state;
+    if (current === 'complete' || current === 'interrupted') {
+      settlePendingDownload({ id: downloadId, state: { current } });
+    }
+  });
+}
+
+function settlePendingDownload(delta) {
+  const pending = pendingDownloadUrls.get(delta.id);
+  if (!pending) {
     return;
   }
-  pendingDownloadUrls.delete(downloadId);
-  composer.revokeDownloadUrl(downloadUrl);
+  pendingDownloadUrls.delete(delta.id);
+
+  let revokePromise;
+  try {
+    revokePromise = Promise.resolve(composer.revokeDownloadUrl(pending.downloadUrl));
+  } catch {
+    revokePromise = Promise.resolve();
+  }
+  revokePromise.catch(() => undefined).finally(() => {
+    if (delta.state.current === 'complete') {
+      pending.resolve(delta.id);
+      return;
+    }
+    const error = new Error(t(
+      'errDownloadInterrupted',
+      'ダウンロードが完了する前に中断されました。'
+    ));
+    error.downloadUrlRevoked = true;
+    pending.reject(error);
+  });
 }

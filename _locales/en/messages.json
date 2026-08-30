@@ -128,7 +128,7 @@
     "message": "Capture failed."
   },
   "popupStatusSaved": {
-    "message": "Download started: $FILENAME$",
+    "message": "Saved: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -136,7 +136,7 @@
     }
   },
   "popupStatusSavedAndCopied": {
-    "message": "Download started and copied to clipboard: $FILENAME$",
+    "message": "Saved and copied to clipboard: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -144,7 +144,7 @@
     }
   },
   "popupStatusSavedCopyFailed": {
-    "message": "Download started, but clipboard copy failed: $FILENAME$",
+    "message": "Saved, but clipboard copy failed: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -152,7 +152,7 @@
     }
   },
   "popupStatusSavedCopySkippedMultipart": {
-    "message": "Download started. Clipboard copy was skipped because the image was split into parts: $FILENAME$",
+    "message": "Saved. Clipboard copy was skipped because the image was split into parts: $FILENAME$",
     "placeholders": {
       "filename": {
         "content": "$1"
@@ -246,6 +246,9 @@
   "errCaptureStepAdjustFailed": {
     "message": "Failed to adjust scroll position."
   },
+  "errCaptureScrollStalled": {
+    "message": "Capture stopped because the page could not scroll to the next capture position."
+  },
   "errCaptureSliceTransferFailed": {
     "message": "Failed to transfer captured slice data."
   },
@@ -270,8 +273,14 @@
   "errCaptureTabSwitched": {
     "message": "Capture stopped because you switched tabs. Keep the target tab active and try again."
   },
+  "errCapturePageChanged": {
+    "message": "Capture stopped because the page navigated. Keep the same page open and try again."
+  },
   "errDownloadIdMissing": {
     "message": "Could not obtain a download ID."
+  },
+  "errDownloadInterrupted": {
+    "message": "The download was interrupted before it completed."
   },
   "errCaptureSessionIdMissing": {
     "message": "Capture session ID is missing."
@@ -326,6 +335,9 @@
   },
   "errDevicePixelRatioChanged": {
     "message": "Capture aborted because the window was moved to a display with a different zoom level. Please keep the window in place and try again."
+  },
+  "errViewportSizeChanged": {
+    "message": "Capture aborted because the window viewport changed. Please keep the window size unchanged and try again."
   },
   "errClipboardWriteFailed": {
     "message": "Failed to copy to clipboard."

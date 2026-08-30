@@ -11,7 +11,13 @@
   // 10 → 11: 同一版の再 inject でも旧 controller を dispose し、SW の予期しない終了後に
   // 残った撮影状態を即時復元する。Firefox Blob URL 判定と Shadow DOM 内 fixed 要素の
   // 退避もブラウザ横断で正しく動作するよう修正。
-  const CONTROLLER_VERSION = 11;
+  // 11 → 12: 撮影途中の viewport リサイズを DPR 変動と同様に検知して中止する。
+  // 12 → 13: スクロールが進まない場合に不完全な画像を成功扱いせず、撮影を中止する。
+  // 13 → 14: background が予期せず終了して restore が届かない場合も、アイドル期限で
+  // 撮影用 CSS・固定要素退避・スクロール位置を自動復元する。
+  // 14 → 15: viewport / mainColumn は撮影開始時の水平位置を維持し、fullPage だけを
+  // ページ左端へ移動する。mainColumn の検出済み crop 座標と実ピクセルのずれも防ぐ。
+  const CONTROLLER_VERSION = 15;
 
   const previousController = globalThis[CONTROLLER_KEY];
   previousController?.dispose?.();
@@ -93,6 +99,7 @@
         settings: normalizedSettings,
         startedAt: Date.now(),
         expiresAt: Date.now() + CAPTURE_SESSION_TTL_MS,
+        watchdogTimer: null,
         initialScrollX: window.scrollX,
         initialScrollY: window.scrollY,
         plan,
@@ -102,6 +109,7 @@
         styleElement: installCaptureStyle(),
         lastCapturedScrollY: null,
       };
+      armCaptureSessionWatchdog(sessionId);
 
       // capture style の DOM 反映を 1 frame 待つ。旧実装は 2 frame だったが、Chrome では style
       // の computed update は 1 frame で完了する。撮影 trigger → 黄 OK の wall time を 16〜33ms 短縮。
@@ -120,27 +128,45 @@
     }
   }
 
-  async function moveToCaptureStep(sessionId, index) {
-    if (!state.captureSession || state.captureSession.sessionId !== sessionId) {
-      return { ok: false, error: t('errCaptureSessionMismatch', '撮影セッションが一致しません。') };
-    }
-
+  function getCaptureEnvironmentError(plan) {
     // DPR が撮影計画時と変わっていないか確認（マルチモニタ間ウィンドウ移動検知）。
     // プラン固定の devicePixelRatio で cropX/cropY を device pixel 換算しているため、
     // 途中で DPR が変わると合成画像が左右/上下にズレる。
-    const planDpr = state.captureSession.plan?.devicePixelRatio;
+    const planDpr = plan?.devicePixelRatio;
     const currentDpr = window.devicePixelRatio || 1;
     if (
       typeof planDpr === 'number' &&
       Math.abs(planDpr - currentDpr) > 0.01
     ) {
-      return {
-        ok: false,
-        error: t(
-          'errDevicePixelRatioChanged',
-          'ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。'
-        ),
-      };
+      return t(
+        'errDevicePixelRatioChanged',
+        'ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。'
+      );
+    }
+
+    if (
+      typeof plan?.viewportWidth === 'number' &&
+      typeof plan?.viewportHeight === 'number' &&
+      (window.innerWidth !== plan.viewportWidth || window.innerHeight !== plan.viewportHeight)
+    ) {
+      return t(
+        'errViewportSizeChanged',
+        '撮影中にウィンドウの表示領域が変わったため中止しました。ウィンドウサイズを変えずにもう一度お試しください。'
+      );
+    }
+
+    return null;
+  }
+
+  async function moveToCaptureStep(sessionId, index) {
+    if (!state.captureSession || state.captureSession.sessionId !== sessionId) {
+      return { ok: false, error: t('errCaptureSessionMismatch', '撮影セッションが一致しません。') };
+    }
+    armCaptureSessionWatchdog(sessionId);
+
+    const initialEnvironmentError = getCaptureEnvironmentError(state.captureSession.plan);
+    if (initialEnvironmentError) {
+      return { ok: false, error: initialEnvironmentError };
     }
 
     // 動的ロード (無限スクロール / 遅延レンダリング SPA) の検知:
@@ -177,9 +203,12 @@
     }
 
     toggleFixedElements(index > 0);
+    const targetX = state.captureSession.plan.captureMode === 'fullPage'
+      ? 0
+      : state.captureSession.initialScrollX;
     window.scrollTo({
       top: targetY,
-      left: 0,
+      left: targetX,
       behavior: 'auto',
     });
 
@@ -187,16 +216,25 @@
     await Shared.sleep(Constants.CAPTURE_SETTLE_MS);
     await Shared.waitFrames(1);
 
+    // settle 中の resize / display 移動も captureVisibleTab の直前で取りこぼさない。
+    const settledEnvironmentError = getCaptureEnvironmentError(state.captureSession.plan);
+    if (settledEnvironmentError) {
+      return { ok: false, error: settledEnvironmentError };
+    }
+
     const currentScrollY = Math.round(window.scrollY);
     if (
       state.captureSession.plan.scrollingMode &&
       index > 0 &&
       state.captureSession.lastCapturedScrollY !== null &&
-      currentScrollY <= state.captureSession.lastCapturedScrollY + 2
+      currentScrollY <= state.captureSession.lastCapturedScrollY
     ) {
       return {
-        ok: true,
-        done: true,
+        ok: false,
+        error: t(
+          'errCaptureScrollStalled',
+          'ページを次の撮影位置までスクロールできなかったため中止しました。'
+        ),
       };
     }
 
@@ -216,6 +254,7 @@
       return;
     }
 
+    clearTimeout(state.captureSession.watchdogTimer);
     toggleFixedElements(false);
     state.captureSession.styleElement?.remove();
     window.scrollTo({
@@ -224,6 +263,19 @@
       behavior: 'auto',
     });
     state.captureSession = null;
+  }
+
+  function armCaptureSessionWatchdog(sessionId) {
+    const session = state.captureSession;
+    if (!session || session.sessionId !== sessionId) {
+      return;
+    }
+
+    clearTimeout(session.watchdogTimer);
+    session.expiresAt = Date.now() + CAPTURE_SESSION_TTL_MS;
+    session.watchdogTimer = setTimeout(() => {
+      restoreCaptureState(sessionId);
+    }, CAPTURE_SESSION_TTL_MS);
   }
 
   // ショートカット経由の撮影完了後に SW から呼ばれる。popup を経由しないため
@@ -447,7 +499,11 @@
           height: viewportHeight,
           resolvedMode: captureMode,
         };
-    const cropWidthDevice = Math.max(1, Math.round(cropRect.width * dpr));
+    const cropLeftDevice = Math.round(cropRect.x * dpr);
+    const cropWidthDevice = Math.max(
+      1,
+      Math.round((cropRect.x + cropRect.width) * dpr) - cropLeftDevice
+    );
     const maxCanvasCssHeightByArea = Math.max(
       1,
       Math.floor(MAX_TILE_CANVAS_AREA / cropWidthDevice / Math.max(dpr, 1))
