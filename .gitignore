@@ -31,7 +31,6 @@ Thumbs.db
 .idea/
 
 # 開発ツール（ローカル設定）
-.serena/
 
 # wrangler のローカル状態キャッシュ (web/ のデプロイ時に生成される)
 web/.wrangler/
