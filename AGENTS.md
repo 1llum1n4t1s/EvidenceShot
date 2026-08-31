@@ -93,10 +93,12 @@ popup.js ── chrome.runtime.sendMessage ──▶ background.js (Chrome SW / 
 pnpm install
 pnpm run sync:support            # 共通問い合わせ UI の5ファイルを正本から同期
 pnpm exec kagayoi-support-sync --check # 同梱コピーと正本の一致だけを検証
+node --test tests/capture-regressions.test.js # 撮影処理の回帰テスト
 pnpm run generate-icons          # icons/ を生成
 pnpm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
 pnpm run build                   # 問い合わせ UI 同期後、上記 2 つを連続実行
 pnpm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
+pnpm exec web-ext lint --source-dir firefox-build # Firefox 成果物を検証
 ```
 
 開発ループ:
@@ -106,7 +108,7 @@ pnpm run build:firefox           # Firefox AMO 用に firefox-build/ ディレ�
 3. ソース変更後は同画面の更新ボタンで再読込
 4. 手動確認用フィクスチャは `docs/manual-fixture.html`
 
-テストフレームワーク・lint は導入していない。挙動確認は手動で行う。
+撮影処理を変更したら Node.js 組み込みテストを実行する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
 
 ## 改ざん検知の検証
 
