@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://evidenceshot.kagayoi.com/sitemap.xml
