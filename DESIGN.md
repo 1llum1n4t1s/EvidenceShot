@@ -42,9 +42,9 @@ Chrome の `manifest.json` は `background.service_worker` と `offscreen` permi
 
 Offscreen document は focus を持たないため、画像生成とクリップボード書き込みを分離します。
 
-- ポップアップ起動では、Composer が返した PNG Blob URL を user activation を持つ popup が書き込む。
-- ショートカット起動では、background が Blob URL を active tab の content script へ渡す。secure context では Clipboard API を使い、利用できないページでは HTML image のコピーへフォールバックする。
-- 書き込み後は要求元から即時 revoke を依頼し、Composer 側の60秒タイマーも保険として残す。
+- ポップアップ起動では、Composer が返した PNG Blob URL を `popup.js` の `writeClipboardFromUrl` が fetch し、popup の Clipboard API で書き込む。popup が開いている間は対象ページから focus が移るため、この経路を popup に置く。
+- ショートカット起動では、background が Blob URL を active tab の content script へ渡す。`delegateClipboardCopyToContent` が `CLIPBOARD_COPY_FROM_URL` を送り、`copyClipboardFromUrl` が fetch する。Clipboard API が利用できない、または書き込みに失敗した場合は `document.execCommand('copy')` による HTML image のコピーへフォールバックする。
+- 書き込み後、popup は `REVOKE_OBJECT_URL_FROM_POPUP` を送り、ショートカット経路の background は `composer.revokeDownloadUrl` を直接呼ぶ。Composer の `scheduleDownloadUrlRevoke` による60秒タイマーも保険として残す。
 
 クリップボード用画像は常に PNG です。ダウンロード形式が JPEG / WEBP でも、コピー経路は別の PNG Blob を使用します。
 
@@ -53,7 +53,7 @@ Offscreen document は focus を持たないため、画像生成とクリップ
 - 保存対象は `captureVisibleTab` が取得した実ピクセルとし、ブラウザが描画していないカーソル、注釈、矢印、任意画像を後から合成しない。
 - ブラーやモザイクで元ピクセルを不可逆変換しない。
 - 利用者が追加を選択したタイムスタンプと左下固定テキストだけを明示的な例外とする。
-- PNG iTXt には拡張機能 version、UTC 撮影時刻、timezone offset、クエリとハッシュを除いた URL、ページ title、IDAT 結合バイト列の SHA-256 を記録する。
+- PNG iTXt には拡張機能 version、メタデータ生成時の UTC 時刻、timezone offset、クエリとハッシュを除いた URL、ページ title、IDAT 結合バイト列の SHA-256 を記録する。
 - `docs/verify-evidence.js` は埋め込み値と現在の IDAT を比較する。メタデータ自体を書き換えられる攻撃者への真正性保証は行わない。
 
 ## 撮影範囲とページ状態の不変条件
@@ -61,7 +61,7 @@ Offscreen document は focus を持たないため、画像生成とクリップ
 - ページ全体撮影の末尾は開始時点の scroll range で固定する。撮影中の動的拡張は警告するが、計画を伸ばさない。
 - `position: fixed` は重複写り込みを避けるため一時退避し、open Shadow DOM 内も探索する。closed Shadow DOM はアクセス不能なため対象外とする。
 - `position: sticky` は表や記事の見出しまで消す副作用を避けるため退避しない。
-- Content controller の挙動変更時は `CONTROLLER_VERSION` を更新し、既に注入された旧 controller を dispose してから置き換える。
+- Content controller は `CONTROLLER_VERSION` で注入済みインスタンスとの互換性を判定し、異なる版の旧 controller を dispose して置き換える。
 - 複数スライス中は対象タブが継続して同じ window の active tab で、ページ identity と DPR が計画時から変わらないことを要求する。一度でも別タブへ切り替えた activity guard は、対象タブへ戻っても失効状態を維持する。
 
 ## プロトコルと状態管理
@@ -69,7 +69,7 @@ Offscreen document は focus を持たないため、画像生成とクリップ
 - コンテキスト間のメッセージ種別は `src/shared/constants.js` の `MESSAGE_TYPES` を唯一の文字列正本とする。
 - Chrome の background と offscreen の契約は `OFFSCREEN_INTERFACE_VERSION` で世代を照合する。Background 起動ごとの CSPRNG token を offscreen URL とメッセージへ渡し、`sender.id` と `sender.tab` の検証を主な送信元境界とする。
 - Composer の begin / addSlice / finalize / abort は session ID と session secret で対応付ける。Content controller と Composer は TTL watchdog を更新し、Background が失われても期限切れセッションのページ状態と Canvas 資源を回収する。
-- 撮影排他は `navigator.locks` のタブ別ロックとグローバルロックで表現する。Service Worker 終了時にロックも解放されるため、永続的なロック状態を正本にしない。
+- 撮影排他は `navigator.locks` の `evidenceshot-capture-tab-<tabId>` と `evidenceshot-capture-global` の2段ロックで表現する。寿命と採用理由は後述の「Web Locks による排他」を参照。
 - 利用者設定は共通の正規化処理を通して保存し、撮影履歴は成功・失敗とも `chrome.storage.local` に最大50件保持する。
 
 ## 採用済み設計判断

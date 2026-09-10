@@ -10,13 +10,13 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 
 PNG で保存すると、画像内 (`iTXt` チャンク) に撮影 URL（クエリとハッシュは除外）・時刻・タイトル・拡張機能バージョン・画像データ (IDAT) の SHA-256 ハッシュが埋め込まれます。
 
-検証スクリプトで改ざんの有無を確認できます:
+Node.js が入った環境で、リポジトリの [検証スクリプト](docs/verify-evidence.js) を使って画像データのハッシュが一致するか確認できます:
 
 ```
 node docs/verify-evidence.js path/to/screenshot.png
 ```
 
-(JPEG / WEBP には埋め込みません。改ざん検知が必要な場合は PNG を選んでください)
+JPEG / WEBP には埋め込みません。改ざん検知が必要な場合は PNG を選んでください。画像の編集・再保存による変化を調べる仕組みで、電子署名ではありません。メタデータとハッシュも作り直された場合の真正性は保証しません。
 
 ## できること
 
@@ -56,12 +56,18 @@ node docs/verify-evidence.js path/to/screenshot.png
 
 ## 注意
 
-- 撮影開始はポップアップまたはショートカットキーから行います。
-- `http` / `https` ページのみ撮影できます。
-- 常時の `<all_urls>` 権限やフローティングボタンは使用しません。
-- 画像合成は Chrome では offscreen document、Firefox では event page (`background.html`) で行います。両者ともに同じ `src/shared/composer.js` を共有しています。
+- `http` / `https` のページが対象ですが、Chrome Web Store などブラウザが撮影用スクリプトの実行を禁止するページは撮影できません。
+- スクロール連結は撮影開始時点のページ末尾までが対象です。撮影中の追加読み込みで伸びた部分は含まれません。
+- 撮影中は対象タブを切り替えずに待ってください。ページの移動やモニター間の移動で撮影が中止されることもあります。
+- コピー完了まで、ポップアップから開始した場合はポップアップ、ショートカットから開始した場合は対象ページにフォーカスを保ってください。
+- 撮影画像はダウンロード先へ保存します。問い合わせ機能を使用すると、入力したメールアドレス・確認コード・問い合わせ内容を Kagayoi Support へ送信します。撮影画像や撮影履歴は自動送信しません。
 
-## ブラウザ別ビルド
+## 困ったとき
 
-- Chrome (Web Store): リポジトリ直下の `manifest.json` をそのまま使用。`src/background/background.js` が Service Worker として動作し、`chrome.offscreen` 経由で Canvas 合成を行います。
-- Firefox (AMO): `pnpm run build:firefox` が `manifest.json` をベースに `firefox-build/` を生成します。Firefox には `chrome.offscreen` が無いため、`background.html` を持つ event page 内で `composer.js` を直接実行します。
+- ショートカットが動かない場合は、ポップアップの「ショートカットを設定する」から割り当てを確認・再設定してください。
+- 撮影できない場合は、通常の Web ページを開き、対象タブを表示したまま再実行してください。
+- 保存は成功してコピーだけ失敗した場合は、ダウンロード済みの画像を利用できます。コピーを再試行するときは、完了するまで別のアプリやアドレスバーへ移動しないでください。
+
+## 開発に関する情報
+
+ソースからの読み込み、ブラウザ別ビルド、検証手順は [AGENTS.md](AGENTS.md#開発コマンド)、システム設計は [DESIGN.md](DESIGN.md) を参照してください。
