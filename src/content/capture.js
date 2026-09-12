@@ -17,7 +17,8 @@
   // 撮影用 CSS・固定要素退避・スクロール位置を自動復元する。
   // 14 → 15: viewport / mainColumn は撮影開始時の水平位置を維持し、fullPage だけを
   // ページ左端へ移動する。mainColumn の検出済み crop 座標と実ピクセルのずれも防ぐ。
-  const CONTROLLER_VERSION = 15;
+  // 15 → 16: scroll-snap 等で計画位置からずれたスライスを成功扱いせず中止する。
+  const CONTROLLER_VERSION = 16;
 
   const previousController = globalThis[CONTROLLER_KEY];
   previousController?.dispose?.();
@@ -107,7 +108,6 @@
         fixedElements: plan.scrollingMode ? collectFixedElements() : [],
         fixedElementStyles: new Map(),
         styleElement: installCaptureStyle(),
-        lastCapturedScrollY: null,
       };
       armCaptureSessionWatchdog(sessionId);
 
@@ -223,22 +223,18 @@
     }
 
     const currentScrollY = Math.round(window.scrollY);
-    if (
-      state.captureSession.plan.scrollingMode &&
-      index > 0 &&
-      state.captureSession.lastCapturedScrollY !== null &&
-      currentScrollY <= state.captureSession.lastCapturedScrollY
-    ) {
+    const missedPlannedPosition = state.captureSession.plan.scrollingMode &&
+      Math.abs(currentScrollY - targetY) > 1;
+    if (missedPlannedPosition) {
       return {
         ok: false,
         error: t(
           'errCaptureScrollStalled',
-          'ページを次の撮影位置までスクロールできなかったため中止しました。'
+          'ページを計画した撮影位置までスクロールできなかったため中止しました。'
         ),
       };
     }
 
-    state.captureSession.lastCapturedScrollY = currentScrollY;
     return {
       ok: true,
       scrollY: currentScrollY,
@@ -485,7 +481,7 @@
     // 旧実装は computed `overflow-y: hidden/clip` を検知して viewport に降格していたが、
     // CSS の viewport propagation (`body { overflow: hidden }` が `<html>` に伝播) により
     // 普通の長文サイトやモダン SPA でも誤発火していた。内部 div スクロールで window.scrollTo
-    // が効かないページは moveToCaptureStep の lastCapturedScrollY 判定で早期終了する。
+    // が効かないページは moveToCaptureStep の計画位置照合で早期終了する。
     const scrollingMode = captureMode !== 'viewport' && maxScrollY > 0;
     const overlap = scrollingMode ? Math.min(200, Math.max(96, Math.round(viewportHeight * 0.12))) : 0;
     const stride = Math.max(1, viewportHeight - overlap);

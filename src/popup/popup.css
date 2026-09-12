@@ -1,18 +1,4 @@
-/* ============================================================
-   EvidenceShot — Popup (Liquid Glass)
-   - Apple Vision OS / iOS 26 系のガラスモーフィズム
-   - radial gradient mesh の周囲色 (藤・水・若葉)
-   - frosted card に backdrop-filter: blur
-   - 大きな丸角、accent はトランスルーセントスカイ #5c8aff
-   - UDEV Gothic JPDOC を本文・モノ両方に
-   - ライト・ダーク両対応 (prefers-color-scheme)
-   ============================================================ */
-
-/* Bundled webfonts.
-   Files live under src/shared/fonts/ so both the popup and the offscreen
-   document (which draws timestamp / footer label onto canvas) can pull
-   the same woff2 asset. font-display: swap so the system fallback paints
-   first while UDEV Gothic loads asynchronously — popup never blocks on font fetch. */
+/* EvidenceShot — 控えめな青と不透明な面で構成するポップアップ。 */
 @font-face {
   font-family: "UDEVGothicJPDOC";
   font-style: normal;
@@ -32,799 +18,259 @@
 
 :root {
   color-scheme: light dark;
-
-  /* ---- Type ---- */
-  --font-sans:
-    "UDEVGothicJPDOC",
-    "Segoe UI Variable Text", "Segoe UI",
-    "Hiragino Sans", "Yu Gothic UI",
-    system-ui, sans-serif;
-  --font-mono:
-    "UDEVGothicJPDOC", "JetBrains Mono",
-    "SFMono-Regular", "Cascadia Mono",
-    Consolas, monospace;
-
-  /* ---- Background (light) ----
-     base = 薄い藤白を基調にして、mesh で淡い色を漂わせる。
-     mesh は body::before で 3 radial-gradient を重ねる。 */
-  --bg-base:      #ecebf3;
-  --bg-mesh-1:    rgba(255, 187, 212, 0.62);
-  --bg-mesh-2:    rgba(150, 195, 255, 0.55);
-  --bg-mesh-3:    rgba(206, 232, 210, 0.48);
-  --bg-grain:     rgba(20, 20, 40, 0.025);
-
-  /* ---- Glass surfaces ----
-     glass     = 標準 panel 透明度 (背後の mesh が透ける)
-     glass-strong = 入力フォーカス / popover / 重要 surface
-     glass-edge = inset で上端 1px ハイライト (ガラスの縁)
-     glass-rim  = panel 外周の 0.5px rim (くっきり感)
-     glass-tint = card 上に被せる薄ベール (情報密度を上げる) */
-  --glass:        rgba(255, 255, 255, 0.52);
-  --glass-strong: rgba(255, 255, 255, 0.72);
-  --glass-soft:   rgba(255, 255, 255, 0.32);
-  --glass-edge:   rgba(255, 255, 255, 0.78);
-  --glass-rim:    rgba(255, 255, 255, 0.45);
-  --glass-tint:   rgba(255, 255, 255, 0.08);
-
-  /* ---- Ink ----
-     ink            = 主本文 (見出し含む)
-     ink-soft       = 副本文・説明
-     ink-mute       = ラベル / hint
-     ink-faint      = プレースホルダ / disabled */
-  --ink:          #16181c;
-  --ink-soft:     #4e525c;
-  --ink-mute:     #7a7f8a;
-  --ink-faint:    #b3b7c0;
-  --ink-on-accent: #ffffff;
-
-  /* ---- Accent ----
-     accent       = primary 色 (CTA / switch ON / focus ring) 透明スカイ
-     accent-soft  = アクセントの薄影 (focus halo / chip 背景)
-     accent-deep  = hover / active 強調 */
-  --accent:       #5c8aff;
-  --accent-soft:  rgba(92, 138, 255, 0.18);
-  --accent-deep:  #3e6ff5;
-  --accent-glass: rgba(92, 138, 255, 0.85);
-
-  /* ---- Status ---- */
-  --ok:    #14a37f;
-  --warn:  #d6792a;
-  --error: #d04d5a;
-
-  /* ---- Shadow ----
-     soft  = panel の elevation (極めて控えめ、ガラスの浮き感)
-     pop   = primary button / focus 時の強い shadow
-     ring  = focus visible (sky transparent halo) */
-  --shadow-soft:
-    0 1px 1px rgba(20, 30, 60, 0.04),
-    0 12px 32px -16px rgba(40, 60, 120, 0.28),
-    0 32px 64px -32px rgba(40, 60, 120, 0.22);
-  --shadow-pop:
-    0 1px 2px rgba(20, 30, 60, 0.05),
-    0 18px 36px -12px rgba(60, 90, 200, 0.42),
-    0 40px 80px -32px rgba(60, 90, 200, 0.45);
-  --ring: 0 0 0 4px var(--accent-soft);
-
-  /* ---- Geometry ---- */
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius:    16px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
-  --pill:      999px;
-
-  /* ---- Motion ---- */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-
-  /* ---- Composite tokens ----
-     ガラス効果と inset 縁取りは popup 中で繰り返し使うので一元化。
-     カラースキーム切替で --glass-edge / --glass-rim が変わるため自動追従する。 */
-  --blur-strong: blur(28px) saturate(1.4);
-  --blur-card:   blur(24px) saturate(1.4);
-  --blur-input:  blur(18px) saturate(1.4);
-  --blur-canvas: blur(12px);
-  --rim-inset:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 0 0 0.5px var(--glass-rim);
-  --section-dot-ring: rgba(255, 255, 255, 0.6);
-
+  --font-sans: "UDEVGothicJPDOC", "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-soft: #f6f7f9;
+  --surface-hover: #eef1f5;
+  --border: #d5dae2;
+  --ink: #28313e;
+  --ink-soft: #556171;
+  --ink-mute: #626e7d;
+  --accent: #45658b;
+  --accent-hover: #365575;
+  --on-accent: #ffffff;
+  --switch-track: #7a8696;
+  --switch-thumb: #ffffff;
+  --ok: #287052;
+  --warn: #8a591e;
+  --error: #a33f4c;
+  --radius: 10px;
+  --radius-sm: 6px;
   font-family: var(--font-sans);
-  font-feature-settings: "tnum" 1, "cv11" 1;
-  background: var(--bg-base);
+  font-feature-settings: "tnum" 1;
+  background: var(--bg);
   color: var(--ink);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark mesh: 同じ色相 (藤・水・若葉) の彩度を抑えて、
-       ベースを濃紺寄りに置く。glass は半透明黒で「光が抜ける」感を出す。 */
-    --bg-base:      #0c0d14;
-    --bg-mesh-1:    rgba(170, 70, 130, 0.42);
-    --bg-mesh-2:    rgba(50, 95, 180, 0.45);
-    --bg-mesh-3:    rgba(40, 130, 120, 0.30);
-    --bg-grain:     rgba(255, 255, 255, 0.018);
-
-    --glass:        rgba(26, 28, 38, 0.55);
-    --glass-strong: rgba(36, 38, 52, 0.78);
-    --glass-soft:   rgba(26, 28, 38, 0.32);
-    --glass-edge:   rgba(255, 255, 255, 0.08);
-    --glass-rim:    rgba(255, 255, 255, 0.06);
-    --glass-tint:   rgba(255, 255, 255, 0.04);
-
-    --ink:          #ecedf2;
-    --ink-soft:     #b5b9c4;
-    --ink-mute:     #80848f;
-    --ink-faint:    #4a4d56;
-    --ink-on-accent: #0a0c10;
-
-    --accent:       #8aa6ff;
-    --accent-soft:  rgba(138, 166, 255, 0.22);
-    --accent-deep:  #b8c8ff;
-    --accent-glass: rgba(138, 166, 255, 0.85);
-
-    --ok:    #4ed7ad;
-    --warn:  #f1a25a;
-    --error: #ec7a86;
-
-    --shadow-soft:
-      0 1px 1px rgba(0, 0, 0, 0.5),
-      0 12px 32px -16px rgba(0, 0, 0, 0.6),
-      0 32px 64px -32px rgba(0, 0, 0, 0.55);
-    --shadow-pop:
-      0 1px 2px rgba(0, 0, 0, 0.55),
-      0 18px 36px -12px rgba(0, 0, 0, 0.65),
-      0 40px 80px -32px rgba(0, 0, 0, 0.7);
-    --section-dot-ring: rgba(255, 255, 255, 0.18);
+    --bg: #1c2026;
+    --surface: #242a32;
+    --surface-soft: #292f38;
+    --surface-hover: #323a45;
+    --border: #46505e;
+    --ink: #e4e8ef;
+    --ink-soft: #bec6d2;
+    --ink-mute: #a8b2c0;
+    --accent: #9bb7d8;
+    --accent-hover: #b0c8e3;
+    --on-accent: #202d3d;
+    --switch-track: #626f80;
+    --switch-thumb: #ffffff;
+    --ok: #91c5aa;
+    --warn: #dbb27a;
+    --error: #e6a0aa;
   }
 }
 
-/* ============================================================
-   Body + Background mesh
-   ============================================================ */
 body {
   width: 460px;
   font-size: 13.5px;
   line-height: 1.55;
   color: var(--ink);
-  background: var(--bg-base);
+  background: var(--bg);
   overflow-x: hidden;
-  position: relative;
-}
-
-/* Radial-gradient mesh: 3 つの透明 blob を重ねて softlight 混色を作る。
-   filter: blur(40px) で輪郭を完全に溶かし「色の気配」だけを残す。 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: -10%;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 55% 45% at 18% 12%, var(--bg-mesh-1), transparent 62%),
-    radial-gradient(ellipse 50% 55% at 88% 22%, var(--bg-mesh-2), transparent 60%),
-    radial-gradient(ellipse 80% 50% at 50% 105%, var(--bg-mesh-3), transparent 68%);
-  filter: blur(60px) saturate(1.1);
-  pointer-events: none;
-}
-
-/* SVG ノイズで mesh に粒子感を加え、AI-flat gradient っぽさを消す。
-   data-uri SVG fractal noise はライト/ダーク両方で薄く重なる。 */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.42 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  opacity: 0.36;
-  mix-blend-mode: overlay;
 }
 
 .shell {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
 }
 
-/* ============================================================
-   Header (frosted pill)
-   ============================================================ */
 .app-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px 10px 12px;
-  background: var(--glass-strong);
-  border-radius: var(--pill);
-  box-shadow: var(--rim-inset), var(--shadow-soft);
-  backdrop-filter: var(--blur-strong);
-  -webkit-backdrop-filter: var(--blur-strong);
+  padding: 4px 2px 10px;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
+.brand { display: flex; align-items: center; gap: 10px; width: 100%; }
+.brand-mark { width: 22px; height: 22px; flex-shrink: 0; color: var(--accent); }
+.brand-text { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
+.brand-name { font-size: 15px; font-weight: 700; }
+.brand-tagline { font-size: 11px; color: var(--ink-mute); margin-top: 2px; }
 
-.brand-mark {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  color: var(--accent);
-  filter: drop-shadow(0 1px 2px rgba(92, 138, 255, 0.45));
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
-}
-
-.brand-name {
-  font-size: 14.5px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ink);
-}
-
-.brand-tagline {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-  margin-top: 2px;
-}
-
-/* ============================================================
-   Panel (frosted glass card)
-   ============================================================ */
 .panel {
-  position: relative;
-  padding: 18px 18px 16px;
-  background: var(--glass);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--rim-inset), var(--shadow-soft);
-  backdrop-filter: var(--blur-card);
-  -webkit-backdrop-filter: var(--blur-card);
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
+.section-head { margin-bottom: 14px; }
+.section-head h2 { font-size: 13px; font-weight: 700; color: var(--ink); }
 
-/* Section head: pill タグ風の小見出し */
-.section-head {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: 14px;
-}
-
-.section-head h2 {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent-deep);
-  padding: 5px 12px;
-  background: var(--accent-soft);
-  border-radius: var(--pill);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Section head dot — フッターラベル左の細い豆 */
-.section-head h2::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--section-dot-ring);
-}
-
-/* ============================================================
-   Field (label + select / input)
-   ============================================================ */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.field > span {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  letter-spacing: 0.01em;
-  padding-left: 4px;
-}
-
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; min-width: 0; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
 .field select,
 .field input[type="text"] {
   width: 100%;
-  min-height: 42px;
-  padding: 0 14px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
   font: inherit;
-  font-size: 13.5px;
   color: var(--ink);
-  background: var(--glass-strong);
-  border: 0.5px solid var(--glass-rim);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    0 1px 2px rgba(20, 30, 60, 0.04);
-  outline: none;
-  transition:
-    border-color 160ms var(--ease-out),
-    box-shadow 200ms var(--ease-out),
-    background 180ms var(--ease-out),
-    transform 160ms var(--ease-out);
-  backdrop-filter: var(--blur-input);
-  -webkit-backdrop-filter: var(--blur-input);
+  transition: border-color 120ms ease;
 }
-
 .field select {
   appearance: none;
-  -webkit-appearance: none;
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%234e525c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5L6 7.5L9 4.5'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23556171' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5L6 7.5L9 4.5'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 12px 12px;
-  padding-right: 34px;
+  padding-right: 32px;
   cursor: pointer;
 }
-
 @media (prefers-color-scheme: dark) {
   .field select {
-    background-image:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23b5b9c4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5L6 7.5L9 4.5'/></svg>");
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23bec6d2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5L6 7.5L9 4.5'/></svg>");
   }
 }
+.field input[type="text"]::placeholder { color: var(--ink-mute); }
+.field select:hover:not(:disabled),
+.field input[type="text"]:hover:not(:disabled) { border-color: var(--accent); }
+.field select:disabled,
+.field input[type="text"]:disabled { opacity: 0.55; cursor: not-allowed; background-color: var(--surface-soft); }
 
-.field input[type="text"]::placeholder {
-  color: var(--ink-faint);
-}
-
-.field select:hover,
-.field input[type="text"]:hover {
-  border-color: rgba(92, 138, 255, 0.35);
-}
-
+/* キーボード操作時の位置は、影ではなく明確な輪郭で示す。 */
 .field select:focus-visible,
-.field input[type="text"]:focus-visible {
-  border-color: var(--accent);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    var(--ring);
-  background: var(--glass-strong);
+.field input[type="text"]:focus-visible,
+.toggle input:focus-visible,
+.primary.capture:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
+.field-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.6fr); gap: 10px; margin-bottom: 12px; }
+.field-pair .field { margin-bottom: 0; }
 
-/* 2 並び (style + size) */
-.field-pair {
-  display: grid;
-  grid-template-columns: 1fr 0.6fr;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.field-pair .field {
-  margin-bottom: 0;
-}
-
-/* ============================================================
-   Toggle (large iOS-style switch)
-   ============================================================ */
 .toggle {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 12px;
   margin-bottom: 10px;
-  background: var(--glass-soft);
-  border-radius: var(--radius);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 0 0 0.5px var(--glass-rim);
+  background: var(--surface-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition:
-    background 200ms var(--ease-out),
-    box-shadow 200ms var(--ease-out),
-    transform 140ms var(--ease-out);
+  transition: background-color 120ms ease;
 }
-
-.toggle:hover {
-  background: var(--glass);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 0 0 0.5px var(--glass-rim),
-    0 8px 18px -10px rgba(40, 60, 120, 0.25);
-}
-
-.toggle:has(input:checked) {
-  background: var(--glass);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    inset 0 0 0 0.5px rgba(92, 138, 255, 0.45),
-    0 0 0 0.5px rgba(92, 138, 255, 0.18),
-    0 8px 18px -10px rgba(92, 138, 255, 0.28);
-}
-
-/* 「日付を入れる」OFF のときに子トグル (timezone) を視覚的に殺す。
-   :has(input:disabled) は :checked より後ろに置いて宣言順で勝たせる。 */
-.toggle:has(input:disabled) {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.toggle > span {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.toggle strong {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--ink);
-  letter-spacing: 0.005em;
-}
-
-.toggle small {
-  font-size: 11.5px;
-  font-weight: 400;
-  color: var(--ink-soft);
-  line-height: 1.5;
-}
-
+.toggle:hover:not(:has(input:disabled)) { background: var(--surface-hover); }
+.toggle:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
+.toggle > span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.toggle strong { font-size: 13px; font-weight: 600; }
+.toggle small { font-size: 11.5px; color: var(--ink-soft); line-height: 1.6; }
 .toggle input[type="checkbox"] {
   appearance: none;
-  -webkit-appearance: none;
   position: relative;
-  width: 44px;
-  height: 26px;
-  border-radius: var(--pill);
-  background: rgba(120, 124, 134, 0.32);
+  width: 36px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--switch-track);
   cursor: pointer;
   margin: 0;
-  flex-shrink: 0;
-  transition: background 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: background-color 120ms ease;
 }
-
 .toggle input[type="checkbox"]::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 22px;
-  height: 22px;
-  background: #ffffff;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: var(--switch-thumb);
   border-radius: 50%;
-  transition: transform 240ms var(--ease-out), background 200ms var(--ease-out);
-  box-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.05),
-    0 2px 6px rgba(0, 0, 0, 0.22);
+  transition: transform 120ms ease;
 }
+.toggle input[type="checkbox"]:checked { background: var(--accent); }
+.toggle input[type="checkbox"]:checked::after { transform: translateX(14px); background: var(--on-accent); }
+.toggle input[type="checkbox"]:disabled { cursor: not-allowed; }
 
-.toggle input[type="checkbox"]:checked {
-  background: var(--accent);
-  box-shadow:
-    inset 0 1px 2px rgba(60, 90, 200, 0.4),
-    inset 0 0 0 0.5px rgba(60, 90, 200, 0.5),
-    0 0 18px -4px var(--accent-soft);
-}
-
-.toggle input[type="checkbox"]:checked::after {
-  transform: translateX(18px);
-}
-
-.toggle input[type="checkbox"]:focus-visible {
-  outline: none;
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.06),
-    var(--ring);
-}
-
-.toggle input[type="checkbox"]:disabled {
-  cursor: not-allowed;
-  background: rgba(120, 124, 134, 0.18);
-}
-
-.toggle input[type="checkbox"]:disabled::after {
-  background: #e4e5ea;
-}
-
-@media (prefers-color-scheme: dark) {
-  .toggle input[type="checkbox"] {
-    background: rgba(180, 185, 200, 0.18);
-  }
-  .toggle input[type="checkbox"]::after {
-    background: #f0f1f5;
-  }
-  .toggle input[type="checkbox"]:disabled::after {
-    background: #4a4c54;
-  }
-}
-
-/* ============================================================
-   Buttons
-   ============================================================ */
-
-/* Primary capture button — frosted accent pill with glow */
 .primary.capture {
-  position: relative;
   width: 100%;
-  min-height: 52px;
-  padding: 0 22px;
-  margin-top: 4px;
+  min-height: 44px;
+  padding: 10px 16px;
+  margin-top: 2px;
   font: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ink-on-accent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
-    var(--accent);
-  border: 0.5px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius);
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  overflow: hidden;
-  isolation: isolate;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    var(--shadow-pop);
-  transition:
-    transform 160ms var(--ease-out),
-    box-shadow 200ms var(--ease-out),
-    background 200ms var(--ease-out);
+  transition: background-color 120ms ease;
 }
-
-/* Specular highlight that orbits on hover */
-.primary.capture::before {
-  content: "";
-  position: absolute;
-  inset: -50%;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    transparent 0deg,
-    rgba(255, 255, 255, 0.42) 18deg,
-    transparent 36deg,
-    transparent 360deg
-  );
-  opacity: 0;
-  transition: opacity 280ms var(--ease-out);
-  z-index: -1;
-  animation: orbit 6s linear infinite;
-  animation-play-state: paused;
-}
-
-.primary.capture:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
-    var(--accent-deep);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 1px 2px rgba(20, 30, 60, 0.06),
-    0 24px 48px -16px rgba(60, 90, 200, 0.55),
-    0 50px 96px -32px rgba(60, 90, 200, 0.5);
-}
-
-.primary.capture:hover::before {
-  opacity: 1;
-  animation-play-state: running;
-}
-
-.primary.capture:active {
-  transform: translateY(0);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 2px 8px rgba(20, 30, 60, 0.18),
-    0 6px 16px -8px rgba(60, 90, 200, 0.45);
-}
-
-.primary.capture:focus-visible {
-  outline: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    var(--shadow-pop),
-    0 0 0 5px var(--accent-soft);
-}
-
-.primary.capture:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
-}
-
-@keyframes orbit {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-/* Secondary button — ghost frosted */
+.primary.capture:hover:not(:disabled),
+.primary.capture:active:not(:disabled) { background: var(--accent-hover); }
+.primary.capture:disabled { cursor: not-allowed; opacity: 0.55; }
 .secondary {
   width: 100%;
   min-height: 38px;
   margin-top: 8px;
-  padding: 0 16px;
+  padding: 8px 12px;
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ink);
-  background: var(--glass-soft);
-  border: 0.5px solid var(--glass-rim);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 0 var(--glass-edge);
   cursor: pointer;
-  backdrop-filter: var(--blur-input);
-  -webkit-backdrop-filter: var(--blur-input);
-  transition:
-    background 180ms var(--ease-out),
-    transform 140ms var(--ease-out),
-    box-shadow 180ms var(--ease-out);
+  transition: background-color 120ms ease;
 }
-
-.secondary:hover {
-  background: var(--glass);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    0 8px 16px -10px rgba(40, 60, 120, 0.25);
-}
-
-.secondary:active {
-  transform: translateY(0);
-}
-
-.secondary:focus-visible {
-  outline: none;
-  box-shadow:
-    inset 0 1px 0 var(--glass-edge),
-    var(--ring);
-}
-
+.secondary:hover:not(:disabled) { background: var(--surface-hover); }
+.secondary:disabled { cursor: not-allowed; opacity: 0.55; }
 .secondary[hidden] { display: none; }
 
-/* ============================================================
-   Notes + Status
-   ============================================================ */
-.note {
-  font-size: 11.5px;
-  line-height: 1.55;
-  color: var(--ink-mute);
-  margin-top: 8px;
-  padding-left: 12px;
-  border-left: 1px solid rgba(120, 124, 134, 0.3);
-}
-
+.note { font-size: 11.5px; line-height: 1.65; color: var(--ink-mute); margin-top: 8px; }
 .status {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ink-mute);
+  color: var(--ink-soft);
   margin-top: 10px;
-  padding: 8px 12px;
-  background: var(--glass-soft);
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 0 0.5px var(--glass-rim);
+  padding: 8px 10px;
+  background: var(--surface-soft);
+  border-left: 2px solid currentColor;
+  border-radius: 2px;
   min-height: 36px;
   display: flex;
   align-items: center;
-  transition: color 220ms var(--ease-out), background 220ms var(--ease-out);
 }
+.status:empty { display: none; }
+.status[data-tone="ok"] { color: var(--ok); }
+.status[data-tone="error"] { color: var(--error); }
+.status[data-tone="warn"] { color: var(--warn); }
 
-.status:empty {
-  display: none;
-}
-
-.status[data-tone="ok"]    { color: var(--ok);    background: rgba(20, 163, 127, 0.10); }
-.status[data-tone="error"] { color: var(--error); background: rgba(208, 77, 90, 0.10); }
-.status[data-tone="warn"]  { color: var(--warn);  background: rgba(214, 121, 42, 0.10); }
-
-@media (prefers-color-scheme: dark) {
-  .status[data-tone="ok"]    { background: rgba(78, 215, 173, 0.14); }
-  .status[data-tone="error"] { background: rgba(236, 122, 134, 0.14); }
-  .status[data-tone="warn"]  { background: rgba(241, 162, 90, 0.14); }
-}
-
-/* ============================================================
-   Style sample canvas (preview)
-   ============================================================ */
+/* 描画内容には触れず、プレビューの外周と前後の余白だけを整える。 */
 .style-sample-canvas {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 720 / 180;
-  margin-top: 10px;
-  border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, var(--glass-soft) 0%, transparent 100%),
-    repeating-conic-gradient(
-      rgba(120, 124, 134, 0.06) 0% 25%,
-      transparent 0% 50%
-    ) 0 0 / 14px 14px;
-  box-shadow: var(--rim-inset);
-  backdrop-filter: var(--blur-canvas);
-  -webkit-backdrop-filter: var(--blur-canvas);
+  margin: 10px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
 }
 
-/* ============================================================
-   Entrance motion (staggered fade-up)
-   ============================================================ */
-@media (prefers-reduced-motion: no-preference) {
-  .app-header,
-  .panel {
-    animation: rise 540ms var(--ease-out) both;
-  }
-  .app-header { animation-delay: 0ms; }
-  .panel:nth-of-type(1) { animation-delay: 80ms; }
-  .panel:nth-of-type(2) { animation-delay: 160ms; }
-  .panel:nth-of-type(3) { animation-delay: 240ms; }
-
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(8px); filter: blur(6px); }
-    to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
-  }
-}
-
-/* ============================================================
-   Reduced motion
-   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-  .primary.capture::before {
-    animation: none;
-  }
+  *, *::before, *::after { transition: none !important; }
 }
 
-/* ============================================================
-   Safari / iOS — backdrop-filter フォールバック保険
-   旧 Safari / 一部 Linux Chromium で backdrop-filter が効かないとき
-   半透明 + 通常 blur がそもそも乗らないので、せめて不透明寄りに上げる。
-   ============================================================ */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .app-header,
-  .panel,
-  .field select,
-  .field input[type="text"] {
-    background: var(--glass-strong);
-  }
-}
-
-/* ============================================================
-   Support footer
-   お問い合わせ / 評価ボタンは Kagayoi.Support の共通部品
-   <kagayoi-support-footer> が描画する。ここは配色の受け渡しだけ。
-   ============================================================ */
-
+/* 共通問い合わせ部品には公開された配色変数だけを渡す。 */
 .support-footer { margin-top: 4px; }
-
 kagayoi-support-footer {
   --kgs-radius: var(--radius-sm);
-  --kgs-surface: var(--glass-soft);
-  --kgs-surface-hover: var(--glass);
-  --kgs-border: var(--glass-rim);
+  --kgs-surface: var(--surface-soft);
+  --kgs-surface-hover: var(--surface-hover);
+  --kgs-border: var(--border);
   --kgs-accent: var(--accent);
 }

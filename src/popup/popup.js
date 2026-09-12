@@ -107,20 +107,17 @@
     }
   }
 
-  // Chrome の拡張機能ショートカット設定画面を新規タブで開く。
-  // 一般ユーザーは chrome://extensions/shortcuts のパスを知らないため、
-  // popup から 1 クリックで誘導できるようにする。
-  // (Chromium の既知挙動: unpacked 拡張機能のリロードで suggested_key が
-  // 一時的に reset されるケースがあり、ユーザーがこの画面で再設定する必要がある)
+  // Firefox 137+ は commands API で対象拡張機能の設定を直接開ける。
+  // Chromium は同 API を持たないため、公式のショートカット設定 URL を新規タブで開く。
   async function onOpenShortcutSettings() {
     try {
-      await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-      // 設定画面を開いたら popup 自身は閉じる (Chrome はフォーカス遷移時に
-      // popup を自動で閉じる挙動だが、明示的に閉じる)。
+      if (typeof chrome.commands?.openShortcutSettings === 'function') {
+        await chrome.commands.openShortcutSettings();
+      } else {
+        await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+      }
       window.close();
     } catch (error) {
-      // chrome.tabs.create が拒否される稀なケース (権限・状況依存) は
-      // 静的にエラーを popup へ表示するに留める。
       setStatus(
         normalizeUserMessage(error?.message, 'errOpenShortcutSettingsFailed', 'ショートカット設定画面を開けませんでした。'),
         'error'

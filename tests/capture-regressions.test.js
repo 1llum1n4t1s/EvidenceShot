@@ -506,7 +506,9 @@ function createCaptureHarness(options = {}) {
     scrollTo({ left, top }) {
       this.scrollX = left;
       if (!options.preventScroll) {
-        this.scrollY = top;
+        this.scrollY = typeof options.resolveScrollTop === 'function'
+          ? options.resolveScrollTop(top)
+          : top;
       }
     },
     getComputedStyle() {
@@ -610,7 +612,7 @@ test('viewport resize during settle aborts before a slice is captured', async ()
   });
   assert.equal(moved.ok, false);
   assert.match(moved.error, /表示領域/);
-  assert.equal(context.__evidenceShotCaptureControllerV2.version, 15);
+  assert.equal(context.__evidenceShotCaptureControllerV2.version, 16);
 });
 
 test('capture modes keep the intended horizontal origin', async () => {
@@ -732,6 +734,39 @@ test('a stalled full-page scroll fails instead of finalizing a truncated capture
   assert.equal(stalledStep.ok, false);
   assert.match(stalledStep.error, /スクロール/);
   assert.equal('done' in stalledStep, false);
+});
+
+test('full-page capture rejects scroll positions that miss the capture plan', async () => {
+  for (const testCase of [
+    { name: 'initial position', resolveScrollTop: (top) => top + 2, rejectedIndex: 0 },
+    { name: 'later overshoot', resolveScrollTop: (top) => top === 0 ? 0 : top + 250, rejectedIndex: 1 },
+  ]) {
+    const { context, sendMessage } = createCaptureHarness({
+      onSleep: async () => {},
+      pageHeight: 1800,
+      resolveScrollTop: testCase.resolveScrollTop,
+    });
+    const prepared = await sendMessage({
+      type: context.EvidenceShotConstants.MESSAGE_TYPES.CAPTURE_PREPARE_V2,
+      payload: { sessionId: testCase.name, settings: { captureMode: 'fullPage' } },
+    });
+    assert.equal(prepared.ok, true, `${testCase.name}: ${prepared.error}`);
+
+    if (testCase.rejectedIndex > 0) {
+      const firstStep = await sendMessage({
+        type: context.EvidenceShotConstants.MESSAGE_TYPES.CAPTURE_STEP_V2,
+        payload: { sessionId: testCase.name, index: 0 },
+      });
+      assert.equal(firstStep.ok, true, `${testCase.name}: ${firstStep.error}`);
+    }
+
+    const rejectedStep = await sendMessage({
+      type: context.EvidenceShotConstants.MESSAGE_TYPES.CAPTURE_STEP_V2,
+      payload: { sessionId: testCase.name, index: testCase.rejectedIndex },
+    });
+    assert.equal(rejectedStep.ok, false, testCase.name);
+    assert.match(rejectedStep.error, /スクロール/, testCase.name);
+  }
 });
 
 function createComposerHarness() {

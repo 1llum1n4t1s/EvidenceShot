@@ -3,7 +3,7 @@
     "message": "EvidenceShot"
   },
   "extDescription": {
-    "message": "Webテスト向けに、表示領域やスクロール連結のスクリーンショットを日時入りで保存できるChrome拡張機能です。"
+    "message": "Webテスト向けに、表示領域やスクロール連結のスクリーンショットを日時入りで保存できるブラウザ拡張機能です。"
   },
   "extActionTitle": {
     "message": "EvidenceShot"
@@ -54,7 +54,7 @@
     "message": "撮影後、保存とは別に画像を PNG としてクリップボードへ入れます。Excel などへそのまま貼り付けできます。"
   },
   "popupNoteDownloadLocation": {
-    "message": "保存先は Chrome の既定のダウンロードフォルダです。"
+    "message": "保存先はブラウザの既定のダウンロードフォルダです。"
   },
   "popupSectionOptions": {
     "message": "撮影オプション"
@@ -247,7 +247,7 @@
     "message": "スクロール位置の調整に失敗しました。"
   },
   "errCaptureScrollStalled": {
-    "message": "ページを次の撮影位置までスクロールできなかったため中止しました。"
+    "message": "ページを計画した撮影位置までスクロールできなかったため中止しました。"
   },
   "errCaptureSliceTransferFailed": {
     "message": "撮影データの受け渡しに失敗しました。"

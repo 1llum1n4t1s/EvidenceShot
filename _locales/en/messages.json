@@ -3,7 +3,7 @@
     "message": "EvidenceShot"
   },
   "extDescription": {
-    "message": "Chrome extension for web testing that captures viewport or stitched screenshots and saves them with timestamps."
+    "message": "Browser extension for web testing that captures viewport or stitched screenshots and saves them with timestamps."
   },
   "extActionTitle": {
     "message": "EvidenceShot"
@@ -54,7 +54,7 @@
     "message": "After capture, also places the image on the clipboard as PNG so you can paste into Excel."
   },
   "popupNoteDownloadLocation": {
-    "message": "Files are saved to Chrome's default download folder."
+    "message": "Files are saved to the browser's default download folder."
   },
   "popupSectionOptions": {
     "message": "Capture Options"
@@ -247,7 +247,7 @@
     "message": "Failed to adjust scroll position."
   },
   "errCaptureScrollStalled": {
-    "message": "Capture stopped because the page could not scroll to the next capture position."
+    "message": "Capture stopped because the page could not scroll to the planned capture position."
   },
   "errCaptureSliceTransferFailed": {
     "message": "Failed to transfer captured slice data."
