@@ -2,7 +2,7 @@
 
 ## 1. Basic Metadata
 - Extension Name: `EvidenceShot`
-- Version: `1.0.21`
+- Version: `1.0.22`
 - Suggested Category: `Developer Tools` or `Productivity`
 - Store Language: `English (United States)`
 
