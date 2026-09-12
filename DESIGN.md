@@ -30,13 +30,13 @@ Chrome の `manifest.json` は `background.service_worker` と `offscreen` permi
 1. ポップアップまたは `chrome.commands` が background に撮影を要求する。
 2. Background はタブ単位と拡張機能全体の Web Locks を取得し、対象タブへ対応版の capture controller を注入する。撮影開始時のページ identity（origin + pathname）を固定し、タブの切り替え・切り離し・削除を記録する activity guard を開始する。
 3. Content script は開始時点のページ寸法、viewport、DPR、撮影範囲を測定し、スクロール位置と一時変更する表示状態を保持して撮影計画を返す。
-4. Background は Composer セッションを開始し、各計画位置へ content script を移動させた後、対象タブが継続して active かつ同じページであることを撮影前後に照合し、`chrome.tabs.captureVisibleTab` で実際に表示されたピクセルを取得する。
+4. Background は Composer セッションを開始し、各計画位置へ content script を移動させる。Content script は viewport と DPR が計画時から変わらず、実スクロール位置が計画値に到達したことを確認する。Background は対象タブが継続して active かつ同じページであることを撮影前後に照合し、`chrome.tabs.captureVisibleTab` で実際に表示されたピクセルを取得する。
 5. 各スライスは background に蓄積せず Composer へ順次渡し、計画上の crop と配置で Canvas に合成する。
 6. Composer は使用領域へ切り抜き、許可されたスタンプを描画し、指定形式の Blob とファイル名を生成する。PNG の場合だけ証跡メタデータを追加する。
 7. Background は `chrome.downloads.download` へ Blob URL を渡し、完了を確認してから保存成功とする。成功・失敗とクリップボードの最終結果は、競合しないよう直列化して `chrome.storage.local` の直近50件の履歴へ記録する。
 8. `finally` 相当の復元経路で content script がスクロール位置と一時退避した固定要素を戻し、Composer セッションと不要な Blob URL を解放する。
 
-複数スライスでは、Composer の `addSlice` と次の `captureVisibleTab` を重ねられる構成にしつつ、各スライスの完了と順序はセッション内で保証します。対象タブが非アクティブになった場合、ページ identity が変わった場合、または DPR が変化した場合は、異なるページや誤った座標を連結せず撮影を中止します。
+複数スライスでは、Composer の `addSlice` と次の `captureVisibleTab` を重ねられる構成にしつつ、各スライスの完了と順序はセッション内で保証します。対象タブが非アクティブになった場合、ページ identity・viewport・DPR が変化した場合、または実スクロール位置が計画値と一致しない場合は、異なるページや誤った座標を連結せず撮影を中止します。
 
 ## クリップボード経路
 
@@ -61,8 +61,8 @@ Offscreen document は focus を持たないため、画像生成とクリップ
 - ページ全体撮影の末尾は開始時点の scroll range で固定する。撮影中の動的拡張は警告するが、計画を伸ばさない。
 - `position: fixed` は重複写り込みを避けるため一時退避し、open Shadow DOM 内も探索する。closed Shadow DOM はアクセス不能なため対象外とする。
 - `position: sticky` は表や記事の見出しまで消す副作用を避けるため退避しない。
-- Content controller は `CONTROLLER_VERSION` で注入済みインスタンスとの互換性を判定し、異なる版の旧 controller を dispose して置き換える。
-- 複数スライス中は対象タブが継続して同じ window の active tab で、ページ identity と DPR が計画時から変わらないことを要求する。一度でも別タブへ切り替えた activity guard は、対象タブへ戻っても失効状態を維持する。
+- Content controller は挙動世代を `CONTROLLER_VERSION` として公開する。再注入時は同一版を含む既存 controller を dispose してページ状態を復元してから、新しい controller へ置き換える。
+- 複数スライス中は対象タブが継続して同じ window の active tab で、ページ identity・viewport・DPR が計画時から変わらず、実スクロール位置が計画値と一致することを要求する。`scroll-snap` などで計画位置へ到達できない場合は、不正確な連結画像を成功扱いせず中止する。一度でも別タブへ切り替えた activity guard は、対象タブへ戻っても失効状態を維持する。
 
 ## プロトコルと状態管理
 

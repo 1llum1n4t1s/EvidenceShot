@@ -9,7 +9,7 @@
 - メッセージは `src/shared/constants.js` の `MESSAGE_TYPES` に一元定義し、使用するコンテキストの分割代入にも追加する。
 - offscreen ↔ background のプロトコル変更時は `OFFSCREEN_INTERFACE_VERSION` をインクリメントする。送信元検証と世代管理は [DESIGN.md](DESIGN.md#プロトコルと状態管理) の境界を維持する。
 - `src/content/capture.js` の挙動変更時は `CONTROLLER_VERSION` をインクリメントし、注入済みの旧 controller を dispose して置き換える。
-- 撮影処理の変更時は [撮影範囲とページ状態の不変条件](DESIGN.md#撮影範囲とページ状態の不変条件) と [撮影データフロー](DESIGN.md#撮影データフロー) を維持する。排他、対象タブ・ページ・DPR の照合、逐次転送、終了時復元と期限切れ回収を確認する。
+- 撮影処理の変更時は [撮影範囲とページ状態の不変条件](DESIGN.md#撮影範囲とページ状態の不変条件) と [撮影データフロー](DESIGN.md#撮影データフロー) を維持する。排他、対象タブ・ページ・viewport・DPR・計画スクロール位置の照合、逐次転送、終了時復元と期限切れ回収を確認する。
 - 起動経路はポップアップと `chrome.commands` に限定する。フローティングボタンや常時 `<all_urls>` 権限は追加せず、`activeTab` で都度注入する。
 - 権限変更時は `manifest.json` と `scripts/build-firefox.js` を照合する。問い合わせ専用 host permission と Firefox の収集区分は [DESIGN.md](DESIGN.md#実行コンテキストと責務) の外部契約に合わせる。登録済みの `GECKO_ID` は維持する。
 - 問い合わせ UI の `src/shared/kagayoi-support-{popup,footer}.{js,css}` と `src/shared/kagayoi-support-form.css` は、exact 固定した `@kagayoi/support-extension` の同梱コピーとして扱う。直接編集せず、正本側を更新して同期する。依存更新時は5ファイルを同期し、下記の一致検証を実行する。
