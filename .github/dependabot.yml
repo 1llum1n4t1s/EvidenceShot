@@ -1,39 +1,38 @@
+# 更新方針: 毎週月曜09:00（日本時間）、minor/patchを集約、majorは個別PR。
+# マージ可否は既定ブランチのDependabot auto-mergeが最新CIで判定します。
 version: 2
 updates:
-  # GitHub Actions を SHA 固定で自動更新（サプライチェーン攻撃対策）
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "09:00"
-      timezone: Asia/Tokyo
-    open-pull-requests-limit: 5
-    groups:
-      github-actions-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-    commit-message:
-      prefix: ci
-
-  # devDependencies を自動更新（pnpm-lock.yaml を Dependabot の npm エコシステムが管理）
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "09:00"
-      timezone: Asia/Tokyo
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-    commit-message:
-      prefix: chore
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 09:00
+    timezone: Asia/Tokyo
+  open-pull-requests-limit: 5
+  groups:
+    minor-and-patch:
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
+  commit-message:
+    prefix: deps
+- package-ecosystem: npm
+  directory: /
+  schedule:
+    interval: weekly
+    day: monday
+    time: 09:00
+    timezone: Asia/Tokyo
+  open-pull-requests-limit: 5
+  groups:
+    minor-and-patch:
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
+  commit-message:
+    prefix: deps
