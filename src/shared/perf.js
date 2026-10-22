@@ -29,9 +29,11 @@
     } catch { /* no-op */ }
     try {
       const href = globalThis.location?.href || '';
-      if (href.includes('/offscreen/')) return 'offscreen';
-      if (href.includes('/popup/')) return 'popup';
-      if (href.startsWith('chrome-extension://')) return 'background-page'; // Firefox event page
+      if (/^(?:chrome|moz)-extension:\/\//.test(href)) {
+        if (href.includes('/offscreen/')) return 'offscreen';
+        if (href.includes('/popup/')) return 'popup';
+        return 'background-page'; // Firefox event page
+      }
     } catch { /* no-op */ }
     // それ以外は content script (web page の document context)
     return 'content';

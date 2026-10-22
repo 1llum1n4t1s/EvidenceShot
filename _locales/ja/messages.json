@@ -14,6 +14,15 @@
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
+  "popupDocumentLanguage": {
+    "message": "ja"
+  },
+  "popupAriaTimestampSample": {
+    "message": "日付デザインのサンプル"
+  },
+  "popupAriaFooterSample": {
+    "message": "左下固定テキストのサンプル"
+  },
   "popupHeaderTagline": {
     "message": "監査用スクリーンショット"
   },

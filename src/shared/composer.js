@@ -573,14 +573,17 @@
       }
 
       // IDAT 結合 → SHA-256
-      const idatTotalLen = idatChunks.reduce((sum, c) => sum + c.length, 0);
-      const idatConcat = new Uint8Array(idatTotalLen);
-      let writePos = 0;
-      for (const c of idatChunks) {
-        idatConcat.set(c, writePos);
-        writePos += c.length;
+      let idatBytes = idatChunks[0];
+      if (idatChunks.length > 1) {
+        const idatTotalLen = idatChunks.reduce((sum, c) => sum + c.length, 0);
+        idatBytes = new Uint8Array(idatTotalLen);
+        let writePos = 0;
+        for (const c of idatChunks) {
+          idatBytes.set(c, writePos);
+          writePos += c.length;
+        }
       }
-      const hashBuf = await crypto.subtle.digest('SHA-256', idatConcat);
+      const hashBuf = await crypto.subtle.digest('SHA-256', idatBytes);
       const hashHex = Array.from(new Uint8Array(hashBuf))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
@@ -591,7 +594,7 @@
       const fields = [
         ['EvidenceShot:Version', String(meta?.extensionVersion || '')],
         ['EvidenceShot:Timestamp', now.toISOString()],
-        ['EvidenceShot:TimezoneOffset', formatTimezoneOffset(now)],
+        ['EvidenceShot:TimezoneOffset', Shared.formatTimezoneOffset(now)],
         ['EvidenceShot:URL', redactEvidenceUrl(meta?.url)],
         ['EvidenceShot:Title', truncateMetadataField(meta?.title, 512)],
         ['EvidenceShot:IdatHashSha256', hashHex],
@@ -600,24 +603,15 @@
       const newChunks = fields.map(([key, value]) => buildPngITextChunk(key, value));
 
       return new Blob([
-        bytes.subarray(0, iendStart),
+        blob.slice(0, iendStart),
         ...newChunks,
-        bytes.subarray(iendStart),
+        blob.slice(iendStart),
       ], { type: 'image/png' });
     } catch (error) {
       // メタ埋め込みの失敗は撮影成功自体を妨げない (画像はそのまま返す)。
       console.warn('EvidenceShot: failed to embed PNG metadata', error);
       return blob;
     }
-  }
-
-  function formatTimezoneOffset(date) {
-    const offsetMin = -date.getTimezoneOffset();
-    const sign = offsetMin >= 0 ? '+' : '-';
-    const abs = Math.abs(offsetMin);
-    const h = String(Math.floor(abs / 60)).padStart(2, '0');
-    const m = String(abs % 60).padStart(2, '0');
-    return `${sign}${h}:${m}`;
   }
 
   function redactEvidenceUrl(rawUrl) {

@@ -245,9 +245,9 @@ body {
   align-items: center;
 }
 .status:empty { display: none; }
-.status[data-tone="ok"] { color: var(--ok); }
+.status[data-tone="success"] { color: var(--ok); }
 .status[data-tone="error"] { color: var(--error); }
-.status[data-tone="warn"] { color: var(--warn); }
+.status[data-tone="warning"] { color: var(--warn); }
 
 /* 描画内容には触れず、プレビューの外周と前後の余白だけを整える。 */
 .style-sample-canvas {

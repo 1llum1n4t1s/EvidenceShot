@@ -351,9 +351,20 @@
   async function persistPopupSettings({ renderAfterSave = true } = {}) {
     // popup は現在の設定 (settings) をモジュールスコープで保持しているため、
     // Shared.saveSettings 内での loadSettings 再読み込み (storage.local.get) を省ける。
-    settings = await Shared.saveSettings(collectSettingsFromForm(), settings);
+    const submittedSettings = collectSettingsFromForm();
+    settings = await Shared.saveSettings(submittedSettings, settings);
     if (renderAfterSave) {
-      render();
+      const currentFormSettings = collectSettingsFromForm();
+      // 保存待ち中の入力は、先に保存した設定で上書きしない。
+      const formUnchanged = Object.keys(submittedSettings).every(
+        (key) => currentFormSettings[key] === submittedSettings[key]
+      );
+      if (formUnchanged) {
+        render();
+      } else {
+        updateLinkedControlAvailability();
+        renderPreview();
+      }
     }
     return settings;
   }
@@ -503,6 +514,7 @@
   }
 
   function applyStaticLocalization() {
+    document.documentElement.lang = t('popupDocumentLanguage', 'ja');
     document.querySelectorAll('[data-i18n]').forEach((element) => {
       const key = element.dataset.i18n;
       if (!key) {
@@ -517,6 +529,13 @@
         return;
       }
       element.placeholder = t(key, element.placeholder || key);
+    });
+
+    document.querySelectorAll('[data-i18n-aria-label]').forEach((element) => {
+      const key = element.dataset.i18nAriaLabel;
+      if (key) {
+        element.setAttribute('aria-label', t(key, element.getAttribute('aria-label') || key));
+      }
     });
   }
 

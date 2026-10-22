@@ -612,7 +612,7 @@ test('viewport resize during settle aborts before a slice is captured', async ()
   });
   assert.equal(moved.ok, false);
   assert.match(moved.error, /表示領域/);
-  assert.equal(context.__evidenceShotCaptureControllerV2.version, 16);
+  assert.equal(context.__evidenceShotCaptureControllerV2.version, 17);
 });
 
 test('capture modes keep the intended horizontal origin', async () => {

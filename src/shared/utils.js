@@ -186,10 +186,15 @@
     return String(value).padStart(2, '0');
   }
 
-  function buildTimestamp(date = new Date()) {
+  function formatTimezoneOffset(date) {
     const offsetMin = -date.getTimezoneOffset();
     const tzSign = offsetMin >= 0 ? '+' : '-';
     const tzAbs = Math.abs(offsetMin);
+    return `${tzSign}${pad2(Math.floor(tzAbs / 60))}:${pad2(tzAbs % 60)}`;
+  }
+
+  function buildTimestamp(date = new Date()) {
+    const timezone = formatTimezoneOffset(date);
     return {
       year: date.getFullYear(),
       shortYear: String(date.getFullYear()).slice(-2),
@@ -198,7 +203,7 @@
       hours: pad2(date.getHours()),
       minutes: pad2(date.getMinutes()),
       seconds: pad2(date.getSeconds()),
-      timezone: `${tzSign}${pad2(Math.floor(tzAbs / 60))}:${pad2(tzAbs % 60)}`,
+      timezone,
     };
   }
 
@@ -311,13 +316,10 @@
     normalizeSettings,
     loadSettings,
     saveSettings,
-    waitAnimationFrame,
     waitFrames,
     sleep,
     clampNumber,
-    sanitizeHost,
-    sanitizeFileNamePrefix,
-    sanitizeFooterText,
+    formatTimezoneOffset,
     buildTimestamp,
     buildFileName,
     isCapturableUrl,

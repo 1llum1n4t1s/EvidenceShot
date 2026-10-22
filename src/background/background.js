@@ -933,7 +933,8 @@ async function runCaptureWorkflow(tabId) {
       }
       composerSessionStarted = false;
       downloadedFiles.push(finalizeResult.fileName);
-      if (finalizeResult.clipboardStatus) {
+      // 分割時は全体のコピー省略理由を、各タイルの無効状態で上書きしない。
+      if (tiles.length === 1 && finalizeResult.clipboardStatus) {
         clipboardStatus = finalizeResult.clipboardStatus;
         clipboardError = finalizeResult.clipboardError || null;
       }

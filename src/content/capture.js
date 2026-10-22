@@ -18,7 +18,8 @@
   // 14 → 15: viewport / mainColumn は撮影開始時の水平位置を維持し、fullPage だけを
   // ページ左端へ移動する。mainColumn の検出済み crop 座標と実ピクセルのずれも防ぐ。
   // 15 → 16: scroll-snap 等で計画位置からずれたスライスを成功扱いせず中止する。
-  const CONTROLLER_VERSION = 16;
+  // 16 → 17: 全モードで水平・垂直の計画位置を照合し、1スライス単位の分割を許可する。
+  const CONTROLLER_VERSION = 17;
 
   const previousController = globalThis[CONTROLLER_KEY];
   previousController?.dispose?.();
@@ -222,8 +223,9 @@
       return { ok: false, error: settledEnvironmentError };
     }
 
+    const currentScrollX = Math.round(window.scrollX);
     const currentScrollY = Math.round(window.scrollY);
-    const missedPlannedPosition = state.captureSession.plan.scrollingMode &&
+    const missedPlannedPosition = Math.abs(currentScrollX - targetX) > 1 ||
       Math.abs(currentScrollY - targetY) > 1;
     if (missedPlannedPosition) {
       return {
@@ -557,7 +559,7 @@
     }
 
     const maxPositionsPerTile = Math.max(
-      2,
+      1,
       Math.floor((maxTileCssHeight - viewportHeight) / stride) + 1
     );
 
@@ -581,7 +583,7 @@
       if (endIndex >= positions.length - 1) {
         break;
       }
-      startIndex = endIndex;
+      startIndex = Math.max(startIndex + 1, endIndex);
     }
 
     return tiles;

@@ -8,7 +8,6 @@
   const Composer = globalThis.EvidenceShotComposer;
   const { OFFSCREEN_INTERFACE_VERSION, MESSAGE_TYPES } = globalThis.EvidenceShotConstants;
   const t = Shared.t;
-  const normalizeUserMessage = Shared.normalizeUserMessage;
   const MIN_TOKEN_LENGTH = 24;
 
   // Chrome 拡張機能の SW (background) が offscreen を createDocument する際、
@@ -39,20 +38,12 @@
       return undefined;
     }
 
-    Promise.resolve(handleMessage(message, sender))
-      .then((response) => {
-        sendResponse(response);
-      })
-      .catch((error) => {
-        sendResponse({
-          ok: false,
-          error: normalizeUserMessage(
-            error?.message,
-            'errSaveProcessFailed',
-            '保存処理に失敗しました。'
-          ),
-        });
-      });
+    Shared.respondAsync(
+      handleMessage(message, sender),
+      sendResponse,
+      'errSaveProcessFailed',
+      '保存処理に失敗しました。'
+    );
 
     return true;
   });
