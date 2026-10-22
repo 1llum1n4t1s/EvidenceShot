@@ -10,13 +10,16 @@ overrides:
   fast-uri@>=3.0.0 <3.1.5: '>=3.1.5'
   js-yaml@>=4.0.0 <4.3.1: '>=4.3.1'
 
+patchedDependencies:
+  node-forge@1.4.0: 4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0
+
 importers:
 
   .:
     devDependencies:
       '@kagayoi/support-extension':
-        specifier: 1.0.6
-        version: 1.0.6
+        specifier: 1.0.8
+        version: 1.0.8
       chrome-webstore-upload-cli:
         specifier: ^4.0.2
         version: 4.0.2
@@ -287,8 +290,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@kagayoi/support-extension@1.0.6':
-    resolution: {integrity: sha512-nxQqhZWbfXDrmjDg8dKk4/RU7IUXyTkQ7XlcKwKNLR+srCX+KzsMEPETOsa35vDL4cQ4fWqrxl6rW8ddE/sYDQ==}
+  '@kagayoi/support-extension@1.0.8':
+    resolution: {integrity: sha512-NbEvdncBUrKG7suocyhbeO+B1QSURBaEg6OL7n6EoR0EeDKAJyOJiY37tIVUbDrtTM9A/CaOMd13/MrVwLDWeA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -1537,7 +1540,7 @@ snapshots:
       bluebird: 3.7.2
       commander: 9.5.0
       debug: 4.3.7
-      node-forge: 1.4.0
+      node-forge: 1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0)
       split: 1.0.1
     transitivePeerDependencies:
       - supports-color
@@ -1719,7 +1722,7 @@ snapshots:
   '@img/sharp-win32-x64@0.35.5':
     optional: true
 
-  '@kagayoi/support-extension@1.0.6': {}
+  '@kagayoi/support-extension@1.0.8': {}
 
   '@mdn/browser-compat-data@8.1.4': {}
 
@@ -2464,7 +2467,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  node-forge@1.4.0: {}
+  node-forge@1.4.0(patch_hash=4fa957cddb4b4601a48b535053d0fec7ed013f9d075660a38365f285fc830fe0): {}
 
   nth-check@2.1.1:
     dependencies:

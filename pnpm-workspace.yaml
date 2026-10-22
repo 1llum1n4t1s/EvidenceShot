@@ -5,7 +5,7 @@ allowBuilds:
   spawn-sync: true
 
 minimumReleaseAgeExclude:
-  - '@kagayoi/support-extension@1.0.6'
+  - '@kagayoi/support-extension@1.0.8'
   - adm-zip@0.6.1
 
 # web-ext (devDependency) の脆弱な推移的依存を、
@@ -15,3 +15,9 @@ overrides:
   brace-expansion@<1.1.18: '>=1.1.18'
   fast-uri@>=3.0.0 <3.1.5: '>=3.1.5'
   js-yaml@>=4.0.0 <4.3.1: '>=4.3.1'
+
+# CVE-2026-85393: 上流PR #1152 (未マージ) の構造検証を1.4.0へ適用。
+# https://github.com/digitalbazaar/forge/commit/ceba34402e329f0365134f23fe19898756527d65
+# 公開修正版への更新時にこのパッチを外す。監査のversion判定は抑制しない。
+patchedDependencies:
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch

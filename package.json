@@ -1,6 +1,6 @@
 {
   "name": "evidence-shot",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "type": "commonjs",
   "description": "EvidenceShot: Web テスト時の証跡用に、ポップアップから表示領域やスクロール連結撮影を行い、多彩なタイムスタンプ付きで保存できる Chrome スクリーンショット拡張機能",
   "scripts": {
@@ -12,7 +12,7 @@
     "build:firefox": "node scripts/build-firefox.js"
   },
   "devDependencies": {
-    "@kagayoi/support-extension": "1.0.6",
+    "@kagayoi/support-extension": "1.0.8",
     "chrome-webstore-upload-cli": "^4.0.2",
     "puppeteer": "^25.14.0",
     "sharp": "^0.35.5",
