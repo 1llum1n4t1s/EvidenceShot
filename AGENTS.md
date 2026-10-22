@@ -11,6 +11,7 @@
 - `src/content/capture.js` の挙動変更時は `CONTROLLER_VERSION` をインクリメントし、注入済みの旧 controller を dispose して置き換える。
 - 撮影処理の変更時は [撮影範囲とページ状態の不変条件](DESIGN.md#撮影範囲とページ状態の不変条件) と [撮影データフロー](DESIGN.md#撮影データフロー) を維持する。排他、対象タブ・ページ・viewport・DPR・計画スクロール位置の照合、逐次転送、終了時復元と期限切れ回収を確認する。
 - 起動経路はポップアップと `chrome.commands` に限定する。フローティングボタンや常時 `<all_urls>` 権限は追加せず、`activeTab` で都度注入する。
+- 計測には `node scripts/build-perf.js` で生成する `perf-build/` を使い、配信物に含めない。追加権限の用途は [DESIGN.md](DESIGN.md#実行コンテキストと責務) を参照する。
 - 権限変更時は `manifest.json` と `scripts/build-firefox.js` を照合する。問い合わせ専用 host permission と Firefox の収集区分は [DESIGN.md](DESIGN.md#実行コンテキストと責務) の外部契約に合わせる。登録済みの `GECKO_ID` は維持する。
 - 問い合わせ UI の `src/shared/kagayoi-support-{popup,footer}.{js,css}` と `src/shared/kagayoi-support-form.css` は、exact 固定した `@kagayoi/support-extension` の同梱コピーとして扱う。直接編集せず、正本側を更新して同期する。依存更新時は5ファイルを同期し、下記の一致検証を実行する。
 - UI の文言は `_locales/{en,ja}/messages.json` へ反映する。タイムスタンプと左下固定テキストのデザイン・文字サイズは共通設定に連動させ、プレビューと保存画像の整合を確認する。
@@ -40,7 +41,7 @@ pnpm exec web-ext lint --source-dir firefox-build # Firefox 成果物を検証
 
 `build:firefox` は既存の `firefox-build/` を削除して再生成する。問い合わせ UI の同期やアイコン生成は行わないため、必要な更新は生成前に済ませる。公開 CI も同梱 UI をそのまま梱包するため、同期済みファイルをコミット対象に含める。
 
-撮影処理を変更したら Node.js 組み込みテストを実行する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
+撮影処理を変更したら Node.js 組み込みテストを実行し、長いページの分割保存と分割時のコピー省略も確認する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
 
 ## 証跡画像の制約と検証
 

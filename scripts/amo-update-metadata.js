@@ -89,23 +89,8 @@ async function patchListing() {
   const descriptionJa = readListing('store-listing.txt');
   const descriptionEn = readListing('store-listing.en-US.txt');
 
-  const privacyJa = [
-    'EvidenceShot はユーザーがポップアップまたはショートカットキーから明示的に撮影を開始した場合にのみ、現在のタブの内容を撮影し、ブラウザの既定ダウンロードフォルダに画像を保存します。',
-    '',
-    '撮影した画像・URL・タイムスタンプを含む一切の情報を、外部サーバへ送信することはありません。',
-    '撮影設定 (フォーマット / スタンプ種別 / クリップボード設定など) は chrome.storage.local に、撮影履歴は同じく chrome.storage.local の captureHistory キーに、最大 50 件まで保存されます。これらの情報はユーザーのブラウザ内のみに残ります。',
-    '',
-    '広告・トラッキング・アナリティクス目的のコードは一切含みません。',
-  ].join('\n');
-
-  const privacyEn = [
-    'EvidenceShot captures the current tab\'s contents only when you explicitly start a capture from the popup or via a keyboard shortcut, and saves the resulting image to your browser\'s default download folder.',
-    '',
-    'No data, including captured images, URLs, or timestamps, is ever sent to any external server.',
-    'Capture preferences (format / timestamp style / clipboard option / etc.) are stored solely in chrome.storage.local, and a rolling history of up to 50 captures is stored under the captureHistory key in the same chrome.storage.local. All of this remains on your machine only.',
-    '',
-    'The extension contains no advertising, tracking, or analytics code.',
-  ].join('\n');
+  const privacyJa = fs.readFileSync(path.join(ROOT, 'docs', 'privacy-policy-ja.md'), 'utf8').trim();
+  const privacyEn = fs.readFileSync(path.join(ROOT, 'docs', 'privacy-policy.md'), 'utf8').trim();
 
   const homepage = 'https://github.com/1llum1n4t1s/EvidenceShot';
   const supportUrl = 'https://github.com/1llum1n4t1s/EvidenceShot/issues';

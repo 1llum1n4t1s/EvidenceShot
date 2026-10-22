@@ -23,6 +23,8 @@ EvidenceShot は、利用者が明示的に開始したときだけ現在のタ�
 
 Chrome の `manifest.json` は `background.service_worker` と `offscreen` permission を使います。`scripts/build-firefox.js` はこれを正本として Firefox 用成果物を生成し、background を非永続 event page へ切り替え、`offscreen` permission と `minimum_chrome_version` を除去して Gecko 固有設定を加えます。
 
+計測専用の `scripts/build-perf.js` は `perf-build/` へ別成果物を生成し、自動計測でのタブ情報取得とスクリプト注入のため `tabs` permission と `<all_urls>` host permission を追加します。配信用 manifest の最小権限は維持し、計測時だけ権限を広げる構成です。
+
 問い合わせ UI だけが `https://support.kagayoi.com/*` の host permission を使い、利用者が入力したメールアドレス、確認コード、問い合わせ内容を API へ送ります。撮影画像、撮影履歴、証跡メタデータはこの問い合わせ経路へ渡しません。Firefox 用 manifest は、この問い合わせ機能に対応する個人識別情報、認証情報、個人間通信の収集区分を Gecko 設定へ明示します。
 
 ## 撮影データフロー
@@ -37,6 +39,8 @@ Chrome の `manifest.json` は `background.service_worker` と `offscreen` permi
 8. `finally` 相当の復元経路で content script がスクロール位置と一時退避した固定要素を戻し、Composer セッションと不要な Blob URL を解放する。
 
 複数スライスでは、Composer の `addSlice` と次の `captureVisibleTab` を重ねられる構成にしつつ、各スライスの完了と順序はセッション内で保証します。対象タブが非アクティブになった場合、ページ identity・viewport・DPR が変化した場合、または実スクロール位置が計画値と一致しない場合は、異なるページや誤った座標を連結せず撮影を中止します。
+
+スクロール連結の計画は Canvas の辺長・面積上限に合わせてタイルへ分割します。Background はタイルごとに Composer セッションを開始し、合成・スタンプ描画・ダウンロード完了まで順に処理してから次のタイルへ進みます。分割時はファイル名に部番号を付け、PNG メタデータも各画像に埋め込みます。クリップボードコピーは単一画像の場合だけ有効にし、複数ファイルの場合は `SKIPPED_MULTIPART` として省略します。
 
 ## クリップボード経路
 

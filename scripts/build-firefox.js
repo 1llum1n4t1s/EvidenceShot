@@ -10,8 +10,9 @@
 //   - minimum_chrome_version を削除 (Firefox では無意味)
 //   - browser_specific_settings.gecko を付与 (AMO 必須)
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
+const { assertCleanupPath, copyDir } = require('./build-common');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC_MANIFEST = path.join(ROOT, 'manifest.json');
@@ -31,19 +32,6 @@ const STRICT_MIN_VERSION = '140.0';
 function fail(msg) {
   console.error(`❌ ${msg}`);
   process.exit(1);
-}
-
-function copyDir(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(s, d);
-    } else {
-      fs.copyFileSync(s, d);
-    }
-  }
 }
 
 function buildFirefoxManifest() {
@@ -91,7 +79,7 @@ function main() {
 
   // 出力ディレクトリを clean して再構築
   if (fs.existsSync(OUT_DIR)) {
-    fs.rmSync(OUT_DIR, { recursive: true, force: true });
+    fs.rmSync(assertCleanupPath(path.resolve(OUT_DIR), path.resolve(ROOT)), { recursive: true, force: true });
   }
   fs.mkdirSync(OUT_DIR, { recursive: true });
 

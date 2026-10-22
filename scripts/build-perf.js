@@ -7,21 +7,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { assertCleanupPath, copyDir } = require('./build-common');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC_MANIFEST = path.join(ROOT, 'manifest.json');
 const OUT_DIR = path.join(ROOT, 'perf-build');
 const OUT_MANIFEST = path.join(OUT_DIR, 'manifest.json');
-
-function copyDir(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDir(s, d);
-    else fs.copyFileSync(s, d);
-  }
-}
 
 function main() {
   if (!fs.existsSync(SRC_MANIFEST)) {
@@ -29,7 +20,7 @@ function main() {
     process.exit(1);
   }
   if (fs.existsSync(OUT_DIR)) {
-    fs.rmSync(OUT_DIR, { recursive: true, force: true });
+    fs.rmSync(assertCleanupPath(path.resolve(OUT_DIR), path.resolve(ROOT)), { recursive: true, force: true });
   }
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
