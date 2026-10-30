@@ -5,7 +5,7 @@ allowBuilds:
   spawn-sync: true
 
 minimumReleaseAgeExclude:
-  - '@kagayoi/support-extension@1.0.8'
+  - '@kagayoi/support-extension@1.0.9'
   - adm-zip@0.6.1
 
 # web-ext (devDependency) の脆弱な推移的依存を、
