@@ -2,6 +2,8 @@
 
 このファイルは EvidenceShot で作業する coding agent 向けの規約です。システム構造、責務境界、データフロー、設計判断は [DESIGN.md](DESIGN.md) を正本とし、本書は変更時の制約と検証手順を扱います。
 
+Bun は `package.json` の `packageManager` (`bun@1.4.4`) を正本とする。`bunfig.toml` の `minimumReleaseAge = 86400` は従来の24時間の公開待機を維持し、例外は `minimumReleaseAgeExcludes`、依存の実行許可は `package.json` の `trustedDependencies` に置く。CI は `scripts/Initialize-BunBuild.ps1 -VersionFile package.json` で同じ実行環境を準備する。
+
 ## 変更時の制約
 
 機能と使い方は [README.md](README.md)、実装ファイルの責務とブラウザ差は [DESIGN.md](DESIGN.md#実行コンテキストと責務) を参照する。
@@ -11,25 +13,25 @@
 - `src/content/capture.js` の挙動変更時は `CONTROLLER_VERSION` をインクリメントし、注入済みの旧 controller を dispose して置き換える。
 - 撮影処理の変更時は [撮影範囲とページ状態の不変条件](DESIGN.md#撮影範囲とページ状態の不変条件) と [撮影データフロー](DESIGN.md#撮影データフロー) を維持する。排他、対象タブ・ページ・viewport・DPR・計画スクロール位置の照合、逐次転送、終了時復元と期限切れ回収を確認する。
 - 起動経路はポップアップと `chrome.commands` に限定する。フローティングボタンや常時 `<all_urls>` 権限は追加せず、`activeTab` で都度注入する。
-- 計測には `node scripts/build-perf.js` で生成する `perf-build/` を使い、配信物に含めない。追加権限の用途は [DESIGN.md](DESIGN.md#実行コンテキストと責務) を参照する。
+- 計測には `bun scripts/build-perf.js` で生成する `perf-build/` を使い、配信物に含めない。追加権限の用途は [DESIGN.md](DESIGN.md#実行コンテキストと責務) を参照する。
 - 権限変更時は `manifest.json` と `scripts/build-firefox.js` を照合する。問い合わせ専用 host permission と Firefox の収集区分は [DESIGN.md](DESIGN.md#実行コンテキストと責務) の外部契約に合わせる。登録済みの `GECKO_ID` は維持する。
 - 問い合わせ UI の `src/shared/kagayoi-support-{popup,footer}.{js,css}` と `src/shared/kagayoi-support-form.css` は、exact 固定した `@kagayoi/support-extension` の同梱コピーとして扱う。直接編集せず、正本側を更新して同期する。依存更新時は5ファイルを同期し、下記の一致検証を実行する。
 - UI の文言は `_locales/{en,ja}/messages.json` へ反映する。タイムスタンプと左下固定テキストのデザイン・文字サイズは共通設定に連動させ、プレビューと保存画像の整合を確認する。
 
 ## 開発コマンド
 
-CI と同じ Node.js 24 / pnpm 11 を使用する。Chrome はルートの `manifest.json`、Firefox は生成した `firefox-build/manifest.json` を使用する。
+CI と同じ Bun 1.4.4 を使用する。Chrome はルートの `manifest.json`、Firefox は生成した `firefox-build/manifest.json` を使用する。
 
 ```bash
-pnpm install
-pnpm run sync:support            # 共通問い合わせ UI の5ファイルを正本から同期
-pnpm exec kagayoi-support-sync --check # 同梱コピーと正本の一致だけを検証
-node --test tests/capture-regressions.test.js # 撮影処理の回帰テスト
-pnpm run generate-icons          # icons/ を生成
-pnpm run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
-pnpm run build                   # 問い合わせ UI 同期後、上記 2 つを連続実行
-pnpm run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
-pnpm exec web-ext lint --source-dir firefox-build # Firefox 成果物を検証
+bun install
+bun --bun run sync:support            # 共通問い合わせ UI の5ファイルを正本から同期
+bun --bun run kagayoi-support-sync --check # 同梱コピーと正本の一致だけを検証
+bun test tests/capture-regressions.test.js # 撮影処理の回帰テスト
+bun --bun run generate-icons          # icons/ を生成
+bun --bun run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
+bun --bun run build                   # 問い合わせ UI 同期後、上記 2 つを連続実行
+bun --bun run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
+bun --bun run web-ext lint --source-dir firefox-build # Firefox 成果物を検証
 ```
 
 開発ループ:
@@ -41,7 +43,7 @@ pnpm exec web-ext lint --source-dir firefox-build # Firefox 成果物を検証
 
 `build:firefox` は既存の `firefox-build/` を削除して再生成する。問い合わせ UI の同期やアイコン生成は行わないため、必要な更新は生成前に済ませる。公開 CI も同梱 UI をそのまま梱包するため、同期済みファイルをコミット対象に含める。
 
-撮影処理を変更したら Node.js 組み込みテストを実行し、長いページの分割保存と分割時のコピー省略も確認する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
+撮影処理を変更したら Bun の node:test 互換テストを実行し、長いページの分割保存と分割時のコピー省略も確認する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
 
 ## 証跡画像の制約と検証
 
@@ -53,7 +55,7 @@ PNG の検証は [README.md](README.md#撮影画像の改ざん検知) のコマ
 
 `/vava` スキルでバージョンアップ〜リリースまで一括処理する。手動でやる場合の必須手順:
 
-1. **バージョン同期 (3 ファイル)**: `manifest.json` / `package.json` / `README.md` を必ず揃える。これを揃え忘れると CI の検証ステップで `package.json` と `manifest.json` の不一致で弾かれる。依存の lockfile は pnpm 化済み (`pnpm-lock.yaml`)。CI は `pnpm install --frozen-lockfile --ignore-scripts` でインストールするため、`package.json` を変更したら `pnpm install` で `pnpm-lock.yaml` を更新してコミットする (lockfile 不整合だと frozen install が落ちる)
+1. **バージョン同期 (3 ファイル)**: `manifest.json` / `package.json` / `README.md` を必ず揃える。これを揃え忘れると CI の検証ステップで `package.json` と `manifest.json` の不一致で弾かれる。依存の lockfile は Bun の正本 (`bun.lock`)。CI は `bun run deps --ignore-scripts` でインストールするため、`package.json` を変更したら `bun install` で `bun.lock` を更新してコミットする (lockfile 不整合だと frozen install が落ちる)
 2. **`release/x.y.z` ブランチ名 = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで一致を確認する
 3. main にコミット → push → `release/x.y.z` ブランチを作成して push
 4. **`release/**` への push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由の公開要求と Firefox AMO listed submission。AMO は `--approval-timeout 0` で承認待ちを省くため、CI 成功とストア承認・公開を区別して確認する
@@ -83,3 +85,23 @@ CI で必要な GitHub Secrets:
   - `chrome.runtime.getManifest()` は **`TypeError: chrome.runtime.getManifest is not a function`** で失敗する。拡張機能バージョンが必要なら SW 側で取得して `meta.extensionVersion` 経由で渡す。
 - **`ensureContentScriptOnTab` の inject 拒否**: Chrome Web Store (`chromewebstore.google.com`) / `chrome://` / `view-source:` 等は `chrome.scripting.executeScript` が拒否し `cannot be scripted` 等の英語例外を投げる。`isCapturableUrl` は protocol しか見ないので `https` の Chrome Web Store は事前に弾けない。`ensureContentScriptOnTab` 内で例外メッセージを文字列パターンマッチして `errPageNotCapturable` (日本語) に正規化することで「撮影に失敗しました」(原因不明) を回避している。
 - **ショートカット未割り当て**: `popup.js` の `onOpenShortcutSettings` とブラウザから取得した割り当てを確認する。利用者の再設定手順は [README.md](README.md#困ったとき) を参照する。
+
+### CWS 公開のHTTP境界
+
+`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認してからpublishする。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+
+### AMO 公開のHTTP境界
+
+公開workflowはネイティブarchive builderが生成した最終XPIとそのsnapshotのSHA-256 receiptを使い、GUID・versionとともに `scripts/Publish-Amo.ps1`（PowerShell 7）へ渡す。旧web-ext sign/承認タイムアウトを成功化する手順に代えて、JWT認証・全ページの非公開listed版検査・upload検証・GUIDに対するPUT提出の受付応答まで確認する。XPIの同一snapshotをhash検証と送信に使い、保存UUIDの再利用・重複・不明な受付結果は停止する。CI成功は審査完了・ストア公開を意味しない。
+
+掲載情報と画像の追加は `pwsh -NoProfile -File scripts/Update-AmoListing.ps1` で更新する。認証は既存の `AMO_JWT_ISSUER` / `AMO_JWT_SECRET` を使用する。`-MetadataOnly` / `-PreviewsOnly` で対象を選び、`-DryRun` は外部接続せずmetadataを表示する。画像は既存分を消さず追加する。HTTP境界は `scripts/Test-AmoListing.ps1 -WorkDirectory <絶対作業パス>` で確認する。
+
+CWS公開workflowはrepository固定のconcurrency groupで直列化する。同期uploadの成功・ID・版を確認した場合だけpublishし、非同期uploadはAPI v2でdraft版を要求と結び付けられないため停止する。APIにはuploadとpublishの原子的なCASが無いため、提出中はDashboardや他の手動公開操作を並行しない。
+
+## Bun依存の脆弱性検出
+
+依存の固定復元は `bun run deps` を使う。lock欠落・破損を拒否し、`[run] bun=true` 経由で依存のpostinstallまでBunで実行する。Node.jsがあるPCでも通常の `bun install` を直接使う経路へ戻さない。
+
+日次と手動実行では `bun audit` でlock全体を監査する。ローカルでも同じコマンドで確認できる。BunはDependabotの通常の更新PRには対応するが、脆弱性起点の自動修正PRには未対応なので、監査失敗の調査と依存更新は別途必要。警告を除外して成功扱いにしない。
+
+依存の安全性は `bun --bun run test:dependencies` で実際の web-ext → addons-linter が使う deepmerge を検証する。CVE-2026-93753（GHSA-gcqx-w48m-w2h4）は公式修正版が未公開のため、`patches/deepmerge@4.3.1.patch` で own データ属性として書き込み、戻り値の prototype 汚染を防ぐ暫定対応を行う。公式修正版が出たらパッチを置換する。版に基づく `bun audit` の deepmerge 警告は残るため、監査成功とは扱わない。minimatch は 11.0.4 以降、関連する multimatch は 8 系へ固定し、ESLint の eslintrc / config-array へ ESM named import 互換パッチを適用する。web-ext 10.8.0 は Windows の秘密ファイル・依存・成果物の除外を保つため、FileFilter に windowsPathsNoEscape を渡す互換パッチを適用する。node-forge は公式修正版 1.4.2 を使用する。

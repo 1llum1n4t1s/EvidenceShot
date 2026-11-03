@@ -10,10 +10,10 @@ EvidenceShot は、現在のタブを証跡向けに撮影して保存する Chr
 
 PNG で保存すると、画像内 (`iTXt` チャンク) に撮影 URL（クエリとハッシュは除外）・時刻・タイトル・拡張機能バージョン・画像データ (IDAT) の SHA-256 ハッシュが埋め込まれます。
 
-Node.js が入った環境で、リポジトリの [検証スクリプト](docs/verify-evidence.js) を使って画像データのハッシュが一致するか確認できます:
+Bun 1.4.4 が入った環境で、リポジトリの [検証スクリプト](docs/verify-evidence.js) を使って画像データのハッシュが一致するか確認できます:
 
 ```
-node docs/verify-evidence.js path/to/screenshot.png
+bun docs/verify-evidence.js path/to/screenshot.png
 ```
 
 JPEG / WEBP には埋め込みません。改ざん検知が必要な場合は PNG を選んでください。画像の編集・再保存による変化を調べる仕組みで、電子署名ではありません。メタデータとハッシュも作り直された場合の真正性は保証しません。

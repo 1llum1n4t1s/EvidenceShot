@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // EvidenceShot Firefox 用ビルドスクリプト
 // Chrome 用 manifest.json をベースに Firefox AMO 向け manifest を生成し、
 // firefox-build/ ディレクトリに配信内容一式 (manifest + icons + src + _locales)

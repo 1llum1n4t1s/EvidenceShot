@@ -38,9 +38,9 @@ $scriptDir = Split-Path -Parent ($MyInvocation.MyCommand.Path ?? $PSCommandPath 
 if ($scriptDir) { Set-Location $scriptDir }
 
 Write-Host "アイコンを生成しています..." -ForegroundColor Yellow
-pnpm install --frozen-lockfile
-if ($LASTEXITCODE -ne 0) { throw "pnpm install に失敗しました" }
-node scripts/generate-icons.js
+bun run deps
+if ($LASTEXITCODE -ne 0) { throw "bun install に失敗しました" }
+bun scripts/generate-icons.js
 if ($LASTEXITCODE -ne 0) { throw "アイコン生成に失敗しました" }
 
 $zipName = "evidence-shot.zip"

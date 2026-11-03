@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   publish:
     name: Chrome Web Store & Firefox AMO 公開
@@ -15,8 +20,18 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
     steps:
-      - name: リポジトリをチェックアウト
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout release commit with native git
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" submodule update --init --recursive
 
       - name: manifest のバージョン取得
         id: version
@@ -37,29 +52,21 @@ jobs:
           fi
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
-      - name: pnpm セットアップ
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 11
-
-      - name: Node をセットアップ
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          # pnpm 11 は Node.js 22.13+ を要求する (Node 20 では `pnpm store path` が
-          # node:sqlite 不在で ERR_UNKNOWN_BUILTIN_MODULE で落ちる)。
-          # ローカル開発環境と同じ Node 24 に合わせる。
-          node-version: '24'
-          cache: 'pnpm'
+      - name: Prepare native Bun build toolchain
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile 'package.json'
 
       - name: 依存関係をインストール
         # 公開用 secrets を扱う同一 job では依存の lifecycle script を走らせない。
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: bun run deps --ignore-scripts
+      - name: Test dependency security regressions
+        run: bun --bun run test:dependencies
 
       - name: 依存インストール後の公開対象差分を検証
         run: |
-          dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json pnpm-lock.yaml pnpm-workspace.yaml _locales src scripts)
+          dirty=$(git status --porcelain --untracked-files=all -- manifest.json package.json bun.lock bunfig.toml _locales src scripts)
           if [ -n "$dirty" ]; then
-            echo "::error::pnpm install 後に公開対象ファイルへ差分が出ました"
+            echo "::error::bun install 後に公開対象ファイルへ差分が出ました"
             echo "$dirty"
             exit 1
           fi
@@ -68,16 +75,16 @@ jobs:
         env:
           MANIFEST_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          pkg_ver=$(node -p "require('./package.json').version")
+          pkg_ver=$(bun -p "require('./package.json').version")
           if [ "$pkg_ver" != "$MANIFEST_VERSION" ]; then
             echo "::error::package.json ($pkg_ver) と manifest.json ($MANIFEST_VERSION) が一致しません"
             exit 1
           fi
-          # pnpm-lock.yaml はプロジェクト version を保持しないため lockfile バージョン照合は行わない。
-          # lockfile と package.json の整合性は上の pnpm install --frozen-lockfile が担保する。
+          # bun.lock はプロジェクト version を保持しないため lockfile バージョン照合は行わない。
+          # lockfile と package.json の整合性は上の bun run deps が担保する。
 
       - name: アイコンを生成
-        run: node scripts/generate-icons.js
+        run: bun scripts/generate-icons.js
 
       - name: ZIP パッケージを作成
         run: |
@@ -86,13 +93,6 @@ jobs:
           ls -lh evidence-shot.zip
 
       - name: Chrome Web Store にアップロード & 公開
-        # chrome-webstore-upload-cli はローカル devDep にインストール済 (package.json で固定)。
-        # secrets を持つステップでレジストリから未検証コードを取得しない方針のため
-        # `pnpm exec` を指定し、node_modules 内のローカル版だけを呼ぶ (無ければ失敗する)。
-        # v4 以降は --client-id 等の CLI フラグが廃止され、環境変数 (CLIENT_ID 等) が必須。
-        # PUBLISHER_ID も新規必須項目。コマンド (upload/publish) を省略すると
-        # upload → publish の両方が自動実行される。
-        # バイナリ名は `chrome-webstore-upload` (npm パッケージ名 chrome-webstore-upload-cli とは別名)。
         env:
           CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -100,8 +100,8 @@ jobs:
           EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
           PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
         run: |
-          pnpm exec chrome-webstore-upload --source evidence-shot.zip
-          echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
+          pwsh -NoProfile -File scripts/Test-PublishCws.ps1 -WorkDirectory "$RUNNER_TEMP/cws-publisher-tests"
+          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "evidence-shot.zip"
 
       - name: Firefox 用ビルドディレクトリを生成
         # Chrome step が失敗 (同 version 再 upload 等) しても Firefox AMO は独立して
@@ -109,35 +109,24 @@ jobs:
         # (cancelled 時は skip)。
         if: ${{ success() || failure() }}
         run: |
-          node scripts/build-firefox.js
+          bun scripts/build-firefox.js
           echo "📦 Firefox source dir contents:"
           ls -la firefox-build
 
       - name: Firefox AMO に submission API でアップロード
-        # Chrome 失敗時も実行する (前 step の Firefox ディレクトリ準備が success なら OK)。
         if: ${{ success() || failure() }}
         env:
-          # web-ext は WEB_EXT_API_KEY / WEB_EXT_API_SECRET を環境変数から読む。
-          # AMO API キーは https://addons.mozilla.org/developers/addon/api/key/ で発行。
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-        # web-ext はローカル devDep にインストール済 (package.json で固定)。
-        # Chrome 側と同じく `pnpm exec` で node_modules 内のローカル版を呼ぶ。
-        # web-ext 10+ では submission API がデフォルト動作のため --use-submission-api フラグは不要。
         run: |
-          if [ -z "$WEB_EXT_API_KEY" ] || [ -z "$WEB_EXT_API_SECRET" ]; then
-            echo "::error::AMO_JWT_ISSUER / AMO_JWT_SECRET の GitHub Secrets が未設定です"
-            exit 1
-          fi
-          # --approval-timeout 0 で AMO 人手レビューの承認待ちを行わず即 exit する。
-          # AMO listed channel は数時間〜数日のレビューが必要で、デフォルト 900s だと
-          # 必ずタイムアウト失敗する。submission 自体は成功しているので、レビュー結果は
-          # AMO Developer Hub (https://addons.mozilla.org/developers/addon/evidenceshot/)
-          # で確認する運用に統一する。
-          pnpm exec web-ext sign \
-            --source-dir=firefox-build \
-            --artifacts-dir=web-ext-artifacts \
-            --channel=listed \
-            --amo-metadata=amo-metadata.json \
-            --approval-timeout 0
-          echo "🦊 Firefox AMO への submission を送信したよ〜 (レビュー待ち)"
+          pwsh -NoProfile -File scripts/Test-PublishAmo.ps1 -WorkDirectory "$RUNNER_TEMP/amo-publisher-tests"
+          test ! -e firefox-build/.amo-upload-uuid
+          mkdir -p web-ext-artifacts
+          ARCHIVE="$GITHUB_WORKSPACE/web-ext-artifacts/unsigned-submission.xpi"
+          test ! -e "$ARCHIVE"
+          pwsh -NoProfile -File scripts/Test-FirefoxArchive.ps1 -WorkDirectory "$RUNNER_TEMP/firefox-archive-tests"
+          pwsh -NoProfile -File scripts/New-FirefoxArchive.ps1 -SourceDirectory firefox-build -Archive "$ARCHIVE" > web-ext-artifacts/build-receipt.json
+          VERSION=$(python3 -c 'import json; print(json.load(open("firefox-build/manifest.json"))["version"])')
+          ADDON_ID=$(python3 -c 'import json; m=json.load(open("firefox-build/manifest.json")); print(m.get("browser_specific_settings",m.get("applications",{}))["gecko"]["id"])')
+          SHA256=$(python3 -c 'import json; print(json.load(open("web-ext-artifacts/build-receipt.json"))["sha256"])')
+          pwsh -NoProfile -File scripts/Publish-Amo.ps1 -Archive "$ARCHIVE" -Metadata amo-metadata.json -AddonId "$ADDON_ID" -ExpectedVersion "$VERSION" -ExpectedSha256 "$SHA256"

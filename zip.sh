@@ -11,8 +11,8 @@ rm -f ./evidence-shot.zip
 
 if [ -f scripts/generate-icons.js ]; then
   echo "アイコンを生成しています..."
-  pnpm install --frozen-lockfile
-  node scripts/generate-icons.js
+  bun run deps
+  bun scripts/generate-icons.js
 fi
 
 if ! command -v zip &> /dev/null; then

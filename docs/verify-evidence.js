@@ -2,7 +2,7 @@
 // EvidenceShot で撮影された PNG ファイルの改ざん検知メタデータを検証するスクリプト
 //
 // 使い方:
-//   node docs/verify-evidence.js <path-to-png>
+//   bun docs/verify-evidence.js <path-to-png>
 //
 // 出力:
 //   - 埋め込まれた EvidenceShot:* メタデータ一覧
@@ -118,7 +118,7 @@ function verify(filePath) {
 function main() {
   const arg = process.argv[2];
   if (!arg) {
-    console.error('Usage: node docs/verify-evidence.js <path-to-png>');
+    console.error('Usage: bun docs/verify-evidence.js <path-to-png>');
     process.exit(64);
   }
   verify(arg);

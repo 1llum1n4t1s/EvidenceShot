@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // パフォーマンス計測専用ビルドスクリプト
 // 本番 manifest をベースに `permissions` に `tabs` を一時追加した perf-build/ を生成する。
 // cxcx などの自動計測ハーネスが chrome.tabs.query/get で対象タブの URL を取得するために必要。
