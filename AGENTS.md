@@ -102,6 +102,6 @@ CWS公開workflowはrepository固定のconcurrency groupで直列化する。同
 
 依存の固定復元は `bun run deps` を使う。lock欠落・破損を拒否し、`[run] bun=true` 経由で依存のpostinstallまでBunで実行する。Node.jsがあるPCでも通常の `bun install` を直接使う経路へ戻さない。
 
-日次と手動実行では `bun audit` でlock全体を監査する。ローカルでも同じコマンドで確認できる。BunはDependabotの通常の更新PRには対応するが、脆弱性起点の自動修正PRには未対応なので、監査失敗の調査と依存更新は別途必要。警告を除外して成功扱いにしない。
+日次と手動実行では `bun audit` でlock全体を監査する。ローカルでも同じコマンドで確認できる。BunはDependabotの通常の更新PRには対応するが、脆弱性起点の自動修正PRは `dependency-security.yml` が補完する。日次・手動で全件監査し、隔離領域で `bun audit fix` による候補を作成し、同じrunから既存の Dependency validation を呼ぶ。未対策アドバイザリが減少し、依存以外のmanifest・パッチ・24時間待機を保ち、全検証が成功した場合だけ、検証したマージコミットを競合検知付きの通常pushで取り込む。保護されたブランチには自動pushせず、修正版未公開・互換性・検証失敗は単一のIssueに通知して次回再試行する。生の監査は警告を除外せず、対策済みパッチの認定も監査成功とは区別してsummaryへ残す。既知のdeepmerge対策はアドバイザリ・版・パッチSHAが完全一致した場合だけ修正対象から外し、生監査には残す。通常のDependabot更新と他ecosystemの設定は維持する。
 
 依存の安全性は `bun --bun run test:dependencies` で実際の web-ext → addons-linter が使う deepmerge を検証する。CVE-2026-93753（GHSA-gcqx-w48m-w2h4）は公式修正版が未公開のため、`patches/deepmerge@4.3.1.patch` で own データ属性として書き込み、戻り値の prototype 汚染を防ぐ暫定対応を行う。公式修正版が出たらパッチを置換する。版に基づく `bun audit` の deepmerge 警告は残るため、監査成功とは扱わない。minimatch は 11.0.4 以降、関連する multimatch は 8 系へ固定し、ESLint の eslintrc / config-array へ ESM named import 互換パッチを適用する。web-ext 10.8.0 は Windows の秘密ファイル・依存・成果物の除外を保つため、FileFilter に windowsPathsNoEscape を渡す互換パッチを適用する。node-forge は公式修正版 1.4.2 を使用する。
