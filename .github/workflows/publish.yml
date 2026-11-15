@@ -1,4 +1,7 @@
 name: Publish to Chrome Web Store & Firefox AMO
+# CWS は「アップロード」と「審査への申請」を別 workflow に分けている。
+# この workflow は検証済みZIPを下書きとしてアップロードするだけで、申請しない。
+# 申請は掲載画像などを Dashboard で整えた後に、cws-submit.yml を手動で実行する。
 
 on:
   push:
@@ -15,7 +18,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Chrome Web Store & Firefox AMO 公開
+    name: Chrome Web Store アップロード & Firefox AMO 提出
     runs-on: ubuntu-latest
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -92,7 +95,7 @@ jobs:
             -x "*.DS_Store" "*.swp" "*~"
           ls -lh evidence-shot.zip
 
-      - name: Chrome Web Store にアップロード & 公開
+      - name: Chrome Web Store にアップロード（下書き）
         env:
           CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -101,7 +104,7 @@ jobs:
           PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
         run: |
           pwsh -NoProfile -File scripts/Test-PublishCws.ps1 -WorkDirectory "$RUNNER_TEMP/cws-publisher-tests"
-          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "evidence-shot.zip"
+          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "evidence-shot.zip" -Stage Upload
 
       - name: Firefox 用ビルドディレクトリを生成
         # Chrome step が失敗 (同 version 再 upload 等) しても Firefox AMO は独立して
