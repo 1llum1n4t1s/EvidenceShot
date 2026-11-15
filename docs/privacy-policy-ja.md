@@ -65,4 +65,4 @@ EvidenceShot によるユーザーデータの利用は、Chrome Web Store User 
 
 ## お問い合わせ
 
-ストア申請やコンプライアンス要件により本ポリシーを更新する場合は、manifest・ドキュメント・実装の説明内容が一致するように同時更新してください。
+プライバシーに関するご質問は、設定画面の「お問い合わせ」ボタン、または GitHub Issues（https://github.com/1llum1n4t1s/EvidenceShot/issues）からご連絡ください。

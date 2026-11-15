@@ -29,16 +29,19 @@
   - `https://evidenceshot.kagayoi.com/privacy`
 
 ## 5. Permission Justifications (for CWS form)
-- `activeTab`: Capture the current active tab after explicit user action
+- Single-purpose description: A browser extension for web testing that saves viewport and scroll-stitched screenshots with a date and time stamp.
+- `activeTab`: Used to capture the current tab when the user starts a capture with the popup's capture button or the keyboard shortcut (Ctrl+Shift+Y).
 - `storage`: Store local settings such as format, timestamp style/size, and capture mode
 - `scripting`: Inject capture control script into the current tab during capture
 - `offscreen`: Compose and annotate images in a hidden document
 - `downloads`: Save generated screenshots through Chrome downloads
-- `clipboardWrite`: Copy the generated screenshot image to the clipboard when enabled by the user
-- `https://support.kagayoi.com/*`: Communicate with the Kagayoi Support API only when the user submits a support request from the popup
+- `clipboardWrite`: For the optional feature that copies the image to the clipboard when a capture finishes
+- Host permission (`https://support.kagayoi.com/*`): https://support.kagayoi.com/* communicates with Kagayoi Support, only when the user submits the popup's contact form, to verify the email address and send the inquiry. Captured images, the content of the page being viewed, and capture settings are never sent.
 
 ## 6. Data Use Draft Answers
-- Personal data collection: `Yes (email address, optional name, category, subject, message, and email verification code entered when contacting support)`
+- Data types collected (checked): `Personally identifiable information` / `Authentication information` / `Personal communications` (email address, optional name, category, subject, message, and email verification code entered when contacting support)
+- Data types not collected: `Health information` / `Financial and payment information` / `Location` / `Web history` / `User activity` / `Website content`
+- Certifications (all three checked): `I do not sell or transfer user data to third parties, outside of the approved use cases` / `I do not use or transfer user data for purposes that are unrelated to my item's single purpose` / `I do not use or transfer user data to determine creditworthiness or for lending purposes`
 - Data sharing with third parties: `Sent to Kagayoi Support (https://support.kagayoi.com) only when the user submits a support request`
 - Sale/advertising use: `No`
 - Tracking/analytics SDK: `None`

@@ -65,4 +65,4 @@ EvidenceShot's use of user data complies with the Chrome Web Store User Data Pol
 
 ## Contact
 
-If the privacy policy needs to be updated for store submission or compliance wording, update this document together with the manifest and product documentation so the behavior description remains consistent.
+For questions about privacy, contact us through the "Contact support" button in the settings popup or on GitHub Issues (https://github.com/1llum1n4t1s/EvidenceShot/issues).

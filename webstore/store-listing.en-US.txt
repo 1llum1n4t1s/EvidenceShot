@@ -1,27 +1,34 @@
-EvidenceShot is a Chrome extension for quickly saving evidence screenshots while testing web pages.
+EvidenceShot is a Chrome extension for quickly saving the page you're viewing as an evidence screenshot, whether you're recording test results or keeping a record of your work.
 
 Features
-- Capture instantly from the popup or keyboard shortcut
-- Capture visible area, full page, or the main content column
-- Stitch vertical screenshots up to the current scroll range end
-- Save as PNG / JPEG / WEBP
-- Optional timestamp and fixed bottom-left text overlays
-- Copies the captured image to the clipboard for pasting into Excel or other apps
+- Capture instantly from the popup or with a keyboard shortcut (Ctrl+Shift+Y by default, Command+Shift+Y on Mac)
+- Choose the capture area: "Visible area only (1 screen)", "Full page (with layout)" including side columns, or "Main content only" for the central column
+- Full-page and main-column captures scroll down the page and stitch the result into one image
+- Save as PNG, JPEG or WEBP
+- Burn the capture date and time into the bottom-right corner. Pick from 15 stamp designs (official document, vermillion seal, accounting ledger, blueprint, terminal, neon and more) and 5 text sizes, and choose whether to include the time zone (e.g. +09:00)
+- Add fixed text to the bottom-left corner (e.g. "Confidential" or your company name), shown in the same design and size as the timestamp
+- Preview how the stamps will look right in the popup
+- Set a filename prefix (left blank, the site name is used; the date and time are added automatically)
+- Also copy the captured image to the clipboard for pasting straight into Excel or other apps
+- When saving as PNG, the page URL (without query and hash), time, title and a SHA-256 hash of the image data are recorded inside the image. This helps check whether the image has been edited or re-saved (it is not a digital signature)
+- A bundled Japanese font keeps text looking the same in captures and in the popup
+- The popup follows your browser's light or dark theme
 - Contact Kagayoi Support directly from the popup
-- Popup automatically follows the browser light / dark theme
-- Save to Chrome's default download folder
+- Images are saved to your browser's default download folder
 
 How to use
-1. Click the extension icon
-2. Review options in the popup
-3. Click Capture This Tab or use the keyboard shortcut
+1. Click the extension icon in the toolbar
+2. Check the capture area, file format, timestamp and other options in the popup
+3. Click "Capture This Tab" or use the keyboard shortcut
 
 Notes
-- Scroll-stitch mode captures up to the scroll range end at the moment capture starts
-- Content loaded later during capture is excluded
-- This behavior is designed for stable output on infinite-scroll pages
-- Check the popup or Chrome extension shortcut settings for the actual shortcut assignment
+- Scrolling captures cover the page down to where it ended when the capture started. Content loaded during capture is left out, so results stay consistent even on infinite-scroll pages
+- Very long pages are split into several files to stay within image size limits, with numbered names such as "-part1-of2". Split captures are not copied to the clipboard
+- If the page can't scroll to the planned position (for example because of scroll snapping), the capture stops instead of saving an inaccurate image. Use "Visible area only (1 screen)" in that case
+- Pages where the browser doesn't allow extensions to run, such as the Chrome Web Store, can't be captured
+- Check or change the actual shortcut with "Set up shortcut" in the popup
 
-Permissions
-- No always-on broad site access
-- Capture is initiated for the current tab by explicit user action
+Permissions and data
+- No always-on access to every site. Captures run only on the current tab, and only when you start them
+- Captured images are saved to your download folder and are never sent anywhere
+- What you enter in the contact form is sent to Kagayoi Support only when you submit it
