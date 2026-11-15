@@ -14,9 +14,6 @@
   "popupDocumentTitle": {
     "message": "EvidenceShot"
   },
-  "popupDocumentLanguage": {
-    "message": "en"
-  },
   "popupAriaTimestampSample": {
     "message": "Timestamp design sample"
   },
@@ -78,7 +75,7 @@
     "message": "Include time zone"
   },
   "popupNoteTimestampIncludeTimezone": {
-    "message": "Append the time zone (e.g. +09:00) to the timestamp text (only when \"Burn timestamp\" is on)."
+    "message": "Append the time zone (e.g. +09:00) to the timestamp text (only when \"Add Timestamp\" is on)."
   },
   "popupNoteShortcutChecking": {
     "message": "Checking shortcut assignment."
@@ -359,5 +356,20 @@
   },
   "errCaptureSliceTooLarge": {
     "message": "Capture data is too large. Please shrink the window and try again."
+  },
+  "languageAuto": {
+    "message": "Auto (browser)"
+  },
+  "languageSelectLabel": {
+    "message": "Language"
+  },
+  "languageSelectTitle": {
+    "message": "Language. Open pages need a reload to update."
+  },
+  "kagayoiSupportContact": {
+    "message": "Contact support"
+  },
+  "kagayoiSupportRate": {
+    "message": "Please rate us!"
   }
 }

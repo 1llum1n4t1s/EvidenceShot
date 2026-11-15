@@ -109,6 +109,7 @@ function createBackgroundHarness() {
       getURL: (relativePath) => `chrome-extension://evidenceshot/${relativePath}`,
       id: 'evidenceshot',
       lastError: null,
+      onInstalled: createMockEvent(),
       onMessage: {
         addListener(listener) {
           state.messageListener = listener;
@@ -138,6 +139,13 @@ function createBackgroundHarness() {
     console: quietConsole(),
     crypto: webcrypto,
     importScripts() {},
+    // 表示言語の共通モジュールの代役。テストでは fallback（英語）をそのまま返す。
+    Localizer: {
+      ensureFresh: async () => undefined,
+      onChange() {},
+      ready: Promise.resolve(),
+      t: (_key, _subs, fallback) => fallback,
+    },
     navigator: {},
     setTimeout,
     clearTimeout,
@@ -215,7 +223,7 @@ test('download completion is part of the capture success contract', async () => 
     context
   );
   assert.equal(interrupted.ok, false);
-  assert.match(interrupted.error, /中断/);
+  assert.match(interrupted.error, /interrupted/);
   assert.deepEqual(state.revokedUrls.sort(), ['blob:clipboard', 'blob:download']);
 
   state.revokedUrls.length = 0;
@@ -364,7 +372,7 @@ test('tab activity guard latches a transient switch even after returning to the 
       "ensureTargetTabStillActive(10, 20, testActivityGuard, 'https://example.com/evidence')",
       context
     ),
-    /ページ/
+    /page/
   );
   targetTab.url = 'https://example.com/evidence?returned=1';
 
@@ -375,7 +383,7 @@ test('tab activity guard latches a transient switch even after returning to the 
       "ensureTargetTabStillActive(10, 20, testActivityGuard, 'https://example.com/evidence')",
       context
     ),
-    /別タブ/
+    /switched tabs/
   );
 
   context.testActivityGuard.dispose();
@@ -611,7 +619,7 @@ test('viewport resize during settle aborts before a slice is captured', async ()
     payload: { sessionId: 'session', index: 0 },
   });
   assert.equal(moved.ok, false);
-  assert.match(moved.error, /表示領域/);
+  assert.match(moved.error, /viewport/);
   assert.equal(context.__evidenceShotCaptureControllerV2.version, 17);
 });
 
@@ -732,7 +740,7 @@ test('a stalled full-page scroll fails instead of finalizing a truncated capture
     payload: { sessionId: 'session', index: 1 },
   });
   assert.equal(stalledStep.ok, false);
-  assert.match(stalledStep.error, /スクロール/);
+  assert.match(stalledStep.error, /scroll/);
   assert.equal('done' in stalledStep, false);
 });
 
@@ -765,7 +773,7 @@ test('full-page capture rejects scroll positions that miss the capture plan', as
       payload: { sessionId: testCase.name, index: testCase.rejectedIndex },
     });
     assert.equal(rejectedStep.ok, false, testCase.name);
-    assert.match(rejectedStep.error, /スクロール/, testCase.name);
+    assert.match(rejectedStep.error, /scroll/, testCase.name);
   }
 });
 
@@ -912,7 +920,7 @@ test('canvas edge and captured bitmap dimensions are validated', async () => {
     context
   );
   assert.equal(added.ok, false);
-  assert.match(added.error, /表示領域/);
+  assert.match(added.error, /viewport/);
   assert.equal(bitmapClosed, true);
   assert.equal(state.drawCount, 0);
 });
@@ -990,7 +998,7 @@ test('composer watchdog releases an orphaned canvas session', async () => {
     context
   );
   assert.equal(missing.ok, false);
-  assert.match(missing.error, /見つかりません/);
+  assert.match(missing.error, /not found/);
 });
 
 test('purging an orphaned session does not revoke finalized download URLs', async () => {
@@ -1134,4 +1142,45 @@ test('trim failure preserves canvas width and releases both canvases and the sou
     assert.equal(canvas.width, 1);
     assert.equal(canvas.height, 1);
   }
+});
+
+// normalizeUserMessage は表示言語（Localizer が差し替えた getUILanguage）と文字種の食い違いを検出する。
+// 9 言語すべてで、自前の翻訳文は通り、他言語の痕跡だけが既定文言へ置き換わることを確認する。
+test('normalizeUserMessage keeps localized text and replaces foreign-script text in all nine UI languages', () => {
+  const samples = {
+    en: 'Capture failed.',
+    ja: '撮影に失敗しました。',
+    'zh-CN': '截图失败。',
+    'zh-TW': '擷取失敗。',
+    ko: '캡처에 실패했습니다.',
+    es: 'Error al capturar.',
+    fr: 'Échec de la capture.',
+    de: 'Die Aufnahme ist fehlgeschlagen.',
+    'pt-BR': 'Falha na captura.',
+  };
+  for (const [language, own] of Object.entries(samples)) {
+    const context = vm.createContext({
+      chrome: { i18n: { getMessage: () => '', getUILanguage: () => language } },
+      console: quietConsole(),
+    });
+    runSource(context, 'src/shared/constants.js');
+    runSource(context, 'src/shared/utils.js');
+    const { normalizeUserMessage } = context.EvidenceShotShared;
+    assert.equal(normalizeUserMessage(own, 'errCaptureFailed', 'FALLBACK'), own, language + ': own text passes');
+    assert.equal(normalizeUserMessage('', 'errCaptureFailed', 'FALLBACK'), 'FALLBACK', language + ': empty');
+    assert.equal(normalizeUserMessage(undefined, 'errCaptureFailed', 'FALLBACK'), 'FALLBACK', language + ': non-string');
+    if (language === 'ja') {
+      assert.equal(normalizeUserMessage('Network error', 'errCaptureFailed', 'FALLBACK'), 'FALLBACK');
+    } else {
+      assert.equal(normalizeUserMessage('Network error', 'errCaptureFailed', 'FALLBACK'), 'Network error', language + ': Latin text passes');
+      assert.equal(normalizeUserMessage('撮影に失敗しました。', 'errCaptureFailed', 'FALLBACK'), 'FALLBACK', language + ': kana replaced');
+    }
+  }
+  const zh = vm.createContext({
+    chrome: { i18n: { getMessage: () => '', getUILanguage: () => 'zh-CN' } },
+    console: quietConsole(),
+  });
+  runSource(zh, 'src/shared/constants.js');
+  runSource(zh, 'src/shared/utils.js');
+  assert.equal(zh.EvidenceShotShared.normalizeUserMessage('截图失败。', 'k', 'FALLBACK'), '截图失败。');
 });

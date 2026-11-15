@@ -3,4 +3,4 @@ bun = true
 
 [install]
 minimumReleaseAge = 86400
-minimumReleaseAgeExcludes = ["@kagayoi/support-extension@1.0.9","adm-zip@0.6.1"]
+minimumReleaseAgeExcludes = ["@kagayoi/support-extension@1.0.12","adm-zip@0.6.1"]

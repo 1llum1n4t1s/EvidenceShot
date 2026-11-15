@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "웹 테스트용 브라우저 확장 프로그램으로, 표시 영역이나 스크롤 이어 붙이기 스크린샷을 타임스탬프와 함께 저장합니다."
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "현재 탭 캡처"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "타임스탬프 디자인 예시"
+  },
+  "popupAriaFooterSample": {
+    "message": "왼쪽 아래 고정 텍스트 예시"
+  },
+  "popupHeaderTagline": {
+    "message": "증빙용 스크린샷"
+  },
+  "popupSectionCaptureNow": {
+    "message": "지금 캡처"
+  },
+  "popupCaptureNowButton": {
+    "message": "이 탭 캡처"
+  },
+  "popupSectionSave": {
+    "message": "저장"
+  },
+  "popupLabelFormat": {
+    "message": "파일 형식"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "파일 이름 접두사"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "예: audit-2026(비우면 사이트 이름 사용)"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "비워 두면 `screenshot-{domain}`이 사용됩니다. 날짜와 확장자는 자동으로 붙습니다."
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "클립보드에 복사"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "캡처 후 이미지를 PNG로 클립보드에도 넣어 Excel 등에 바로 붙여넣을 수 있습니다."
+  },
+  "popupNoteDownloadLocation": {
+    "message": "파일은 브라우저의 기본 다운로드 폴더에 저장됩니다."
+  },
+  "popupSectionOptions": {
+    "message": "캡처 옵션"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "타임스탬프 추가"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "오른쪽 아래에 필름 카메라 스타일의 날짜와 시간을 새겨 넣습니다."
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "시간대 포함"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "타임스탬프 끝에 +09:00 같은 시간대를 붙입니다(‘타임스탬프 추가’를 켠 경우에만 적용)."
+  },
+  "popupNoteShortcutChecking": {
+    "message": "단축키 지정 상태를 확인하는 중입니다."
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "단축키: $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "단축키가 지정되어 있지 않습니다. 아래 버튼을 눌러 설정 페이지를 여세요."
+  },
+  "popupNoteShortcutDefault": {
+    "message": "권장 단축키: Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "단축키 설정"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "단축키 설정 페이지를 열 수 없습니다."
+  },
+  "popupLabelTimestampStyle": {
+    "message": "타임스탬프 스타일"
+  },
+  "popupLabelTimestampSize": {
+    "message": "글자 크기"
+  },
+  "popupLabelFooterText": {
+    "message": "왼쪽 아래 고정 텍스트"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "예: © Example Inc. / 대외비"
+  },
+  "popupNoteFooterLinked": {
+    "message": "왼쪽 아래 텍스트는 타임스탬프 스타일과 글자 크기를 따릅니다."
+  },
+  "popupPreviewTimestampOff": {
+    "message": "(타임스탬프 끔)"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "(왼쪽 아래 고정 텍스트 미설정)"
+  },
+  "popupLabelCaptureMode": {
+    "message": "캡처 범위"
+  },
+  "popupStatusInitFailed": {
+    "message": "초기화에 실패했습니다."
+  },
+  "popupStatusCapturing": {
+    "message": "캡처를 시작하는 중…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "캡처에 실패했습니다."
+  },
+  "popupStatusSaved": {
+    "message": "저장됨: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "저장하고 클립보드에도 복사했습니다: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "저장했지만 클립보드 복사에 실패했습니다: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "저장했습니다. 이미지가 분할되어 클립보드 복사는 건너뛰었습니다: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "증빙: 공문서"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "증빙: 붉은 인장"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "증빙: 회계 장부"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "증빙: 청사진"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "증빙: 터미널 CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "증빙: 감열 영수증"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "증빙: 크라프트지 태그"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "증빙: 먹지 복사"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "증빙: 스텐실"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "증빙: 밀랍 봉인"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "증빙: 마이크로피시"
+  },
+  "optionTimestampStylePostit": {
+    "message": "개인: 노란 포스트잇"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "개인: 칠판 분필"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "개인: 타자기"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "개인: 네온사인"
+  },
+  "optionTimestampSizeXs": {
+    "message": "매우 작게"
+  },
+  "optionTimestampSizeSm": {
+    "message": "작게"
+  },
+  "optionTimestampSizeMd": {
+    "message": "보통"
+  },
+  "optionTimestampSizeLg": {
+    "message": "크게"
+  },
+  "optionTimestampSizeXl": {
+    "message": "매우 크게"
+  },
+  "optionCaptureModeViewport": {
+    "message": "표시 영역만(1화면)"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "전체 페이지(레이아웃 포함)"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "본문만"
+  },
+  "errTargetTabNotFound": {
+    "message": "대상 탭을 찾을 수 없습니다."
+  },
+  "errPageNotCapturable": {
+    "message": "이 페이지는 캡처할 수 없습니다. http/https 페이지에서 시도하세요."
+  },
+  "errTabAlreadyCapturing": {
+    "message": "이 페이지에서 이미 캡처가 진행 중입니다. 완료된 후 다시 시도하세요."
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "다른 캡처가 이미 진행 중입니다. 완료된 후 다시 시도하세요."
+  },
+  "errCapturePrepareFailed": {
+    "message": "캡처 준비에 실패했습니다."
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "스크롤 위치 조정에 실패했습니다."
+  },
+  "errCaptureScrollStalled": {
+    "message": "페이지를 예정된 캡처 위치까지 스크롤할 수 없어 캡처를 중단했습니다."
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "캡처한 조각 데이터를 전달하지 못했습니다."
+  },
+  "errCaptureFailed": {
+    "message": "캡처에 실패했습니다."
+  },
+  "errSavePrepareFailed": {
+    "message": "저장 처리 준비에 실패했습니다."
+  },
+  "errSaveProcessFailed": {
+    "message": "저장 처리에 실패했습니다."
+  },
+  "errSaveDataMissing": {
+    "message": "저장 데이터를 받지 못했습니다."
+  },
+  "errDownloadStartFailed": {
+    "message": "다운로드를 시작하지 못했습니다."
+  },
+  "errOffscreenNotReady": {
+    "message": "저장 처리 준비에 실패했습니다. offscreen 시작이 완료되지 않았습니다."
+  },
+  "errCaptureTabSwitched": {
+    "message": "탭을 전환하여 캡처를 중단했습니다. 대상 탭을 활성 상태로 유지하고 다시 시도하세요."
+  },
+  "errCapturePageChanged": {
+    "message": "페이지가 이동하여 캡처를 중단했습니다. 같은 페이지를 열어 둔 채 다시 시도하세요."
+  },
+  "errDownloadIdMissing": {
+    "message": "다운로드 ID를 가져올 수 없습니다."
+  },
+  "errDownloadInterrupted": {
+    "message": "다운로드가 완료되기 전에 중단되었습니다."
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "캡처 세션 ID가 없습니다."
+  },
+  "errCaptureSessionMismatch": {
+    "message": "캡처 세션이 일치하지 않습니다."
+  },
+  "errCaptureStepInvalid": {
+    "message": "캡처 위치가 올바르지 않습니다."
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "캡처 캔버스가 예상보다 큽니다. 최신 버전으로 업데이트한 후 다시 시도하세요."
+  },
+  "errViewportTooTall": {
+    "message": "뷰포트가 너무 커서 캡처할 수 없습니다. 창을 작게 줄인 후 다시 시도하세요."
+  },
+  "errInvalidCaller": {
+    "message": "호출 주체가 올바르지 않습니다."
+  },
+  "errCallerNotAllowed": {
+    "message": "이 호출 주체는 이 작업을 실행할 수 없습니다."
+  },
+  "errInvalidCallerUrl": {
+    "message": "호출 주체의 URL이 올바르지 않습니다."
+  },
+  "errChannelTokenMissing": {
+    "message": "채널 토큰이 없습니다."
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "캡처 세션 인증이 올바르지 않습니다."
+  },
+  "errCaptureMetaMissing": {
+    "message": "캡처 메타데이터를 받지 못했습니다."
+  },
+  "errImageSaveFailed": {
+    "message": "이미지를 저장하지 못했습니다."
+  },
+  "errCaptureSessionNotFound": {
+    "message": "캡처 세션을 찾을 수 없습니다."
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "캡처 세션 인증에 실패했습니다."
+  },
+  "errCaptureDataInvalid": {
+    "message": "캡처 데이터가 올바르지 않습니다."
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "캡처 메타데이터를 불러오지 못했습니다."
+  },
+  "errImageConvertFailed": {
+    "message": "이미지 변환에 실패했습니다."
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "창이 배율이 다른 디스플레이로 이동하여 캡처를 중단했습니다. 창을 움직이지 말고 다시 시도하세요."
+  },
+  "errViewportSizeChanged": {
+    "message": "창의 표시 영역이 바뀌어 캡처를 중단했습니다. 창 크기를 바꾸지 말고 다시 시도하세요."
+  },
+  "errClipboardWriteFailed": {
+    "message": "클립보드에 복사하지 못했습니다."
+  },
+  "errClipboardUnsupported": {
+    "message": "이 환경에서는 클립보드 복사를 지원하지 않습니다."
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "이미지가 너무 커서 클립보드 호환 복사를 할 수 없습니다."
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "캡처 데이터가 너무 큽니다. 창을 작게 줄인 후 다시 시도하세요."
+  },
+  "languageAuto": {
+    "message": "자동(브라우저)"
+  },
+  "languageSelectLabel": {
+    "message": "언어"
+  },
+  "languageSelectTitle": {
+    "message": "언어(열려 있는 페이지는 새로고침 후 적용)"
+  },
+  "kagayoiSupportContact": {
+    "message": "문의하기"
+  },
+  "kagayoiSupportRate": {
+    "message": "평가해 주세요!"
+  }
+}

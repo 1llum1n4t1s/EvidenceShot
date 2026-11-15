@@ -42,7 +42,7 @@
       handleMessage(message, sender),
       sendResponse,
       'errSaveProcessFailed',
-      '保存処理に失敗しました。'
+      'Save processing failed.'
     );
 
     return true;
@@ -82,24 +82,24 @@
 
   function assertTrustedCaller(message, sender) {
     if (sender?.id !== chrome.runtime.id) {
-      return { ok: false, error: t('errInvalidCaller', '不正な呼び出し元です。') };
+      return { ok: false, error: t('errInvalidCaller', 'Invalid caller.') };
     }
     if (sender?.tab?.id) {
-      return { ok: false, error: t('errCallerNotAllowed', 'この呼び出し元からは実行できません。') };
+      return { ok: false, error: t('errCallerNotAllowed', 'This caller is not allowed to execute this action.') };
     }
     if (sender?.url && !sender.url.startsWith(chrome.runtime.getURL(''))) {
-      return { ok: false, error: t('errInvalidCallerUrl', '不正な呼び出し元URLです。') };
+      return { ok: false, error: t('errInvalidCallerUrl', 'Invalid caller URL.') };
     }
 
     const channelToken = message?.channelToken;
     if (typeof channelToken !== 'string' || channelToken.length < MIN_TOKEN_LENGTH) {
-      return { ok: false, error: t('errChannelTokenMissing', '認証トークンが不足しています。') };
+      return { ok: false, error: t('errChannelTokenMissing', 'Channel token is missing.') };
     }
 
     // URL クエリから取得した正規トークンと完全一致する場合のみ受け入れる。
     // token が URL に無い場合（設計ミスで起動された場合）はすべて拒否。
     if (!expectedChannelToken || expectedChannelToken !== channelToken) {
-      return { ok: false, error: t('errCaptureSessionAuthInvalid', '撮影セッション認証が不正です。') };
+      return { ok: false, error: t('errCaptureSessionAuthInvalid', 'Capture session authentication is invalid.') };
     }
 
     return { ok: true };

@@ -101,13 +101,13 @@
 
   function beginSession(sessionId, sessionSecret, meta) {
     if (!sessionId) {
-      return { ok: false, error: t('errCaptureSessionIdMissing', '撮影セッションIDがありません。') };
+      return { ok: false, error: t('errCaptureSessionIdMissing', 'Capture session ID is missing.') };
     }
     if (typeof sessionSecret !== 'string' || sessionSecret.length < MIN_TOKEN_LENGTH) {
-      return { ok: false, error: t('errCaptureSessionAuthInvalid', '撮影セッション認証が不正です。') };
+      return { ok: false, error: t('errCaptureSessionAuthInvalid', 'Capture session authentication is invalid.') };
     }
     if (!meta?.plan || !meta?.settings) {
-      return { ok: false, error: t('errCaptureMetaMissing', '撮影メタデータを受け取れませんでした。') };
+      return { ok: false, error: t('errCaptureMetaMissing', 'Capture metadata was not received.') };
     }
 
     // 孤児セッション掃除: SW が途中で落ちると abort が届かず、古い巨大 Canvas が残り続ける。
@@ -132,7 +132,7 @@
     ) {
       return {
         ok: false,
-        error: t('errCaptureCanvasTooLarge', '撮影キャンバスの想定サイズが大きすぎます。'),
+        error: t('errCaptureCanvasTooLarge', 'The capture canvas is larger than expected. Please update to the latest version and try again.'),
       };
     }
 
@@ -143,7 +143,7 @@
     const context = canvas.getContext('2d', { alpha: false });
     if (!context || context.isContextLost?.()) {
       releaseCanvas(canvas);
-      return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
+      return { ok: false, error: t('errImageSaveFailed', 'Failed to save image.') };
     }
 
     try {
@@ -151,11 +151,11 @@
       context.fillRect(0, 0, canvas.width, canvas.height);
     } catch {
       releaseCanvas(canvas);
-      return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
+      return { ok: false, error: t('errImageSaveFailed', 'Failed to save image.') };
     }
     if (context.isContextLost?.()) {
       releaseCanvas(canvas);
-      return { ok: false, error: t('errImageSaveFailed', '画像の保存に失敗しました。') };
+      return { ok: false, error: t('errImageSaveFailed', 'Failed to save image.') };
     }
 
     captureSessions.set(sessionId, {
@@ -173,24 +173,24 @@
   async function addCaptureSlice(sessionId, sessionSecret, capture) {
     const session = captureSessions.get(sessionId);
     if (!session) {
-      return { ok: false, error: t('errCaptureSessionNotFound', '撮影セッションが見つかりません。') };
+      return { ok: false, error: t('errCaptureSessionNotFound', 'Capture session not found.') };
     }
     if (session.sessionSecret !== sessionSecret) {
-      return { ok: false, error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。') };
+      return { ok: false, error: t('errCaptureSessionAuthFailed', 'Capture session authentication failed.') };
     }
     if (
       !capture ||
       typeof capture.scrollY !== 'number' ||
       (!(capture.blob instanceof Blob) && !capture.dataUrl)
     ) {
-      return { ok: false, error: t('errCaptureDataInvalid', '撮影データが不正です。') };
+      return { ok: false, error: t('errCaptureDataInvalid', 'Captured data is invalid.') };
     }
     armCaptureSessionWatchdog(sessionId);
 
     const bitmap = await createImageBitmapFromCapture(capture);
     try {
       if (captureSessions.get(sessionId) !== session) {
-        return { ok: false, error: t('errCaptureSessionNotFound', '撮影セッションが見つかりません。') };
+        return { ok: false, error: t('errCaptureSessionNotFound', 'Capture session not found.') };
       }
       const plan = session.meta.plan;
       const expectedBitmapWidth = Math.round(plan.viewportWidth * plan.devicePixelRatio);
@@ -203,7 +203,7 @@
           ok: false,
           error: t(
             'errViewportSizeChanged',
-            '撮影中にウィンドウの表示領域が変わったため中止しました。ウィンドウサイズを変えずにもう一度お試しください。'
+            'Capture aborted because the window viewport changed. Please keep the window size unchanged and try again.'
           ),
         };
       }
@@ -225,7 +225,7 @@
         cropX + cropWidth > bitmap.width ||
         cropY + cropHeight > bitmap.height
       ) {
-        return { ok: false, error: t('errCaptureDataInvalid', '撮影データが不正です。') };
+        return { ok: false, error: t('errCaptureDataInvalid', 'Captured data is invalid.') };
       }
 
       const drawY = plan.scrollingMode
@@ -258,13 +258,13 @@
     if (!session) {
       return {
         ok: false,
-        error: t('errCaptureMetaLoadFailed', '撮影メタデータを取得できませんでした。'),
+        error: t('errCaptureMetaLoadFailed', 'Failed to load capture metadata.'),
       };
     }
     if (session.sessionSecret !== sessionSecret) {
       return {
         ok: false,
-        error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。'),
+        error: t('errCaptureSessionAuthFailed', 'Capture session authentication failed.'),
       };
     }
     clearCaptureSessionWatchdog(session);
@@ -294,7 +294,7 @@
 
         const trimmedContext = trimmedCanvas.getContext('2d', { alpha: false });
         if (!trimmedContext) {
-          throw new Error(t('errImageSaveFailed', '画像の保存に失敗しました。'));
+          throw new Error(t('errImageSaveFailed', 'Failed to save image.'));
         }
 
         trimmedContext.fillStyle = '#ffffff';
@@ -355,7 +355,7 @@
             error: normalizeUserMessage(
               error?.message,
               'errClipboardWriteFailed',
-              'クリップボードへのコピーに失敗しました。'
+              'Failed to copy to clipboard.'
             ),
           };
         }
@@ -425,7 +425,7 @@
         error: normalizeUserMessage(
           error?.message,
           'errImageSaveFailed',
-          '画像の保存に失敗しました。'
+          'Failed to save image.'
         ),
       };
     } finally {
@@ -444,7 +444,7 @@
       return { ok: true };
     }
     if (session.sessionSecret !== sessionSecret) {
-      return { ok: false, error: t('errCaptureSessionAuthFailed', '撮影セッション認証に失敗しました。') };
+      return { ok: false, error: t('errCaptureSessionAuthFailed', 'Capture session authentication failed.') };
     }
 
     clearCaptureSessionWatchdog(session);
@@ -478,7 +478,7 @@
 
   async function createImageBitmapFromDataUrl(dataUrl) {
     if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-      throw new Error(t('errCaptureDataInvalid', '撮影データが不正です。'));
+      throw new Error(t('errCaptureDataInvalid', 'Captured data is invalid.'));
     }
     const response = await fetch(dataUrl);
     const blob = await response.blob();
@@ -518,7 +518,7 @@
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            reject(new Error(t('errImageConvertFailed', '画像の変換に失敗しました。')));
+            reject(new Error(t('errImageConvertFailed', 'Image conversion failed.')));
             return;
           }
           resolve(blob);

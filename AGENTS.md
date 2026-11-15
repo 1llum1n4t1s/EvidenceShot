@@ -28,7 +28,7 @@ bun --bun run sync:support            # 共通問い合わせ UI の5ファイ�
 bun --bun run kagayoi-support-sync --check # 同梱コピーと正本の一致だけを検証
 bun test tests/capture-regressions.test.js # 撮影処理の回帰テスト
 bun --bun run generate-icons          # icons/ を生成
-bun --bun run generate-screenshots    # webstore/ プロモ画像 (puppeteer 使用)
+bun --bun run generate-screenshots    # webstore/images/ のストア掲載画像 (vitrina。Windows は実拡張で9言語、CI は smoke)
 bun --bun run build                   # 問い合わせ UI 同期後、上記 2 つを連続実行
 bun --bun run build:firefox           # Firefox AMO 用に firefox-build/ ディレクトリを生成
 bun --bun run web-ext lint --source-dir firefox-build # Firefox 成果物を検証
@@ -44,6 +44,12 @@ bun --bun run web-ext lint --source-dir firefox-build # Firefox 成果物を検�
 `build:firefox` は既存の `firefox-build/` を削除して再生成する。問い合わせ UI の同期やアイコン生成は行わないため、必要な更新は生成前に済ませる。公開 CI も同梱 UI をそのまま梱包するため、同期済みファイルをコミット対象に含める。
 
 撮影処理を変更したら Bun の node:test 互換テストを実行し、長いページの分割保存と分割時のコピー省略も確認する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
+
+- **Chrome を起動するスクリプトを足すときはシード必須**: puppeteer.launch・chrome-launcher・Chrome の直接起動は、起動前に user-data-dir の `Local State` へ `{"password_manager":{"os_password_blank":false,"os_password_last_changed":"9223372036854775000"}}` を書く。Windows の Chromium は新規プロファイルごとに空パスワードで LogonUser を呼び（`password_manager_util_win.cc` の `CheckBlankPasswordWithPrefs`）、ログオン失敗（Security 4625）として数えられるため、並列・連続起動で Windows アカウントがロックされる（2026-11-15 実害）。userDataDir 未指定の起動は作らず、`webstore/vitrina/lib/capture.mjs` の `seedChromeProfile`（および一時プロファイルは D:\tmp 配下）と同等の処理を先に呼ぶ。`webstore/vitrina/` は逐語コピーで対策済み。
+
+## ストア掲載画像
+
+`webstore/vitrina/` は Kagayoi.Support の `clients/chrome-extension/store-assets/` を `sync-kit.mjs` で逐語コピーしたもので、直接編集しない。設定は `webstore/store-assets.json`、撮影前の操作は `webstore/store-assets.steps.mjs`、呼び出しは `webstore/vitrina/vitrina.mjs generate`（`--work-dir` 省略時は Windows で `D:\tmp\vitrina-EvidenceShot`）。出力は `webstore/images/<locale>/screenshot-01..04.png` と `tile-small.png` / `tile-marquee.png` で、Git には含めない。掲載画像は実ポップアップの撮影と図解だけで作り、拡張が行わない加工（注釈・矢印・ハイライト等）を描かない。スタンプの見本はポップアップ内のプレビューをそのまま撮る。
 
 ## 証跡画像の制約と検証
 
@@ -88,7 +94,20 @@ CI で必要な GitHub Secrets:
 
 ### CWS 公開のHTTP境界
 
-`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認してからpublishする。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認する（既定の `-Stage All` はその後publishまで行うが、CIは `-Stage Upload` でアップロードだけを行い、申請は `cws-submit.yml` が `-Stage Publish` で行う）。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+
+### CWS のアップロードと申請の分離
+
+`publish.yml` は検証済みZIPを `-Stage Upload` で下書きとしてアップロードするだけで、審査へは申請しない。新ロケールの掲載画像欄はアップロード後でないと Dashboard に出ないため、申請は別workflow `.github/workflows/cws-submit.yml`（手動実行、`-Stage Publish`）で行う。
+
+1. `release/x.y.z` を push する（publish.yml がアップロードする）
+2. Dashboard（Edictora）でロケール別の掲載画像などを整えて下書き保存する
+3. `gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z` で申請する
+
+- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が `release/<version>` で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit である。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
+- 同版が申請済み・公開済み（PENDING_REVIEW / STAGED / PUBLISHED / PUBLISHED_TO_TESTERS）なら再送せず成功終了する。別版の審査中、より新しい版の存在、直近アップロードの進行中・失敗、状態不明は申請せず停止する。
+- Dashboard で手動アップロードした下書きなど、同じ commit のアップロード成功 run が無い場合は申請されない。その場合は Dashboard から手動で申請する。
+- 両workflowは同じ concurrency group で直列化する。申請中は Dashboard の操作を並行しない。
 
 ### AMO 公開のHTTP境界
 

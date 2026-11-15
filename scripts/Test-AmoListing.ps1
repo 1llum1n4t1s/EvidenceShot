@@ -92,9 +92,9 @@ foreach($case in 'policy-source-success','policy-source-mismatch') {
 if($Recipe -eq 'Evidence') {
     foreach($case in 'caption-success','caption-mismatch') {
         $handler=[ListingHandler]::new()
-        $captions=@(@('機能概要','Feature overview'),@('使い方','How to use'),@('撮影サンプル','Sample capture'))
-        $names=@('01-feature-overview-1280x800.png','02-how-to-use-1280x800.png','03-hero-promo-1280x800.png')
-        for($i=0;$i -lt 3;$i++){
+        $captions=@(@('撮影画面','Popup'),@('日時スタンプ','Timestamp stamps'),@('撮影範囲と保存','Capture area and saving'),@('改ざん検知','Tamper check'))
+        $names=@('screenshot-01.png','screenshot-02.png','screenshot-03.png','screenshot-04.png')
+        for($i=0;$i -lt 4;$i++){
             [IO.File]::WriteAllBytes((Join-Path $fixtureRoot $names[$i]),[byte[]](1,2,3))
             $handler.Replies.Enqueue('200|'+(@{id=($i+1)}|ConvertTo-Json -Compress))
             $caption=if($case -eq 'caption-mismatch'){@{ja='wrong';'en-US'='wrong'}}else{@{ja=$captions[$i][0];'en-US'=$captions[$i][1]}}
@@ -103,7 +103,7 @@ if($Recipe -eq 'Evidence') {
         $failed=$false
         try{& "$PSScriptRoot/Update-AmoListing.ps1" -PreviewsOnly -PreviewDirectory $fixtureRoot -HttpHandler $handler}catch{$failed=$true}
         if($failed -ne ($case -eq 'caption-mismatch')){throw "Unexpected caption result: $case"}
-        $expected=if($case -eq 'caption-success'){6}else{2}
+        $expected=if($case -eq 'caption-success'){8}else{2}
         if($handler.Requests.Count -ne $expected -or $handler.Requests[0] -notmatch '^POST ' -or $handler.Requests[1] -notmatch '^PATCH .*previews/1/$'){throw 'Preview endpoint sequence changed'}
         if([Text.Encoding]::UTF8.GetString($handler.Bodies[0]) -match 'caption'){throw 'Caption was sent in preview create multipart'}
         Write-Output "PASS wrapper $case"

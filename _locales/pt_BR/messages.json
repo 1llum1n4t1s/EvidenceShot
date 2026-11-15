@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "Extensão para testes web que captura a área visível ou capturas unidas por rolagem e as salva com data e hora."
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "Capturar a aba atual"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "Exemplo do design de data e hora"
+  },
+  "popupAriaFooterSample": {
+    "message": "Exemplo do texto fixo no canto inferior esquerdo"
+  },
+  "popupHeaderTagline": {
+    "message": "Capturas de tela como evidência"
+  },
+  "popupSectionCaptureNow": {
+    "message": "Capturar agora"
+  },
+  "popupCaptureNowButton": {
+    "message": "Capturar esta aba"
+  },
+  "popupSectionSave": {
+    "message": "Salvar"
+  },
+  "popupLabelFormat": {
+    "message": "Formato do arquivo"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "Prefixo do nome do arquivo"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "ex.: audit-2026 (vazio = nome do site)"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "Se estiver em branco, `screenshot-{domain}` é usado. A data e a extensão são adicionadas automaticamente."
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "Copiar para a área de transferência"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "Após a captura, a imagem também é colocada na área de transferência como PNG para colar no Excel."
+  },
+  "popupNoteDownloadLocation": {
+    "message": "Os arquivos são salvos na pasta de downloads padrão do navegador."
+  },
+  "popupSectionOptions": {
+    "message": "Opções de captura"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "Adicionar data e hora"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "Grava no canto inferior direito a data e a hora no estilo de câmeras de filme."
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "Incluir fuso horário"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "Acrescenta o fuso horário (ex.: +09:00) ao texto de data e hora (somente quando “Adicionar data e hora” está ativado)."
+  },
+  "popupNoteShortcutChecking": {
+    "message": "Verificando a atribuição do atalho."
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "Atalho: $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "Nenhum atalho está atribuído. Clique no botão abaixo para abrir a página de configuração."
+  },
+  "popupNoteShortcutDefault": {
+    "message": "Atalho sugerido: Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "Configurar atalho"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "Não foi possível abrir a página de configuração de atalhos."
+  },
+  "popupLabelTimestampStyle": {
+    "message": "Estilo de data e hora"
+  },
+  "popupLabelTimestampSize": {
+    "message": "Tamanho do texto"
+  },
+  "popupLabelFooterText": {
+    "message": "Texto fixo no canto inferior esquerdo"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "ex.: © Example Inc. / Confidencial"
+  },
+  "popupNoteFooterLinked": {
+    "message": "O texto do canto inferior esquerdo acompanha o estilo de data e hora e o tamanho do texto."
+  },
+  "popupPreviewTimestampOff": {
+    "message": "(Data e hora desativadas)"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "(Texto fixo do canto inferior esquerdo não definido)"
+  },
+  "popupLabelCaptureMode": {
+    "message": "Área de captura"
+  },
+  "popupStatusInitFailed": {
+    "message": "Falha na inicialização."
+  },
+  "popupStatusCapturing": {
+    "message": "Iniciando a captura…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "Falha na captura."
+  },
+  "popupStatusSaved": {
+    "message": "Salvo: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "Salvo e copiado para a área de transferência: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "Salvo, mas falha ao copiar para a área de transferência: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "Salvo. A cópia para a área de transferência foi ignorada porque a imagem foi dividida em partes: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "Evidência: Documento oficial"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "Evidência: Selo vermelhão"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "Evidência: Livro contábil"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "Evidência: Planta azul"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "Evidência: Terminal CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "Evidência: Recibo térmico"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "Evidência: Etiqueta de papel kraft"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "Evidência: Cópia carbono"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "Evidência: Estêncil"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "Evidência: Selo de cera"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "Evidência: Microficha"
+  },
+  "optionTimestampStylePostit": {
+    "message": "Pessoal: Nota adesiva amarela"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "Pessoal: Giz de lousa"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "Pessoal: Máquina de escrever"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "Pessoal: Letreiro de neon"
+  },
+  "optionTimestampSizeXs": {
+    "message": "Muito pequeno"
+  },
+  "optionTimestampSizeSm": {
+    "message": "Pequeno"
+  },
+  "optionTimestampSizeMd": {
+    "message": "Médio"
+  },
+  "optionTimestampSizeLg": {
+    "message": "Grande"
+  },
+  "optionTimestampSizeXl": {
+    "message": "Muito grande"
+  },
+  "optionCaptureModeViewport": {
+    "message": "Somente a área visível (1 tela)"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "Página inteira (com layout)"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "Somente o conteúdo principal"
+  },
+  "errTargetTabNotFound": {
+    "message": "Não foi possível encontrar a aba de destino."
+  },
+  "errPageNotCapturable": {
+    "message": "Não é possível capturar esta página. Tente em uma página http/https."
+  },
+  "errTabAlreadyCapturing": {
+    "message": "Já há uma captura em andamento nesta página. Tente novamente quando terminar."
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "Já há outra captura em andamento. Tente novamente quando terminar."
+  },
+  "errCapturePrepareFailed": {
+    "message": "Falha ao preparar a captura."
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "Falha ao ajustar a posição de rolagem."
+  },
+  "errCaptureScrollStalled": {
+    "message": "A captura foi interrompida porque a página não conseguiu rolar até a posição de captura planejada."
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "Falha ao transferir os dados do trecho capturado."
+  },
+  "errCaptureFailed": {
+    "message": "Falha na captura."
+  },
+  "errSavePrepareFailed": {
+    "message": "Falha ao preparar o processo de salvamento."
+  },
+  "errSaveProcessFailed": {
+    "message": "Falha no processo de salvamento."
+  },
+  "errSaveDataMissing": {
+    "message": "Falha ao receber os dados de salvamento."
+  },
+  "errDownloadStartFailed": {
+    "message": "Falha ao iniciar o download."
+  },
+  "errOffscreenNotReady": {
+    "message": "Falha ao preparar o processo de salvamento. A inicialização do offscreen não foi concluída."
+  },
+  "errCaptureTabSwitched": {
+    "message": "A captura foi interrompida porque você trocou de aba. Mantenha a aba de destino ativa e tente novamente."
+  },
+  "errCapturePageChanged": {
+    "message": "A captura foi interrompida porque a página navegou para outro endereço. Mantenha a mesma página aberta e tente novamente."
+  },
+  "errDownloadIdMissing": {
+    "message": "Não foi possível obter o ID do download."
+  },
+  "errDownloadInterrupted": {
+    "message": "O download foi interrompido antes de ser concluído."
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "O ID da sessão de captura está ausente."
+  },
+  "errCaptureSessionMismatch": {
+    "message": "A sessão de captura não corresponde."
+  },
+  "errCaptureStepInvalid": {
+    "message": "Posição de captura inválida."
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "A tela de captura é maior que o esperado. Atualize para a versão mais recente e tente novamente."
+  },
+  "errViewportTooTall": {
+    "message": "A área de visualização é alta demais para a captura. Reduza a janela e tente novamente."
+  },
+  "errInvalidCaller": {
+    "message": "Chamador inválido."
+  },
+  "errCallerNotAllowed": {
+    "message": "Este chamador não tem permissão para executar esta ação."
+  },
+  "errInvalidCallerUrl": {
+    "message": "URL do chamador inválido."
+  },
+  "errChannelTokenMissing": {
+    "message": "O token do canal está ausente."
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "A autenticação da sessão de captura é inválida."
+  },
+  "errCaptureMetaMissing": {
+    "message": "Os metadados da captura não foram recebidos."
+  },
+  "errImageSaveFailed": {
+    "message": "Falha ao salvar a imagem."
+  },
+  "errCaptureSessionNotFound": {
+    "message": "Sessão de captura não encontrada."
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "Falha na autenticação da sessão de captura."
+  },
+  "errCaptureDataInvalid": {
+    "message": "Os dados capturados são inválidos."
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "Falha ao carregar os metadados da captura."
+  },
+  "errImageConvertFailed": {
+    "message": "Falha na conversão da imagem."
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "A captura foi cancelada porque a janela foi movida para uma tela com outro nível de zoom. Mantenha a janela no lugar e tente novamente."
+  },
+  "errViewportSizeChanged": {
+    "message": "A captura foi cancelada porque a área de visualização da janela mudou. Não altere o tamanho da janela e tente novamente."
+  },
+  "errClipboardWriteFailed": {
+    "message": "Falha ao copiar para a área de transferência."
+  },
+  "errClipboardUnsupported": {
+    "message": "A cópia para a área de transferência não é compatível com este ambiente."
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "A imagem é grande demais para a cópia de compatibilidade para a área de transferência."
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "Os dados da captura são grandes demais. Reduza a janela e tente novamente."
+  },
+  "languageAuto": {
+    "message": "Automático (navegador)"
+  },
+  "languageSelectLabel": {
+    "message": "Idioma"
+  },
+  "languageSelectTitle": {
+    "message": "Idioma (páginas abertas atualizam ao recarregar)"
+  },
+  "kagayoiSupportContact": {
+    "message": "Falar com o suporte"
+  },
+  "kagayoiSupportRate": {
+    "message": "Avalie-nos!"
+  }
+}

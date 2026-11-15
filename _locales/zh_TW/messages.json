@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "適用於網頁測試的瀏覽器擴充功能，可擷取可見範圍或捲動拼接的截圖，並附上時間戳記儲存。"
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "擷取目前分頁"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "時間戳記樣式範例"
+  },
+  "popupAriaFooterSample": {
+    "message": "左下角固定文字範例"
+  },
+  "popupHeaderTagline": {
+    "message": "證據等級截圖"
+  },
+  "popupSectionCaptureNow": {
+    "message": "立即擷取"
+  },
+  "popupCaptureNowButton": {
+    "message": "擷取此分頁"
+  },
+  "popupSectionSave": {
+    "message": "儲存"
+  },
+  "popupLabelFormat": {
+    "message": "檔案格式"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "檔名前綴"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "例如：audit-2026（留空則使用網站名稱）"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "留空時使用 `screenshot-{domain}`。日期與副檔名會自動加上。"
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "複製到剪貼簿"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "擷取後，也會將圖片以 PNG 格式放入剪貼簿，可直接貼到 Excel。"
+  },
+  "popupNoteDownloadLocation": {
+    "message": "檔案會儲存到瀏覽器的預設下載資料夾。"
+  },
+  "popupSectionOptions": {
+    "message": "擷取選項"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "加入時間戳記"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "在右下角燒錄底片相機風格的日期時間。"
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "包含時區"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "在時間戳記文字末尾加上時區（例如 +09:00）（僅在「加入時間戳記」開啟時有效）。"
+  },
+  "popupNoteShortcutChecking": {
+    "message": "正在檢查快速鍵指派。"
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "快速鍵：$SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "尚未指派快速鍵。請按下方按鈕開啟設定頁面。"
+  },
+  "popupNoteShortcutDefault": {
+    "message": "建議快速鍵：Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "設定快速鍵"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "無法開啟快速鍵設定頁面。"
+  },
+  "popupLabelTimestampStyle": {
+    "message": "時間戳記樣式"
+  },
+  "popupLabelTimestampSize": {
+    "message": "文字大小"
+  },
+  "popupLabelFooterText": {
+    "message": "左下角固定文字"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "例如：© Example Inc. / 機密"
+  },
+  "popupNoteFooterLinked": {
+    "message": "左下角文字會跟隨時間戳記樣式與文字大小。"
+  },
+  "popupPreviewTimestampOff": {
+    "message": "（時間戳記已關閉）"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "（未設定左下角固定文字）"
+  },
+  "popupLabelCaptureMode": {
+    "message": "擷取範圍"
+  },
+  "popupStatusInitFailed": {
+    "message": "初始化失敗。"
+  },
+  "popupStatusCapturing": {
+    "message": "正在開始擷取…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "擷取失敗。"
+  },
+  "popupStatusSaved": {
+    "message": "已儲存：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "已儲存並複製到剪貼簿：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "已儲存，但複製到剪貼簿失敗：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "已儲存。因圖片被分割，已略過複製到剪貼簿：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "證據：公文"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "證據：朱印"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "證據：會計帳簿"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "證據：藍圖"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "證據：終端機 CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "證據：熱感應收據"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "證據：牛皮紙標籤"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "證據：複寫紙"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "證據：鏤空字"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "證據：蠟封印章"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "證據：微縮片"
+  },
+  "optionTimestampStylePostit": {
+    "message": "個人：黃色便利貼"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "個人：黑板粉筆"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "個人：打字機"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "個人：霓虹燈"
+  },
+  "optionTimestampSizeXs": {
+    "message": "特小"
+  },
+  "optionTimestampSizeSm": {
+    "message": "小"
+  },
+  "optionTimestampSizeMd": {
+    "message": "中"
+  },
+  "optionTimestampSizeLg": {
+    "message": "大"
+  },
+  "optionTimestampSizeXl": {
+    "message": "特大"
+  },
+  "optionCaptureModeViewport": {
+    "message": "僅可見範圍（1 個畫面）"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "整頁（含版面配置）"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "僅主要內容"
+  },
+  "errTargetTabNotFound": {
+    "message": "找不到目標分頁。"
+  },
+  "errPageNotCapturable": {
+    "message": "無法擷取此頁面。請在 http / https 頁面上重試。"
+  },
+  "errTabAlreadyCapturing": {
+    "message": "此頁面正在擷取中。請在完成後重試。"
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "另一項擷取正在進行中。請在完成後重試。"
+  },
+  "errCapturePrepareFailed": {
+    "message": "擷取準備失敗。"
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "調整捲動位置失敗。"
+  },
+  "errCaptureScrollStalled": {
+    "message": "頁面無法捲動到預定的擷取位置，擷取已中止。"
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "傳輸擷取的分段資料失敗。"
+  },
+  "errCaptureFailed": {
+    "message": "擷取失敗。"
+  },
+  "errSavePrepareFailed": {
+    "message": "儲存處理準備失敗。"
+  },
+  "errSaveProcessFailed": {
+    "message": "儲存處理失敗。"
+  },
+  "errSaveDataMissing": {
+    "message": "未能接收儲存資料。"
+  },
+  "errDownloadStartFailed": {
+    "message": "無法開始下載。"
+  },
+  "errOffscreenNotReady": {
+    "message": "儲存處理準備失敗。offscreen 未能完成啟動。"
+  },
+  "errCaptureTabSwitched": {
+    "message": "因切換了分頁，擷取已中止。請保持目標分頁為使用中後重試。"
+  },
+  "errCapturePageChanged": {
+    "message": "因頁面發生跳轉，擷取已中止。請保持同一頁面開啟後重試。"
+  },
+  "errDownloadIdMissing": {
+    "message": "無法取得下載 ID。"
+  },
+  "errDownloadInterrupted": {
+    "message": "下載在完成前被中斷。"
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "缺少擷取工作階段 ID。"
+  },
+  "errCaptureSessionMismatch": {
+    "message": "擷取工作階段不相符。"
+  },
+  "errCaptureStepInvalid": {
+    "message": "擷取位置無效。"
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "擷取畫布超出預期大小。請更新到最新版本後重試。"
+  },
+  "errViewportTooTall": {
+    "message": "檢視區過高，無法擷取。請縮小視窗後重試。"
+  },
+  "errInvalidCaller": {
+    "message": "呼叫端無效。"
+  },
+  "errCallerNotAllowed": {
+    "message": "此呼叫端無權執行此動作。"
+  },
+  "errInvalidCallerUrl": {
+    "message": "呼叫端 URL 無效。"
+  },
+  "errChannelTokenMissing": {
+    "message": "缺少通道權杖。"
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "擷取工作階段驗證無效。"
+  },
+  "errCaptureMetaMissing": {
+    "message": "未收到擷取中繼資料。"
+  },
+  "errImageSaveFailed": {
+    "message": "儲存圖片失敗。"
+  },
+  "errCaptureSessionNotFound": {
+    "message": "找不到擷取工作階段。"
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "擷取工作階段驗證失敗。"
+  },
+  "errCaptureDataInvalid": {
+    "message": "擷取資料無效。"
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "載入擷取中繼資料失敗。"
+  },
+  "errImageConvertFailed": {
+    "message": "圖片轉換失敗。"
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "因視窗被移到縮放比例不同的顯示器，擷取已中止。請保持視窗位置不動後重試。"
+  },
+  "errViewportSizeChanged": {
+    "message": "因視窗檢視區發生變化，擷取已中止。請保持視窗大小不變後重試。"
+  },
+  "errClipboardWriteFailed": {
+    "message": "複製到剪貼簿失敗。"
+  },
+  "errClipboardUnsupported": {
+    "message": "目前環境不支援複製到剪貼簿。"
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "圖片過大，無法使用剪貼簿相容複製。"
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "擷取資料過大。請縮小視窗後重試。"
+  },
+  "languageAuto": {
+    "message": "自動（跟隨瀏覽器）"
+  },
+  "languageSelectLabel": {
+    "message": "語言"
+  },
+  "languageSelectTitle": {
+    "message": "語言（已開啟的頁面需重新整理後生效）"
+  },
+  "kagayoiSupportContact": {
+    "message": "聯絡支援"
+  },
+  "kagayoiSupportRate": {
+    "message": "請為我們評分！"
+  }
+}

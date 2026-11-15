@@ -36,6 +36,13 @@
   const MAX_FIXED_SCAN_NODES = 2200;
   const MAX_FIXED_ELEMENTS = 120;
 
+  // 選択中の表示言語の読み込み（Localizer.ready）を待ってから処理する。注入直後に届いたメッセージの
+  // エラー文言がブラウザ標準の言語で出るのを防ぐ。ready は一度解決すれば以降は即時。
+  const whenLocalized = (task) =>
+    Promise.resolve(globalThis.Localizer?.ready)
+      .catch(() => undefined)
+      .then(task);
+
   const messageHandler = (message, sender, sendResponse) => {
     if (!message?.type) {
       return undefined;
@@ -49,17 +56,17 @@
 
     switch (message.type) {
       case MESSAGE_TYPES.CAPTURE_PREPARE_V2:
-        respondAsync(prepareCapture(message.payload?.sessionId, message.payload?.settings), sendResponse);
+        respondAsync(whenLocalized(() => prepareCapture(message.payload?.sessionId, message.payload?.settings)), sendResponse);
         return true;
       case MESSAGE_TYPES.CAPTURE_STEP_V2:
-        respondAsync(moveToCaptureStep(message.payload?.sessionId, message.payload?.index), sendResponse);
+        respondAsync(whenLocalized(() => moveToCaptureStep(message.payload?.sessionId, message.payload?.index)), sendResponse);
         return true;
       case MESSAGE_TYPES.CAPTURE_RESTORE_V2:
         restoreCaptureState(message.payload?.sessionId);
         sendResponse({ ok: true });
         return undefined;
       case MESSAGE_TYPES.CLIPBOARD_COPY_FROM_URL:
-        respondAsync(copyClipboardFromUrl(message.payload?.url), sendResponse);
+        respondAsync(whenLocalized(() => copyClipboardFromUrl(message.payload?.url)), sendResponse);
         return true;
       default:
         return undefined;
@@ -81,7 +88,7 @@
 
   async function prepareCapture(sessionId, settings) {
     if (!sessionId) {
-      return { ok: false, error: t('errCaptureSessionIdMissing', '撮影セッションIDがありません。') };
+      return { ok: false, error: t('errCaptureSessionIdMissing', 'Capture session ID is missing.') };
     }
 
     if (state.captureSession && Date.now() > state.captureSession.expiresAt) {
@@ -89,7 +96,7 @@
     }
 
     if (state.captureSession) {
-      return { ok: false, error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。') };
+      return { ok: false, error: t('errTabAlreadyCapturing', 'Capture is already in progress on this page. Please try again after it finishes.') };
     }
 
     const normalizedSettings = Shared.normalizeSettings(settings || {});
@@ -123,7 +130,7 @@
         error: normalizeUserMessage(
           error?.message,
           'errCapturePrepareFailed',
-          '撮影の準備に失敗しました。'
+          'Failed to prepare capture.'
         ),
       };
     }
@@ -141,7 +148,7 @@
     ) {
       return t(
         'errDevicePixelRatioChanged',
-        'ウィンドウ移動によりズーム倍率が変わったため撮影を中止しました。ウィンドウを動かさずにもう一度お試しください。'
+        'Capture aborted because the window was moved to a display with a different zoom level. Please keep the window in place and try again.'
       );
     }
 
@@ -152,7 +159,7 @@
     ) {
       return t(
         'errViewportSizeChanged',
-        '撮影中にウィンドウの表示領域が変わったため中止しました。ウィンドウサイズを変えずにもう一度お試しください。'
+        'Capture aborted because the window viewport changed. Please keep the window size unchanged and try again.'
       );
     }
 
@@ -161,7 +168,7 @@
 
   async function moveToCaptureStep(sessionId, index) {
     if (!state.captureSession || state.captureSession.sessionId !== sessionId) {
-      return { ok: false, error: t('errCaptureSessionMismatch', '撮影セッションが一致しません。') };
+      return { ok: false, error: t('errCaptureSessionMismatch', 'Capture session mismatch.') };
     }
     armCaptureSessionWatchdog(sessionId);
 
@@ -200,7 +207,7 @@
 
     const targetY = state.captureSession.positions[index];
     if (typeof targetY !== 'number') {
-      return { ok: false, error: t('errCaptureStepInvalid', '無効な撮影位置です。') };
+      return { ok: false, error: t('errCaptureStepInvalid', 'Invalid capture position.') };
     }
 
     toggleFixedElements(index > 0);
@@ -232,7 +239,7 @@
         ok: false,
         error: t(
           'errCaptureScrollStalled',
-          'ページを計画した撮影位置までスクロールできなかったため中止しました。'
+          'Capture stopped because the page could not scroll to the planned capture position.'
         ),
       };
     }
@@ -290,7 +297,7 @@
     if (!Shared.isExtensionObjectUrl(url)) {
       globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
       try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
-      return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+      return { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
     }
     try {
       globalThis.EvidenceShotPerf?.mark('content.fetch_blob:start');
@@ -299,7 +306,7 @@
         globalThis.EvidenceShotPerf?.mark('content.fetch_blob:end');
         globalThis.EvidenceShotPerf?.mark('content.copyClipboardFromUrl:end');
       try { await globalThis.EvidenceShotPerf?.flush('shortcut-capture'); } catch { /* no-op */ }
-        return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+        return { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
       }
       const blob = await response.blob();
       globalThis.EvidenceShotPerf?.mark('content.fetch_blob:end');
@@ -317,7 +324,7 @@
         error: normalizeUserMessage(
           error?.message,
           'errClipboardWriteFailed',
-          'クリップボードへのコピーに失敗しました。'
+          'Failed to copy to clipboard.'
         ),
       };
     } finally {
@@ -361,21 +368,21 @@
 
   async function copyImageBlobAsHtml(blob) {
     if (typeof document.execCommand !== 'function') {
-      return { ok: false, error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。') };
+      return { ok: false, error: t('errClipboardUnsupported', 'Clipboard copy is not supported in this environment.') };
     }
     if (blob.size > MAX_HTML_CLIPBOARD_BYTES) {
       return {
         ok: false,
         error: t(
           'errClipboardHtmlFallbackTooLarge',
-          'クリップボード互換コピーには画像が大きすぎます。'
+          'Image is too large for clipboard compatibility copy.'
         ),
       };
     }
 
     const dataUrl = await readBlobAsDataUrl(blob);
     if (!dataUrl) {
-      return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+      return { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
     }
 
     // PNG IHDR から物理ピクセルの width/height を読み取る。
@@ -420,7 +427,7 @@
       const commandSucceeded = document.execCommand('copy');
       return commandSucceeded && copied
         ? { ok: true, clipboardStatus: Constants.CLIPBOARD_STATUS.COPIED_HTML_FALLBACK }
-        : { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+        : { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
     } finally {
       document.removeEventListener('copy', onCopy, true);
       editable.remove();
@@ -510,7 +517,7 @@
     const positions = [];
 
     if (scrollingMode && viewportHeight > maxTileCssHeight) {
-      throw new Error(t('errViewportTooTall', 'ビューポートが大きすぎるため撮影できません。ウィンドウを小さくして再度お試しください。'));
+      throw new Error(t('errViewportTooTall', 'The viewport is too tall to capture. Please shrink the window and try again.'));
     }
 
     if (scrollingMode) {

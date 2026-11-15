@@ -4,7 +4,7 @@
   "description": "__MSG_extDescription__",
   "version": "1.0.24",
   "minimum_chrome_version": "117",
-  "default_locale": "ja",
+  "default_locale": "en",
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_title": "__MSG_extActionTitle__",

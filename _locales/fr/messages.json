@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "Extension pour tests web : capture la zone visible ou des pages défilantes assemblées, enregistrées avec horodatage."
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "Capturer l’onglet actuel"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "Aperçu du style d’horodatage"
+  },
+  "popupAriaFooterSample": {
+    "message": "Aperçu du texte fixe en bas à gauche"
+  },
+  "popupHeaderTagline": {
+    "message": "Captures d’écran à valeur de preuve"
+  },
+  "popupSectionCaptureNow": {
+    "message": "Capturer maintenant"
+  },
+  "popupCaptureNowButton": {
+    "message": "Capturer cet onglet"
+  },
+  "popupSectionSave": {
+    "message": "Enregistrer"
+  },
+  "popupLabelFormat": {
+    "message": "Format de fichier"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "Préfixe du nom de fichier"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "p. ex. audit-2026 (vide = nom du site)"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "Si ce champ est vide, `screenshot-{domain}` est utilisé. La date et l’extension sont ajoutées automatiquement."
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "Copier dans le presse-papiers"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "Après la capture, l’image est aussi placée dans le presse-papiers au format PNG pour être collée dans Excel."
+  },
+  "popupNoteDownloadLocation": {
+    "message": "Les fichiers sont enregistrés dans le dossier de téléchargement par défaut du navigateur."
+  },
+  "popupSectionOptions": {
+    "message": "Options de capture"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "Ajouter un horodatage"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "Incruste dans le coin inférieur droit une date et une heure façon appareil photo argentique."
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "Inclure le fuseau horaire"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "Ajoute le fuseau horaire (p. ex. +09:00) à la fin de l’horodatage (uniquement si « Ajouter un horodatage » est activé)."
+  },
+  "popupNoteShortcutChecking": {
+    "message": "Vérification de l’attribution du raccourci."
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "Raccourci : $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "Aucun raccourci n’est attribué. Cliquez sur le bouton ci-dessous pour ouvrir la page de configuration."
+  },
+  "popupNoteShortcutDefault": {
+    "message": "Raccourci suggéré : Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "Configurer le raccourci"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "Impossible d’ouvrir la page de configuration des raccourcis."
+  },
+  "popupLabelTimestampStyle": {
+    "message": "Style d’horodatage"
+  },
+  "popupLabelTimestampSize": {
+    "message": "Taille du texte"
+  },
+  "popupLabelFooterText": {
+    "message": "Texte fixe en bas à gauche"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "p. ex. © Example Inc. / Confidentiel"
+  },
+  "popupNoteFooterLinked": {
+    "message": "Le texte en bas à gauche suit le style d’horodatage et la taille du texte."
+  },
+  "popupPreviewTimestampOff": {
+    "message": "(Horodatage désactivé)"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "(Texte fixe en bas à gauche non défini)"
+  },
+  "popupLabelCaptureMode": {
+    "message": "Zone de capture"
+  },
+  "popupStatusInitFailed": {
+    "message": "Échec de l’initialisation."
+  },
+  "popupStatusCapturing": {
+    "message": "Démarrage de la capture…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "Échec de la capture."
+  },
+  "popupStatusSaved": {
+    "message": "Enregistré : $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "Enregistré et copié dans le presse-papiers : $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "Enregistré, mais la copie dans le presse-papiers a échoué : $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "Enregistré. La copie dans le presse-papiers a été ignorée, car l’image a été découpée en plusieurs parties : $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "Preuve : Document officiel"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "Preuve : Sceau vermillon"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "Preuve : Registre comptable"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "Preuve : Plan bleu"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "Preuve : Terminal CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "Preuve : Reçu thermique"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "Preuve : Étiquette en papier kraft"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "Preuve : Copie carbone"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "Preuve : Pochoir"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "Preuve : Sceau de cire"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "Preuve : Microfiche"
+  },
+  "optionTimestampStylePostit": {
+    "message": "Personnel : Pense-bête jaune"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "Personnel : Craie sur tableau noir"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "Personnel : Machine à écrire"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "Personnel : Enseigne néon"
+  },
+  "optionTimestampSizeXs": {
+    "message": "Très petite"
+  },
+  "optionTimestampSizeSm": {
+    "message": "Petite"
+  },
+  "optionTimestampSizeMd": {
+    "message": "Moyenne"
+  },
+  "optionTimestampSizeLg": {
+    "message": "Grande"
+  },
+  "optionTimestampSizeXl": {
+    "message": "Très grande"
+  },
+  "optionCaptureModeViewport": {
+    "message": "Zone visible uniquement (1 écran)"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "Page entière (avec mise en page)"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "Contenu principal uniquement"
+  },
+  "errTargetTabNotFound": {
+    "message": "Impossible de trouver l’onglet cible."
+  },
+  "errPageNotCapturable": {
+    "message": "Cette page ne peut pas être capturée. Essayez sur une page http/https."
+  },
+  "errTabAlreadyCapturing": {
+    "message": "Une capture est déjà en cours sur cette page. Réessayez une fois qu’elle est terminée."
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "Une autre capture est déjà en cours. Réessayez une fois qu’elle est terminée."
+  },
+  "errCapturePrepareFailed": {
+    "message": "Échec de la préparation de la capture."
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "Échec de l’ajustement de la position de défilement."
+  },
+  "errCaptureScrollStalled": {
+    "message": "La capture a été interrompue, car la page n’a pas pu défiler jusqu’à la position prévue."
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "Échec du transfert des données du fragment capturé."
+  },
+  "errCaptureFailed": {
+    "message": "Échec de la capture."
+  },
+  "errSavePrepareFailed": {
+    "message": "Échec de la préparation de l’enregistrement."
+  },
+  "errSaveProcessFailed": {
+    "message": "Échec de l’enregistrement."
+  },
+  "errSaveDataMissing": {
+    "message": "Échec de la réception des données à enregistrer."
+  },
+  "errDownloadStartFailed": {
+    "message": "Échec du démarrage du téléchargement."
+  },
+  "errOffscreenNotReady": {
+    "message": "Échec de la préparation de l’enregistrement. Le démarrage d’offscreen ne s’est pas terminé."
+  },
+  "errCaptureTabSwitched": {
+    "message": "La capture a été interrompue, car vous avez changé d’onglet. Gardez l’onglet cible actif et réessayez."
+  },
+  "errCapturePageChanged": {
+    "message": "La capture a été interrompue, car la page a changé. Gardez la même page ouverte et réessayez."
+  },
+  "errDownloadIdMissing": {
+    "message": "Impossible d’obtenir l’identifiant du téléchargement."
+  },
+  "errDownloadInterrupted": {
+    "message": "Le téléchargement a été interrompu avant la fin."
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "L’identifiant de la session de capture est manquant."
+  },
+  "errCaptureSessionMismatch": {
+    "message": "La session de capture ne correspond pas."
+  },
+  "errCaptureStepInvalid": {
+    "message": "Position de capture non valide."
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "Le canevas de capture est plus grand que prévu. Mettez à jour vers la dernière version et réessayez."
+  },
+  "errViewportTooTall": {
+    "message": "La zone d’affichage est trop haute pour être capturée. Réduisez la fenêtre et réessayez."
+  },
+  "errInvalidCaller": {
+    "message": "Appelant non valide."
+  },
+  "errCallerNotAllowed": {
+    "message": "Cet appelant n’est pas autorisé à exécuter cette action."
+  },
+  "errInvalidCallerUrl": {
+    "message": "URL de l’appelant non valide."
+  },
+  "errChannelTokenMissing": {
+    "message": "Le jeton du canal est manquant."
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "L’authentification de la session de capture n’est pas valide."
+  },
+  "errCaptureMetaMissing": {
+    "message": "Les métadonnées de la capture n’ont pas été reçues."
+  },
+  "errImageSaveFailed": {
+    "message": "Échec de l’enregistrement de l’image."
+  },
+  "errCaptureSessionNotFound": {
+    "message": "Session de capture introuvable."
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "Échec de l’authentification de la session de capture."
+  },
+  "errCaptureDataInvalid": {
+    "message": "Les données capturées ne sont pas valides."
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "Échec du chargement des métadonnées de la capture."
+  },
+  "errImageConvertFailed": {
+    "message": "Échec de la conversion de l’image."
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "La capture a été annulée, car la fenêtre a été déplacée vers un écran avec un autre niveau de zoom. Ne déplacez pas la fenêtre et réessayez."
+  },
+  "errViewportSizeChanged": {
+    "message": "La capture a été annulée, car la zone d’affichage de la fenêtre a changé. Ne modifiez pas la taille de la fenêtre et réessayez."
+  },
+  "errClipboardWriteFailed": {
+    "message": "Échec de la copie dans le presse-papiers."
+  },
+  "errClipboardUnsupported": {
+    "message": "La copie dans le presse-papiers n’est pas prise en charge dans cet environnement."
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "L’image est trop grande pour la copie de compatibilité vers le presse-papiers."
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "Les données de capture sont trop volumineuses. Réduisez la fenêtre et réessayez."
+  },
+  "languageAuto": {
+    "message": "Automatique (navigateur)"
+  },
+  "languageSelectLabel": {
+    "message": "Langue"
+  },
+  "languageSelectTitle": {
+    "message": "Langue (les pages ouvertes se mettent à jour au rechargement)"
+  },
+  "kagayoiSupportContact": {
+    "message": "Contacter le support"
+  },
+  "kagayoiSupportRate": {
+    "message": "Évaluez-nous !"
+  }
+}

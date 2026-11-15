@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "Erweiterung für Web-Tests: Screenshots des sichtbaren Bereichs oder per Scrollen zusammengesetzt, mit Zeitstempel gespeichert."
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "Aktuellen Tab aufnehmen"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "Beispiel für das Zeitstempel-Design"
+  },
+  "popupAriaFooterSample": {
+    "message": "Beispiel für den festen Text unten links"
+  },
+  "popupHeaderTagline": {
+    "message": "Screenshots als Nachweis"
+  },
+  "popupSectionCaptureNow": {
+    "message": "Jetzt aufnehmen"
+  },
+  "popupCaptureNowButton": {
+    "message": "Diesen Tab aufnehmen"
+  },
+  "popupSectionSave": {
+    "message": "Speichern"
+  },
+  "popupLabelFormat": {
+    "message": "Dateiformat"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "Dateinamenpräfix"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "z. B. audit-2026 (leer = Websitename)"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "Bei leerem Feld wird `screenshot-{domain}` verwendet. Datum und Dateiendung werden automatisch angehängt."
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "In die Zwischenablage kopieren"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "Nach der Aufnahme wird das Bild zusätzlich als PNG in die Zwischenablage gelegt, sodass Sie es in Excel einfügen können."
+  },
+  "popupNoteDownloadLocation": {
+    "message": "Dateien werden im Standard-Download-Ordner des Browsers gespeichert."
+  },
+  "popupSectionOptions": {
+    "message": "Aufnahmeoptionen"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "Zeitstempel hinzufügen"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "Brennt unten rechts Datum und Uhrzeit im Stil einer Filmkamera ins Bild ein."
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "Zeitzone einbeziehen"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "Hängt die Zeitzone (z. B. +09:00) an den Zeitstempeltext an (nur wenn „Zeitstempel hinzufügen“ aktiviert ist)."
+  },
+  "popupNoteShortcutChecking": {
+    "message": "Tastenkürzel-Zuweisung wird geprüft."
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "Tastenkürzel: $SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "Es ist kein Tastenkürzel zugewiesen. Klicken Sie unten auf die Schaltfläche, um die Einstellungsseite zu öffnen."
+  },
+  "popupNoteShortcutDefault": {
+    "message": "Vorgeschlagenes Tastenkürzel: Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "Tastenkürzel einrichten"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "Die Einstellungsseite für Tastenkürzel konnte nicht geöffnet werden."
+  },
+  "popupLabelTimestampStyle": {
+    "message": "Zeitstempel-Stil"
+  },
+  "popupLabelTimestampSize": {
+    "message": "Textgröße"
+  },
+  "popupLabelFooterText": {
+    "message": "Fester Text unten links"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "z. B. © Example Inc. / Vertraulich"
+  },
+  "popupNoteFooterLinked": {
+    "message": "Der Text unten links folgt Zeitstempel-Stil und Textgröße."
+  },
+  "popupPreviewTimestampOff": {
+    "message": "(Zeitstempel aus)"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "(Fester Text unten links nicht festgelegt)"
+  },
+  "popupLabelCaptureMode": {
+    "message": "Aufnahmebereich"
+  },
+  "popupStatusInitFailed": {
+    "message": "Initialisierung fehlgeschlagen."
+  },
+  "popupStatusCapturing": {
+    "message": "Aufnahme wird gestartet…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "Die Aufnahme ist fehlgeschlagen."
+  },
+  "popupStatusSaved": {
+    "message": "Gespeichert: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "Gespeichert und in die Zwischenablage kopiert: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "Gespeichert, aber das Kopieren in die Zwischenablage ist fehlgeschlagen: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "Gespeichert. Das Kopieren in die Zwischenablage wurde übersprungen, weil das Bild in mehrere Teile aufgeteilt wurde: $FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "Nachweis: Amtliches Dokument"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "Nachweis: Zinnoberrotes Siegel"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "Nachweis: Buchhaltungsjournal"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "Nachweis: Blaupause"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "Nachweis: Terminal-CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "Nachweis: Thermobon"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "Nachweis: Kraftpapier-Anhänger"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "Nachweis: Durchschlag"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "Nachweis: Schablone"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "Nachweis: Wachssiegel"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "Nachweis: Mikrofiche"
+  },
+  "optionTimestampStylePostit": {
+    "message": "Privat: Gelbe Haftnotiz"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "Privat: Kreidetafel"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "Privat: Schreibmaschine"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "Privat: Neonschild"
+  },
+  "optionTimestampSizeXs": {
+    "message": "Sehr klein"
+  },
+  "optionTimestampSizeSm": {
+    "message": "Klein"
+  },
+  "optionTimestampSizeMd": {
+    "message": "Mittel"
+  },
+  "optionTimestampSizeLg": {
+    "message": "Groß"
+  },
+  "optionTimestampSizeXl": {
+    "message": "Sehr groß"
+  },
+  "optionCaptureModeViewport": {
+    "message": "Nur sichtbarer Bereich (1 Bildschirm)"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "Ganze Seite (mit Layout)"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "Nur Hauptinhalt"
+  },
+  "errTargetTabNotFound": {
+    "message": "Der Ziel-Tab wurde nicht gefunden."
+  },
+  "errPageNotCapturable": {
+    "message": "Diese Seite kann nicht aufgenommen werden. Versuchen Sie es auf einer http/https-Seite."
+  },
+  "errTabAlreadyCapturing": {
+    "message": "Auf dieser Seite läuft bereits eine Aufnahme. Versuchen Sie es nach Abschluss erneut."
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "Es läuft bereits eine andere Aufnahme. Versuchen Sie es nach Abschluss erneut."
+  },
+  "errCapturePrepareFailed": {
+    "message": "Die Aufnahme konnte nicht vorbereitet werden."
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "Die Scrollposition konnte nicht angepasst werden."
+  },
+  "errCaptureScrollStalled": {
+    "message": "Die Aufnahme wurde abgebrochen, weil die Seite nicht zur geplanten Aufnahmeposition scrollen konnte."
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "Die Daten des aufgenommenen Abschnitts konnten nicht übertragen werden."
+  },
+  "errCaptureFailed": {
+    "message": "Die Aufnahme ist fehlgeschlagen."
+  },
+  "errSavePrepareFailed": {
+    "message": "Das Speichern konnte nicht vorbereitet werden."
+  },
+  "errSaveProcessFailed": {
+    "message": "Das Speichern ist fehlgeschlagen."
+  },
+  "errSaveDataMissing": {
+    "message": "Die Speicherdaten konnten nicht empfangen werden."
+  },
+  "errDownloadStartFailed": {
+    "message": "Der Download konnte nicht gestartet werden."
+  },
+  "errOffscreenNotReady": {
+    "message": "Das Speichern konnte nicht vorbereitet werden. Der Start von Offscreen wurde nicht abgeschlossen."
+  },
+  "errCaptureTabSwitched": {
+    "message": "Die Aufnahme wurde abgebrochen, weil Sie den Tab gewechselt haben. Lassen Sie den Ziel-Tab aktiv und versuchen Sie es erneut."
+  },
+  "errCapturePageChanged": {
+    "message": "Die Aufnahme wurde abgebrochen, weil die Seite gewechselt hat. Lassen Sie dieselbe Seite geöffnet und versuchen Sie es erneut."
+  },
+  "errDownloadIdMissing": {
+    "message": "Die Download-ID konnte nicht abgerufen werden."
+  },
+  "errDownloadInterrupted": {
+    "message": "Der Download wurde vor dem Abschluss unterbrochen."
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "Die ID der Aufnahmesitzung fehlt."
+  },
+  "errCaptureSessionMismatch": {
+    "message": "Die Aufnahmesitzung stimmt nicht überein."
+  },
+  "errCaptureStepInvalid": {
+    "message": "Ungültige Aufnahmeposition."
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "Die Aufnahmefläche ist größer als erwartet. Aktualisieren Sie auf die neueste Version und versuchen Sie es erneut."
+  },
+  "errViewportTooTall": {
+    "message": "Der sichtbare Bereich ist zu hoch für eine Aufnahme. Verkleinern Sie das Fenster und versuchen Sie es erneut."
+  },
+  "errInvalidCaller": {
+    "message": "Ungültiger Aufrufer."
+  },
+  "errCallerNotAllowed": {
+    "message": "Dieser Aufrufer darf diese Aktion nicht ausführen."
+  },
+  "errInvalidCallerUrl": {
+    "message": "Ungültige Aufrufer-URL."
+  },
+  "errChannelTokenMissing": {
+    "message": "Das Kanal-Token fehlt."
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "Die Authentifizierung der Aufnahmesitzung ist ungültig."
+  },
+  "errCaptureMetaMissing": {
+    "message": "Die Metadaten der Aufnahme wurden nicht empfangen."
+  },
+  "errImageSaveFailed": {
+    "message": "Das Bild konnte nicht gespeichert werden."
+  },
+  "errCaptureSessionNotFound": {
+    "message": "Aufnahmesitzung nicht gefunden."
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "Die Authentifizierung der Aufnahmesitzung ist fehlgeschlagen."
+  },
+  "errCaptureDataInvalid": {
+    "message": "Die aufgenommenen Daten sind ungültig."
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "Die Metadaten der Aufnahme konnten nicht geladen werden."
+  },
+  "errImageConvertFailed": {
+    "message": "Die Bildkonvertierung ist fehlgeschlagen."
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "Die Aufnahme wurde abgebrochen, weil das Fenster auf einen Bildschirm mit anderer Zoomstufe verschoben wurde. Lassen Sie das Fenster an seinem Platz und versuchen Sie es erneut."
+  },
+  "errViewportSizeChanged": {
+    "message": "Die Aufnahme wurde abgebrochen, weil sich der sichtbare Bereich des Fensters geändert hat. Ändern Sie die Fenstergröße nicht und versuchen Sie es erneut."
+  },
+  "errClipboardWriteFailed": {
+    "message": "Das Kopieren in die Zwischenablage ist fehlgeschlagen."
+  },
+  "errClipboardUnsupported": {
+    "message": "Das Kopieren in die Zwischenablage wird in dieser Umgebung nicht unterstützt."
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "Das Bild ist zu groß für die kompatible Kopie in die Zwischenablage."
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "Die Aufnahmedaten sind zu groß. Verkleinern Sie das Fenster und versuchen Sie es erneut."
+  },
+  "languageAuto": {
+    "message": "Automatisch (Browser)"
+  },
+  "languageSelectLabel": {
+    "message": "Sprache"
+  },
+  "languageSelectTitle": {
+    "message": "Sprache (geöffnete Seiten übernehmen sie nach dem Neuladen)"
+  },
+  "kagayoiSupportContact": {
+    "message": "Support kontaktieren"
+  },
+  "kagayoiSupportRate": {
+    "message": "Bitte bewerten Sie uns!"
+  }
+}

@@ -248,9 +248,15 @@
     }
   }
 
+  // 文言取得の入口。実体は共通モジュール Localizer.t（利用者が選んだ表示言語 → ブラウザ標準 → fallback）。
+  // 既存の呼び出し形 t(key, fallback, substitutions) を保つ薄いラッパで、fallback は英語で渡す。
+  // Localizer を読み込んでいない文脈でも壊れないよう、標準の chrome.i18n へ戻す。
   function t(key, fallback = '', substitutions = undefined) {
     try {
-      const message = chrome.i18n.getMessage(key, substitutions);
+      const localizer = globalThis.Localizer;
+      const message = localizer
+        ? localizer.t(key, substitutions, fallback)
+        : chrome.i18n.getMessage(key, substitutions);
       if (message) {
         return message;
       }
@@ -272,15 +278,25 @@
       return fallback;
     }
 
+    // 表示言語（Localizer が差し替えた getUILanguage）と文字種の食い違いを検出し、
+    // 食い違うときは現在の言語の既定文言へ置き換える。9 言語で誤作動しないよう、判定は文字種の
+    // 「他言語の痕跡」に限る（自前の翻訳文は表示言語の文字で書かれているため通る）。
+    //   - ja: 日本語を含まず英字だけのメッセージ（ブラウザ内部の英語エラー等）は置換する。
+    //   - ja 以外: かな（日本語固有）を含むメッセージは置換する。漢字は zh では正当な表示文字なので、
+    //     zh 以外の言語（en / es / fr / de / pt / ko）でのみ「他言語の痕跡」として扱う。
     const uiLanguage = getUiLanguage();
-    const hasJapanese = /[ぁ-んァ-ン一-龯]/.test(trimmed);
+    const hasKana = /[ぁ-んァ-ヶ]/.test(trimmed);
+    const hasHan = /[一-龯]/.test(trimmed);
     const hasLatin = /[A-Za-z]/.test(trimmed);
 
-    if (uiLanguage.startsWith('ja') && !hasJapanese && hasLatin) {
-      return fallback;
+    if (uiLanguage.startsWith('ja')) {
+      if (!hasKana && !hasHan && hasLatin) {
+        return fallback;
+      }
+      return trimmed;
     }
 
-    if (uiLanguage.startsWith('en') && hasJapanese) {
+    if (hasKana || (hasHan && !uiLanguage.startsWith('zh'))) {
       return fallback;
     }
 
@@ -298,7 +314,7 @@
 
   // chrome.runtime.onMessage の async ハンドラで使う共通レスポンサ。
   // background / content の両方で同じロジックが必要だったため shared に集約。
-  function respondAsync(promise, sendResponse, fallbackKey = 'errCaptureFailed', fallbackText = '撮影に失敗しました。') {
+  function respondAsync(promise, sendResponse, fallbackKey = 'errCaptureFailed', fallbackText = 'Capture failed.') {
     Promise.resolve(promise)
       .then((response) => {
         sendResponse(response);

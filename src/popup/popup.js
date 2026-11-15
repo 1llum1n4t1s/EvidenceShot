@@ -1,4 +1,8 @@
 (function initializePopup() {
+  // <html lang> を同期で合わせる（Kagayoi サポートフッターが module の遅延実行で lang を読むため、
+  // この classic script の読み込み時点で確定させる）。
+  Localizer.applyDocumentLang();
+
   const {
     TIMESTAMP_STYLES,
     TIMESTAMP_SIZE_OPTIONS,
@@ -34,13 +38,21 @@
 
   bootstrap().catch((error) => {
     setStatus(
-      normalizeUserMessage(error?.message, 'popupStatusInitFailed', '初期化に失敗しました。'),
+      normalizeUserMessage(error?.message, 'popupStatusInitFailed', 'Initialization failed.'),
       'error'
     );
   });
 
   async function bootstrap() {
-    applyStaticLocalization();
+    // 保存済みの表示言語の読み込みと getMessage の差し替えを待ってから、静的文言と動的な選択肢を作る。
+    await Localizer.ready;
+    await Localizer.ensureFresh();
+    // 初回の同期呼び出し時点では localStorage の控えが storage とずれていることがある
+    // （別ページでの言語変更、初回起動など）。storage との同期後にもう一度 <html lang> を合わせ、
+    // 言語別の書体（popup.css の :lang()）が確実に効くようにする。
+    Localizer.applyDocumentLang();
+    Localizer.localizeDocument();
+    Localizer.mountLanguageSelect(document.getElementById('uiLanguage'));
     populateSelectOptions(elements.format, FORMAT_OPTIONS);
     populateSelectOptions(elements.timestampStyle, TIMESTAMP_STYLES);
     populateSelectOptions(elements.timestampSize, TIMESTAMP_SIZE_OPTIONS);
@@ -119,7 +131,7 @@
       window.close();
     } catch (error) {
       setStatus(
-        normalizeUserMessage(error?.message, 'errOpenShortcutSettingsFailed', 'ショートカット設定画面を開けませんでした。'),
+        normalizeUserMessage(error?.message, 'errOpenShortcutSettingsFailed', 'Could not open the shortcut settings page.'),
         'error'
       );
     }
@@ -195,7 +207,7 @@
     if (!timestampEnabled) {
       drawPlaceholderLabel(
         timestampCanvas,
-        t('popupPreviewTimestampOff', '（タイムスタンプ OFF）')
+        t('popupPreviewTimestampOff', '(Timestamp OFF)')
       );
     }
 
@@ -210,7 +222,7 @@
     if (!footerText) {
       drawPlaceholderLabel(
         footerCanvas,
-        t('popupPreviewFooterEmpty', '（左下固定テキスト 未設定）')
+        t('popupPreviewFooterEmpty', '(Bottom-left fixed text not set)')
       );
     }
   }
@@ -266,7 +278,7 @@
 
   async function onCaptureNow() {
     elements.captureNow.disabled = true;
-    setStatus(t('popupStatusCapturing', '撮影を開始しています…'));
+    setStatus(t('popupStatusCapturing', 'Starting capture...'));
 
     try {
       settings = await persistPopupSettings();
@@ -280,7 +292,7 @@
         // DevTools ウィンドウや新規ウィンドウで active タブが取れないケース。
         // background に undefined を丸投げすると診断情報が乏しくなるので、
         // popup の文脈でエラーを出す。
-        setStatus(t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。'), 'error');
+        setStatus(t('errTargetTabNotFound', 'Could not find the target tab.'), 'error');
         return;
       }
 
@@ -291,7 +303,7 @@
 
       if (!result?.ok) {
         setStatus(
-          normalizeUserMessage(result?.error, 'popupStatusCaptureFailed', '撮影に失敗しました。'),
+          normalizeUserMessage(result?.error, 'popupStatusCaptureFailed', 'Capture failed.'),
           'error'
         );
         return;
@@ -312,7 +324,7 @@
           result.clipboardError = normalizeUserMessage(
             error?.message,
             'errClipboardWriteFailed',
-            'クリップボードへのコピーに失敗しました。'
+            'Failed to copy to clipboard.'
           );
         } finally {
           // 成否に関わらず blob URL は不要。offscreen 側の 60 秒タイマーは保険にする。
@@ -326,7 +338,7 @@
       setStatus(successStatus.message, successStatus.tone);
     } catch (error) {
       setStatus(
-        normalizeUserMessage(error?.message, 'popupStatusCaptureFailed', '撮影に失敗しました。'),
+        normalizeUserMessage(error?.message, 'popupStatusCaptureFailed', 'Capture failed.'),
         'error'
       );
     } finally {
@@ -380,15 +392,15 @@
 
   async function writeClipboardFromUrl(url) {
     if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
-      return { ok: false, error: t('errClipboardUnsupported', 'この環境ではクリップボードコピーを利用できません。') };
+      return { ok: false, error: t('errClipboardUnsupported', 'Clipboard copy is not supported in this environment.') };
     }
     if (!Shared.isExtensionObjectUrl(url)) {
-      return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+      return { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
     }
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        return { ok: false, error: t('errClipboardWriteFailed', 'クリップボードへのコピーに失敗しました。') };
+        return { ok: false, error: t('errClipboardWriteFailed', 'Failed to copy to clipboard.') };
       }
       const blob = await response.blob();
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -401,7 +413,7 @@
         error: normalizeUserMessage(
           error?.message,
           'errClipboardWriteFailed',
-          'クリップボードへのコピーに失敗しました。'
+          'Failed to copy to clipboard.'
         ),
       };
     }
@@ -438,7 +450,7 @@
       return {
         message: t(
           'popupStatusSavedAndCopied',
-          `保存を開始し、クリップボードにもコピーしました: ${result.fileName}`,
+          `Saved and copied to clipboard: ${result.fileName}`,
           [result.fileName]
         ),
         tone: 'success',
@@ -449,7 +461,7 @@
       return {
         message: t(
           'popupStatusSavedCopyFailed',
-          `保存を開始しましたが、クリップボードコピーに失敗しました: ${result.fileName}`,
+          `Saved, but clipboard copy failed: ${result.fileName}`,
           [result.fileName]
         ),
         tone: 'warning',
@@ -460,7 +472,7 @@
       return {
         message: t(
           'popupStatusSavedCopySkippedMultipart',
-          `保存を開始しました。画像が分割されたためクリップボードコピーはスキップしました: ${result.fileName}`,
+          `Saved. Clipboard copy was skipped because the image was split into parts: ${result.fileName}`,
           [result.fileName]
         ),
         tone: 'warning',
@@ -468,7 +480,7 @@
     }
 
     return {
-      message: t('popupStatusSaved', `保存を開始しました: ${result.fileName}`, [result.fileName]),
+      message: t('popupStatusSaved', `Saved: ${result.fileName}`, [result.fileName]),
       tone: 'success',
     };
   }
@@ -483,10 +495,10 @@
       const captureCommand = commands.find(({ name }) => name === 'capture-active-tab');
       const shortcut = captureCommand?.shortcut;
       elements.shortcutNote.textContent = shortcut
-        ? t('popupNoteShortcutCurrent', `ショートカット: ${shortcut}`, [shortcut])
+        ? t('popupNoteShortcutCurrent', `Shortcut: ${shortcut}`, [shortcut])
         : t(
             'popupNoteShortcutUnassigned',
-            'ショートカットは未設定です。下のボタンから設定画面を開けます。'
+            'No shortcut is assigned. Click the button below to open the setup page.'
           );
       // 未設定 (= 空文字 / undefined) のときだけ設定誘導ボタンを出す。
       // Chromium の挙動で unpacked 拡張機能のリロード時に suggested_key が
@@ -497,7 +509,7 @@
     } catch {
       elements.shortcutNote.textContent = t(
         'popupNoteShortcutDefault',
-        'ショートカット候補: Ctrl+Shift+Y'
+        'Suggested shortcut: Ctrl+Shift+Y'
       );
       // 取得失敗時はボタン状態を変えない (hidden のまま)。
     }
@@ -510,32 +522,6 @@
       optionElement.value = value;
       optionElement.textContent = labelKey ? t(labelKey, label || value) : (label || value);
       selectElement.appendChild(optionElement);
-    });
-  }
-
-  function applyStaticLocalization() {
-    document.documentElement.lang = t('popupDocumentLanguage', 'ja');
-    document.querySelectorAll('[data-i18n]').forEach((element) => {
-      const key = element.dataset.i18n;
-      if (!key) {
-        return;
-      }
-      element.textContent = t(key, element.textContent || key);
-    });
-
-    document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
-      const key = element.dataset.i18nPlaceholder;
-      if (!key || !('placeholder' in element)) {
-        return;
-      }
-      element.placeholder = t(key, element.placeholder || key);
-    });
-
-    document.querySelectorAll('[data-i18n-aria-label]').forEach((element) => {
-      const key = element.dataset.i18nAriaLabel;
-      if (key) {
-        element.setAttribute('aria-label', t(key, element.getAttribute('aria-label') || key));
-      }
     });
   }
 

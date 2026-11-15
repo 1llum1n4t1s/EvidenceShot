@@ -1,0 +1,375 @@
+{
+  "extName": {
+    "message": "EvidenceShot"
+  },
+  "extDescription": {
+    "message": "面向网页测试的浏览器扩展，可截取可见区域或滚动拼接的整页截图，并带时间戳保存。"
+  },
+  "extActionTitle": {
+    "message": "EvidenceShot"
+  },
+  "commandCaptureActiveTab": {
+    "message": "截取当前标签页"
+  },
+  "popupDocumentTitle": {
+    "message": "EvidenceShot"
+  },
+  "popupAriaTimestampSample": {
+    "message": "时间戳样式示例"
+  },
+  "popupAriaFooterSample": {
+    "message": "左下角固定文字示例"
+  },
+  "popupHeaderTagline": {
+    "message": "证据级截图"
+  },
+  "popupSectionCaptureNow": {
+    "message": "立即截图"
+  },
+  "popupCaptureNowButton": {
+    "message": "截取此标签页"
+  },
+  "popupSectionSave": {
+    "message": "保存"
+  },
+  "popupLabelFormat": {
+    "message": "文件格式"
+  },
+  "optionFormatPng": {
+    "message": "PNG"
+  },
+  "optionFormatJpg": {
+    "message": "JPG"
+  },
+  "optionFormatWebp": {
+    "message": "WEBP"
+  },
+  "popupLabelFileNamePrefix": {
+    "message": "文件名前缀"
+  },
+  "popupPlaceholderFileNamePrefix": {
+    "message": "例如：audit-2026（留空则使用网站名）"
+  },
+  "popupNoteFileNamePrefix": {
+    "message": "留空时使用 `screenshot-{domain}`。日期和扩展名会自动添加。"
+  },
+  "popupLabelCopyToClipboard": {
+    "message": "复制到剪贴板"
+  },
+  "popupNoteCopyToClipboard": {
+    "message": "截图后，还会将图像以 PNG 形式放入剪贴板，可直接粘贴到 Excel 中。"
+  },
+  "popupNoteDownloadLocation": {
+    "message": "文件将保存到浏览器的默认下载文件夹。"
+  },
+  "popupSectionOptions": {
+    "message": "截图选项"
+  },
+  "popupLabelTimestampEnabled": {
+    "message": "添加时间戳"
+  },
+  "popupNoteTimestampEnabled": {
+    "message": "在右下角烧录胶片相机风格的日期时间。"
+  },
+  "popupLabelTimestampIncludeTimezone": {
+    "message": "包含时区"
+  },
+  "popupNoteTimestampIncludeTimezone": {
+    "message": "在时间戳文字末尾附加时区（如 +09:00）（仅在“添加时间戳”开启时有效）。"
+  },
+  "popupNoteShortcutChecking": {
+    "message": "正在检查快捷键设置。"
+  },
+  "popupNoteShortcutCurrent": {
+    "message": "快捷键：$SHORTCUT$",
+    "placeholders": {
+      "shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoteShortcutUnassigned": {
+    "message": "尚未设置快捷键。请点击下方按钮打开设置页面。"
+  },
+  "popupNoteShortcutDefault": {
+    "message": "建议快捷键：Ctrl+Shift+Y"
+  },
+  "popupShortcutSetupButton": {
+    "message": "设置快捷键"
+  },
+  "errOpenShortcutSettingsFailed": {
+    "message": "无法打开快捷键设置页面。"
+  },
+  "popupLabelTimestampStyle": {
+    "message": "时间戳样式"
+  },
+  "popupLabelTimestampSize": {
+    "message": "文字大小"
+  },
+  "popupLabelFooterText": {
+    "message": "左下角固定文字"
+  },
+  "popupPlaceholderFooterText": {
+    "message": "例如：© Example Inc. / 机密"
+  },
+  "popupNoteFooterLinked": {
+    "message": "左下角文字会跟随时间戳样式和文字大小。"
+  },
+  "popupPreviewTimestampOff": {
+    "message": "（时间戳已关闭）"
+  },
+  "popupPreviewFooterEmpty": {
+    "message": "（未设置左下角固定文字）"
+  },
+  "popupLabelCaptureMode": {
+    "message": "截图范围"
+  },
+  "popupStatusInitFailed": {
+    "message": "初始化失败。"
+  },
+  "popupStatusCapturing": {
+    "message": "正在开始截图…"
+  },
+  "popupStatusCaptureFailed": {
+    "message": "截图失败。"
+  },
+  "popupStatusSaved": {
+    "message": "已保存：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedAndCopied": {
+    "message": "已保存并复制到剪贴板：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopyFailed": {
+    "message": "已保存，但复制到剪贴板失败：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStatusSavedCopySkippedMultipart": {
+    "message": "已保存。因图像被分割，已跳过复制到剪贴板：$FILENAME$",
+    "placeholders": {
+      "filename": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionTimestampStyleManuscript": {
+    "message": "证据：公文"
+  },
+  "optionTimestampStyleSeal": {
+    "message": "证据：朱印"
+  },
+  "optionTimestampStyleLedger": {
+    "message": "证据：会计账簿"
+  },
+  "optionTimestampStyleBlueprint": {
+    "message": "证据：蓝图"
+  },
+  "optionTimestampStyleTerminal": {
+    "message": "证据：终端 CLI"
+  },
+  "optionTimestampStyleReceipt": {
+    "message": "证据：热敏小票"
+  },
+  "optionTimestampStyleKraft": {
+    "message": "证据：牛皮纸标签"
+  },
+  "optionTimestampStyleCarbon": {
+    "message": "证据：复写纸"
+  },
+  "optionTimestampStyleStencil": {
+    "message": "证据：镂空字"
+  },
+  "optionTimestampStyleWaxSeal": {
+    "message": "证据：蜡封印章"
+  },
+  "optionTimestampStyleMicrofiche": {
+    "message": "证据：缩微胶片"
+  },
+  "optionTimestampStylePostit": {
+    "message": "个人：黄色便利贴"
+  },
+  "optionTimestampStyleChalk": {
+    "message": "个人：黑板粉笔"
+  },
+  "optionTimestampStyleTypewriter": {
+    "message": "个人：打字机"
+  },
+  "optionTimestampStyleNeon": {
+    "message": "个人：霓虹灯"
+  },
+  "optionTimestampSizeXs": {
+    "message": "特小"
+  },
+  "optionTimestampSizeSm": {
+    "message": "小"
+  },
+  "optionTimestampSizeMd": {
+    "message": "中"
+  },
+  "optionTimestampSizeLg": {
+    "message": "大"
+  },
+  "optionTimestampSizeXl": {
+    "message": "特大"
+  },
+  "optionCaptureModeViewport": {
+    "message": "仅可见区域（1 屏）"
+  },
+  "optionCaptureModeFullPage": {
+    "message": "整页（含版式）"
+  },
+  "optionCaptureModeMainColumn": {
+    "message": "仅主要内容"
+  },
+  "errTargetTabNotFound": {
+    "message": "找不到目标标签页。"
+  },
+  "errPageNotCapturable": {
+    "message": "无法截取此页面。请在 http / https 页面上重试。"
+  },
+  "errTabAlreadyCapturing": {
+    "message": "此页面正在截图。请在完成后重试。"
+  },
+  "errWindowAlreadyCapturing": {
+    "message": "另一项截图正在进行。请在完成后重试。"
+  },
+  "errCapturePrepareFailed": {
+    "message": "截图准备失败。"
+  },
+  "errCaptureStepAdjustFailed": {
+    "message": "调整滚动位置失败。"
+  },
+  "errCaptureScrollStalled": {
+    "message": "页面无法滚动到计划的截图位置，截图已中止。"
+  },
+  "errCaptureSliceTransferFailed": {
+    "message": "传输截图分片数据失败。"
+  },
+  "errCaptureFailed": {
+    "message": "截图失败。"
+  },
+  "errSavePrepareFailed": {
+    "message": "保存处理准备失败。"
+  },
+  "errSaveProcessFailed": {
+    "message": "保存处理失败。"
+  },
+  "errSaveDataMissing": {
+    "message": "未能接收保存数据。"
+  },
+  "errDownloadStartFailed": {
+    "message": "无法开始下载。"
+  },
+  "errOffscreenNotReady": {
+    "message": "保存处理准备失败。offscreen 未能完成启动。"
+  },
+  "errCaptureTabSwitched": {
+    "message": "因切换了标签页，截图已中止。请保持目标标签页处于活动状态后重试。"
+  },
+  "errCapturePageChanged": {
+    "message": "因页面发生跳转，截图已中止。请保持同一页面打开后重试。"
+  },
+  "errDownloadIdMissing": {
+    "message": "无法获取下载 ID。"
+  },
+  "errDownloadInterrupted": {
+    "message": "下载在完成前被中断。"
+  },
+  "errCaptureSessionIdMissing": {
+    "message": "缺少截图会话 ID。"
+  },
+  "errCaptureSessionMismatch": {
+    "message": "截图会话不匹配。"
+  },
+  "errCaptureStepInvalid": {
+    "message": "截图位置无效。"
+  },
+  "errCaptureCanvasTooLarge": {
+    "message": "截图画布超出预期大小。请更新到最新版本后重试。"
+  },
+  "errViewportTooTall": {
+    "message": "视口过高，无法截图。请缩小窗口后重试。"
+  },
+  "errInvalidCaller": {
+    "message": "调用方无效。"
+  },
+  "errCallerNotAllowed": {
+    "message": "此调用方无权执行该操作。"
+  },
+  "errInvalidCallerUrl": {
+    "message": "调用方 URL 无效。"
+  },
+  "errChannelTokenMissing": {
+    "message": "缺少通道令牌。"
+  },
+  "errCaptureSessionAuthInvalid": {
+    "message": "截图会话认证无效。"
+  },
+  "errCaptureMetaMissing": {
+    "message": "未收到截图元数据。"
+  },
+  "errImageSaveFailed": {
+    "message": "保存图像失败。"
+  },
+  "errCaptureSessionNotFound": {
+    "message": "未找到截图会话。"
+  },
+  "errCaptureSessionAuthFailed": {
+    "message": "截图会话认证失败。"
+  },
+  "errCaptureDataInvalid": {
+    "message": "截图数据无效。"
+  },
+  "errCaptureMetaLoadFailed": {
+    "message": "加载截图元数据失败。"
+  },
+  "errImageConvertFailed": {
+    "message": "图像转换失败。"
+  },
+  "errDevicePixelRatioChanged": {
+    "message": "因窗口被移到缩放比例不同的显示器，截图已中止。请保持窗口位置不动后重试。"
+  },
+  "errViewportSizeChanged": {
+    "message": "因窗口可视区域发生变化，截图已中止。请保持窗口大小不变后重试。"
+  },
+  "errClipboardWriteFailed": {
+    "message": "复制到剪贴板失败。"
+  },
+  "errClipboardUnsupported": {
+    "message": "当前环境不支持复制到剪贴板。"
+  },
+  "errClipboardHtmlFallbackTooLarge": {
+    "message": "图像过大，无法使用剪贴板兼容复制。"
+  },
+  "errCaptureSliceTooLarge": {
+    "message": "截图数据过大。请缩小窗口后重试。"
+  },
+  "languageAuto": {
+    "message": "自动（跟随浏览器）"
+  },
+  "languageSelectLabel": {
+    "message": "语言"
+  },
+  "languageSelectTitle": {
+    "message": "语言（已打开的页面需刷新后生效）"
+  },
+  "kagayoiSupportContact": {
+    "message": "联系支持"
+  },
+  "kagayoiSupportRate": {
+    "message": "请给我们评分！"
+  }
+}

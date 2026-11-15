@@ -73,6 +73,13 @@ body {
   overflow-x: hidden;
 }
 
+/* 中国語・韓国語は、日本語向けの同梱フォントや OS 既定の和文フォント（Meiryo 等）で
+   字形が描かれないよう、言語別の書体を body に明示する。拡張ページには body の
+   既定フォント（Segoe UI, Arial, Meiryo）が注入されるため、:root だけの指定では届かない。 */
+html:lang(zh-CN) body { font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; }
+html:lang(zh-TW) body { font-family: "Segoe UI", "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif; }
+html:lang(ko) body { font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
+
 .shell {
   display: flex;
   flex-direction: column;
@@ -86,7 +93,23 @@ body {
   padding: 4px 2px 10px;
 }
 
-.brand { display: flex; align-items: center; gap: 10px; width: 100%; }
+.brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+/* 表示言語の切替。ヘッダー右に置き、ブランド部分が縮んでも選択欄は潰さない。 */
+.language-select {
+  flex: 0 1 auto;
+  max-width: 45%;
+  min-height: 30px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.language-select:hover { border-color: var(--accent); }
+.language-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .brand-mark { width: 22px; height: 22px; flex-shrink: 0; color: var(--accent); }
 .brand-text { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
 .brand-name { font-size: 15px; font-weight: 700; }

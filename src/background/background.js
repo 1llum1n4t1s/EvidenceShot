@@ -9,10 +9,12 @@
 
 // Chrome service worker パスでは importScripts で共通モジュールを読み込む。
 // Firefox event page は importScripts 自体が存在しないので、background.html 内の
-// <script> タグで constants.js / utils.js / stamp-renderer.js / composer.js が先に
+// <script> タグで ui-localizer.js / constants.js / utils.js / stamp-renderer.js / composer.js が先に
 // 読み込まれている前提。
 if (typeof importScripts === 'function') {
   importScripts(
+    // 表示言語の共通モジュール（t() より先に読む）。
+    '../shared/ui-localizer.js',
     '../shared/constants.js',
     '../shared/utils.js',
     '../shared/perf.js'
@@ -38,6 +40,26 @@ const normalizeUserMessage = Shared.normalizeUserMessage;
 const respondAsync = Shared.respondAsync;
 
 const pendingDownloadUrls = new Map();
+
+// ツールバーボタンの title は manifest の default_title がブラウザ言語固定のため、選択中の表示言語で
+// 上書きする。起動時（Localizer.ready 後）と言語変更時（onChange）に更新する。
+function updateActionTitle() {
+  try {
+    const result = chrome.action?.setTitle?.({ title: t('extActionTitle', 'EvidenceShot') });
+    result?.catch?.(() => undefined);
+  } catch {
+    // action API が使えない環境では何もしない。
+  }
+}
+Localizer.ready.then(updateActionTitle);
+Localizer.onChange(updateActionTitle);
+
+chrome.runtime.onInstalled.addListener(async () => {
+  // 拡張の更新後に、保存済みの言語辞書が古ければ作り直す。
+  await Localizer.ready;
+  await Localizer.ensureFresh();
+  updateActionTitle();
+});
 let captureHistoryMutationQueue = Promise.resolve();
 const FINAL_CLIPBOARD_HISTORY_STATUSES = new Set([
   CLIPBOARD_STATUS.COPIED,
@@ -109,7 +131,7 @@ function createOffscreenComposerAdapter() {
     let timeoutHandle;
     const timeoutPromise = new Promise((_, reject) => {
       timeoutHandle = setTimeout(() => {
-        reject(new Error(t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')));
+        reject(new Error(t('errOffscreenNotReady', 'Failed to prepare save processing. Offscreen startup did not complete.')));
       }, timeoutMs);
     });
     return Promise.race([
@@ -158,7 +180,7 @@ function createOffscreenComposerAdapter() {
     await chrome.offscreen.createDocument({
       url: buildOffscreenDocumentUrl(),
       reasons: ['BLOBS', 'CLIPBOARD'],
-      justification: 'スクリーンショット画像を合成し、保存とクリップボードコピーを行うため',
+      justification: 'Compose screenshot images, save them, and copy them to the clipboard.',
     });
     await waitForOffscreenDocumentReady();
   }
@@ -171,7 +193,7 @@ function createOffscreenComposerAdapter() {
       await Shared.sleep(OFFSCREEN_READY_RETRY_DELAY_MS);
     }
     throw new Error(
-      t('errOffscreenNotReady', '保存処理の準備に失敗しました。offscreen の起動が完了しませんでした。')
+      t('errOffscreenNotReady', 'Failed to prepare save processing. Offscreen startup did not complete.')
     );
   }
 
@@ -455,7 +477,7 @@ async function captureActiveTabFromCommand(tabFromCommand) {
 
   const result = tab?.id
     ? await runCaptureWorkflowWithHistory(tab.id)
-    : { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
+    : { ok: false, error: t('errTargetTabNotFound', 'Could not find the target tab.') };
 
   const isCopyPending = Boolean(
     result?.ok && result?.clipboardObjectUrl && tab?.id
@@ -504,7 +526,7 @@ async function completePendingClipboardCopy(tab, result) {
       error: normalizeUserMessage(
         error?.message,
         'errClipboardWriteFailed',
-        'クリップボードへのコピーに失敗しました。'
+        'Failed to copy to clipboard.'
       ),
     };
   }
@@ -589,6 +611,8 @@ function scheduleBadgeClear() {
 // 証跡ツールなので「撮影が失敗した事実」も永続ログに残す。
 // popup を閉じるとエラーメッセージが失われる問題を補完し、後から監査できるようにする。
 async function runCaptureWorkflowWithHistory(tabId) {
+  // 選択中の表示言語の読み込み前にエラー文言を作ると、ブラウザ標準の言語で出てしまう。
+  await Localizer.ready;
   const startedAt = Date.now();
   const historyId = generateSecureToken(12);
   let result;
@@ -597,7 +621,7 @@ async function runCaptureWorkflowWithHistory(tabId) {
   } catch (error) {
     result = {
       ok: false,
-      error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
+      error: normalizeUserMessage(error?.message, 'errCaptureFailed', 'Capture failed.'),
     };
   }
   result.historyId = historyId;
@@ -677,14 +701,14 @@ async function runCaptureWorkflow(tabId) {
   globalThis.EvidenceShotPerf?.mark('runCaptureWorkflow:start');
   if (!Number.isInteger(tabId) || tabId < 0) {
     globalThis.EvidenceShotPerf?.mark('runCaptureWorkflow:end');
-    return { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
+    return { ok: false, error: t('errTargetTabNotFound', 'Could not find the target tab.') };
   }
 
   let tab;
   try {
     tab = await chrome.tabs.get(tabId);
   } catch {
-    return { ok: false, error: t('errTargetTabNotFound', '撮影対象のタブを見つけられませんでした。') };
+    return { ok: false, error: t('errTargetTabNotFound', 'Could not find the target tab.') };
   }
 
   if (!Shared.isCapturableUrl(tab.url)) {
@@ -692,7 +716,7 @@ async function runCaptureWorkflow(tabId) {
       ok: false,
       error: t(
         'errPageNotCapturable',
-        'このページでは撮影できません。http / https のページで試してください。'
+        'This page cannot be captured. Please try on an http/https page.'
       ),
     };
   }
@@ -703,14 +727,14 @@ async function runCaptureWorkflow(tabId) {
     if (acquireResult.conflict === 'tab') {
       return {
         ok: false,
-        error: t('errTabAlreadyCapturing', 'このページではすでに撮影中です。完了してからもう一度お試しください。'),
+        error: t('errTabAlreadyCapturing', 'Capture is already in progress on this page. Please try again after it finishes.'),
       };
     }
     return {
       ok: false,
       error: t(
         'errWindowAlreadyCapturing',
-        '別の撮影が進行中です。完了してからもう一度お試しください。'
+        'Another capture is already running. Please try again after it finishes.'
       ),
     };
   }
@@ -751,7 +775,7 @@ async function runCaptureWorkflow(tabId) {
         error: normalizeUserMessage(
           prepareResult?.error,
           'errCapturePrepareFailed',
-          '撮影の準備に失敗しました。'
+          'Failed to prepare capture.'
         ),
       };
     }
@@ -806,7 +830,7 @@ async function runCaptureWorkflow(tabId) {
           error: normalizeUserMessage(
             beginResult?.error,
             'errSavePrepareFailed',
-            '保存処理の準備に失敗しました。'
+            'Failed to prepare save processing.'
           ),
         };
       }
@@ -847,7 +871,7 @@ async function runCaptureWorkflow(tabId) {
               normalizeUserMessage(
                 stepResult?.error,
                 'errCaptureStepAdjustFailed',
-                'スクロール位置の調整に失敗しました。'
+                'Failed to adjust scroll position.'
               )
             );
           }
@@ -861,7 +885,7 @@ async function runCaptureWorkflow(tabId) {
           if (typeof dataUrl === 'string' && dataUrl.length > MAX_CAPTURE_DATA_URL_LENGTH) {
             throw new Error(t(
               'errCaptureSliceTooLarge',
-              '撮影データが大きすぎます。ウィンドウを小さくして再度お試しください。'
+              'Capture data is too large. Please shrink the window and try again.'
             ));
           }
           lastCapturedAt = Date.now();
@@ -885,7 +909,7 @@ async function runCaptureWorkflow(tabId) {
               normalizeUserMessage(
                 prevResult?.error,
                 'errCaptureSliceTransferFailed',
-                '撮影データの受け渡しに失敗しました。'
+                'Failed to transfer captured slice data.'
               )
             );
           }
@@ -911,7 +935,7 @@ async function runCaptureWorkflow(tabId) {
             normalizeUserMessage(
               lastResult?.error,
               'errCaptureSliceTransferFailed',
-              '撮影データの受け渡しに失敗しました。'
+              'Failed to transfer captured slice data.'
             )
           );
         }
@@ -950,7 +974,7 @@ async function runCaptureWorkflow(tabId) {
     if (downloadedFiles.length === 0) {
       return {
         ok: false,
-        error: t('errCaptureFailed', '撮影に失敗しました。'),
+        error: t('errCaptureFailed', 'Capture failed.'),
       };
     }
 
@@ -973,7 +997,7 @@ async function runCaptureWorkflow(tabId) {
     console.error('EvidenceShot: capture workflow failed', error);
     return {
       ok: false,
-      error: normalizeUserMessage(error?.message, 'errCaptureFailed', '撮影に失敗しました。'),
+      error: normalizeUserMessage(error?.message, 'errCaptureFailed', 'Capture failed.'),
     };
   } finally {
     targetTabActivityGuard?.dispose();
@@ -1006,7 +1030,7 @@ async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
       error: normalizeUserMessage(
         result?.error,
         'errSaveProcessFailed',
-        '保存処理に失敗しました。'
+        'Save processing failed.'
       ),
     };
   }
@@ -1015,7 +1039,7 @@ async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
   if (typeof downloadUrl !== 'string' || downloadUrl.length === 0 || !result.fileName) {
     return {
       ok: false,
-      error: t('errSaveDataMissing', '保存データの受け取りに失敗しました。'),
+      error: t('errSaveDataMissing', 'Failed to receive save data.'),
     };
   }
 
@@ -1042,7 +1066,7 @@ async function finalizeComposerCaptureSession(sessionId, sessionSecret) {
       error: normalizeUserMessage(
         error?.message,
         'errDownloadStartFailed',
-        'ダウンロードの開始に失敗しました。'
+        'Failed to start download.'
       ),
     };
   }
@@ -1099,7 +1123,7 @@ async function ensureContentScriptOnTab(tabId) {
     ) {
       throw new Error(t(
         'errPageNotCapturable',
-        'このページでは撮影できません。http / https のページで試してください。'
+        'This page cannot be captured. Please try on an http/https page.'
       ));
     }
     throw error;
@@ -1123,7 +1147,7 @@ async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
       error: normalizeUserMessage(
         response?.error,
         'errClipboardWriteFailed',
-        'クリップボードへのコピーに失敗しました。'
+        'Failed to copy to clipboard.'
       ),
     };
   } catch (error) {
@@ -1134,7 +1158,7 @@ async function delegateClipboardCopyToContent(tabId, clipboardObjectUrl) {
       error: normalizeUserMessage(
         error?.message,
         'errClipboardWriteFailed',
-        'クリップボードへのコピーに失敗しました。'
+        'Failed to copy to clipboard.'
       ),
     };
   }
@@ -1214,7 +1238,7 @@ function getCapturePageIdentity(value) {
 function createCapturePageChangedError() {
   return new Error(t(
     'errCapturePageChanged',
-    '撮影中にページが移動したため中止しました。同じページを表示したままもう一度お試しください。'
+    'Capture stopped because the page navigated. Keep the same page open and try again.'
   ));
 }
 
@@ -1222,7 +1246,7 @@ function createCaptureTabSwitchedError() {
   return new Error(
     t(
       'errCaptureTabSwitched',
-      '撮影中に別タブへ切り替わったため中止しました。対象タブを開いたまま再度お試しください。'
+      'Capture stopped because you switched tabs. Keep the target tab active and try again.'
     )
   );
 }
@@ -1243,7 +1267,7 @@ function downloadCapture(downloadUrl, fileName) {
               normalizeUserMessage(
                 chrome.runtime.lastError.message,
                 'errDownloadStartFailed',
-                'ダウンロードの開始に失敗しました。'
+                'Failed to start download.'
               )
             )
           );
@@ -1251,7 +1275,7 @@ function downloadCapture(downloadUrl, fileName) {
         }
 
         if (typeof downloadId !== 'number' || Number.isNaN(downloadId)) {
-          reject(new Error(t('errDownloadIdMissing', 'ダウンロードIDを取得できませんでした。')));
+          reject(new Error(t('errDownloadIdMissing', 'Could not obtain a download ID.')));
           return;
         }
 
@@ -1308,7 +1332,7 @@ function settlePendingDownload(delta) {
     }
     const error = new Error(t(
       'errDownloadInterrupted',
-      'ダウンロードが完了する前に中断されました。'
+      'The download was interrupted before it completed.'
     ));
     error.downloadUrlRevoked = true;
     pending.reject(error);

@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script src="../shared/ui-localizer.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title data-i18n="popupDocumentTitle">EvidenceShot</title>
     <link rel="stylesheet" href="./popup.css" />
@@ -25,105 +26,106 @@
           </svg>
           <div class="brand-text">
             <span class="brand-name">EvidenceShot</span>
-            <span class="brand-tagline" data-i18n="popupHeaderTagline">監査用スクリーンショット</span>
+            <span class="brand-tagline" data-i18n="popupHeaderTagline">Evidence-grade screenshots</span>
           </div>
         </div>
+        <select id="uiLanguage" class="language-select" data-i18n-attr="aria-label:languageSelectLabel;title:languageSelectTitle"></select>
       </header>
 
       <section class="panel">
         <div class="section-head">
-          <h2 data-i18n="popupSectionCaptureNow">今すぐ撮影</h2>
+          <h2 data-i18n="popupSectionCaptureNow">Capture Now</h2>
         </div>
 
         <label class="field">
-          <span data-i18n="popupLabelCaptureMode">撮影範囲</span>
+          <span data-i18n="popupLabelCaptureMode">Capture Area</span>
           <select id="capture-mode"></select>
         </label>
 
-        <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">このタブを撮影する</button>
+        <button class="primary capture" id="capture-now" type="button" data-i18n="popupCaptureNowButton">Capture This Tab</button>
         <p class="status" id="status-text"></p>
-        <p class="note" id="shortcut-note" data-i18n="popupNoteShortcutChecking">ショートカットを確認中です。</p>
-        <button class="secondary" id="shortcut-setup" type="button" hidden data-i18n="popupShortcutSetupButton">ショートカットを設定する</button>
+        <p class="note" id="shortcut-note" data-i18n="popupNoteShortcutChecking">Checking shortcut assignment.</p>
+        <button class="secondary" id="shortcut-setup" type="button" hidden data-i18n="popupShortcutSetupButton">Set up shortcut</button>
       </section>
 
       <section class="panel">
         <div class="section-head">
-          <h2 data-i18n="popupSectionSave">保存</h2>
+          <h2 data-i18n="popupSectionSave">Save</h2>
         </div>
 
         <label class="field">
-          <span data-i18n="popupLabelFormat">保存形式</span>
+          <span data-i18n="popupLabelFormat">File Format</span>
           <select id="format"></select>
         </label>
 
         <label class="field">
-          <span data-i18n="popupLabelFileNamePrefix">ファイル名の先頭</span>
+          <span data-i18n="popupLabelFileNamePrefix">Filename Prefix</span>
           <input
             id="file-name-prefix"
             type="text"
             maxlength="60"
-            data-i18n-placeholder="popupPlaceholderFileNamePrefix"
-            placeholder="例: audit-2026（空欄でサイト名を自動）"
+            data-i18n-attr="placeholder:popupPlaceholderFileNamePrefix"
+            placeholder="e.g. audit-2026 (blank = site name)"
           />
         </label>
-        <p class="note" data-i18n="popupNoteFileNamePrefix">空欄のときは `screenshot-ドメイン名` が使われます。日時と拡張子は自動で付きます。</p>
+        <p class="note" data-i18n="popupNoteFileNamePrefix">When blank, `screenshot-{domain}` is used. Date and extension are appended automatically.</p>
 
         <label class="toggle">
           <span>
-            <strong data-i18n="popupLabelCopyToClipboard">クリップボードにもコピー</strong>
-            <small data-i18n="popupNoteCopyToClipboard">撮影後、保存とは別に画像を PNG としてクリップボードへ入れます。Excel などへそのまま貼り付けできます。</small>
+            <strong data-i18n="popupLabelCopyToClipboard">Copy to Clipboard</strong>
+            <small data-i18n="popupNoteCopyToClipboard">After capture, also places the image on the clipboard as PNG so you can paste into Excel.</small>
           </span>
           <input id="copy-to-clipboard" type="checkbox" />
         </label>
 
-        <p class="note" data-i18n="popupNoteDownloadLocation">保存先はブラウザの既定のダウンロードフォルダです。</p>
+        <p class="note" data-i18n="popupNoteDownloadLocation">Files are saved to the browser's default download folder.</p>
       </section>
 
       <section class="panel">
         <div class="section-head">
-          <h2 data-i18n="popupSectionOptions">撮影オプション</h2>
+          <h2 data-i18n="popupSectionOptions">Capture Options</h2>
         </div>
 
         <label class="toggle">
           <span>
-            <strong data-i18n="popupLabelTimestampEnabled">日付を入れる</strong>
-            <small data-i18n="popupNoteTimestampEnabled">右下に昔のフィルムカメラ風の日時を焼き込みます。</small>
+            <strong data-i18n="popupLabelTimestampEnabled">Add Timestamp</strong>
+            <small data-i18n="popupNoteTimestampEnabled">Burns a film-style date/time label into the bottom-right corner.</small>
           </span>
           <input id="timestamp-enabled" type="checkbox" />
         </label>
 
         <label class="toggle">
           <span>
-            <strong data-i18n="popupLabelTimestampIncludeTimezone">タイムゾーンを含める</strong>
-            <small data-i18n="popupNoteTimestampIncludeTimezone">日時の末尾に「+09:00」のようなタイムゾーン表記を入れます（「日付を入れる」が有効なときのみ）。</small>
+            <strong data-i18n="popupLabelTimestampIncludeTimezone">Include time zone</strong>
+            <small data-i18n="popupNoteTimestampIncludeTimezone">Append the time zone (e.g. +09:00) to the timestamp text (only when "Add Timestamp" is on).</small>
           </span>
           <input id="timestamp-include-timezone" type="checkbox" />
         </label>
 
         <div class="field-pair">
           <label class="field">
-            <span data-i18n="popupLabelTimestampStyle">日付デザイン</span>
+            <span data-i18n="popupLabelTimestampStyle">Timestamp Style</span>
             <select id="timestamp-style"></select>
           </label>
           <label class="field">
-            <span data-i18n="popupLabelTimestampSize">文字サイズ</span>
+            <span data-i18n="popupLabelTimestampSize">Text Size</span>
             <select id="timestamp-size"></select>
           </label>
         </div>
-        <canvas id="timestamp-sample-canvas" class="style-sample-canvas" width="720" height="180" aria-label="日付デザインのサンプル" data-i18n-aria-label="popupAriaTimestampSample"></canvas>
+        <canvas id="timestamp-sample-canvas" class="style-sample-canvas" width="720" height="180" aria-label="Timestamp design sample" data-i18n-attr="aria-label:popupAriaTimestampSample"></canvas>
 
         <label class="field">
-          <span data-i18n="popupLabelFooterText">左下固定テキスト</span>
+          <span data-i18n="popupLabelFooterText">Fixed Bottom-Left Text</span>
           <input
             id="footer-text"
             type="text"
             maxlength="80"
-            data-i18n-placeholder="popupPlaceholderFooterText"
-            placeholder="例: © Example Inc. / 社外秘"
+            data-i18n-attr="placeholder:popupPlaceholderFooterText"
+            placeholder="e.g. © Example Inc. / Confidential"
           />
         </label>
-        <canvas id="footer-sample-canvas" class="style-sample-canvas" width="720" height="180" aria-label="左下固定テキストのサンプル" data-i18n-aria-label="popupAriaFooterSample"></canvas>
-        <p class="note" data-i18n="popupNoteFooterLinked">左下の文字は、日付デザインと文字サイズに連動します。</p>
+        <canvas id="footer-sample-canvas" class="style-sample-canvas" width="720" height="180" aria-label="Bottom-left fixed text sample" data-i18n-attr="aria-label:popupAriaFooterSample"></canvas>
+        <p class="note" data-i18n="popupNoteFooterLinked">Bottom-left text follows the timestamp style and text size.</p>
 
       </section>
 

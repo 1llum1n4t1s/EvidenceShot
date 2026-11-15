@@ -1,6 +1,6 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([switch]$MetadataOnly, [switch]$PreviewsOnly, [switch]$DryRun, [string]$PreviewDirectory = "$PSScriptRoot/../webstore/images", [Net.Http.HttpMessageHandler]$HttpHandler)
+param([switch]$MetadataOnly, [switch]$PreviewsOnly, [switch]$DryRun, [string]$PreviewDirectory = "$PSScriptRoot/../webstore/images/ja", [Net.Http.HttpMessageHandler]$HttpHandler)
 $ErrorActionPreference = 'Stop'
 if ($MetadataOnly -and $PreviewsOnly) { throw 'Choose only one operation filter' }
 Import-Module "$PSScriptRoot/Amo-Http.psm1" -Force
@@ -21,10 +21,12 @@ $body = @{
 $policy = @{ privacy_policy=$body.privacy_policy }
 $body.Remove('privacy_policy') | Out-Null
 $body.Remove('has_privacy_policy') | Out-Null
+# vitrina が生成するロケール別スクリーンショット（既定は AMO の default_locale に合わせた ja）。
 $previews = @(
-    @('01-feature-overview-1280x800.png','機能概要','Feature overview'),
-    @('02-how-to-use-1280x800.png','使い方','How to use'),
-    @('03-hero-promo-1280x800.png','撮影サンプル','Sample capture')
+    @('screenshot-01.png','撮影画面','Popup'),
+    @('screenshot-02.png','日時スタンプ','Timestamp stamps'),
+    @('screenshot-03.png','撮影範囲と保存','Capture area and saving'),
+    @('screenshot-04.png','改ざん検知','Tamper check')
 )
 if ($DryRun) { Write-Output (@{listing=$body;policy=$policy} | ConvertTo-Json -Depth 20); return }
 $client = New-AmoClient -HttpHandler $HttpHandler
