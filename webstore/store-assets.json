@@ -1,0 +1,258 @@
+{
+  "brand": "EvidenceShot",
+  "icon": "icons/icon.svg",
+  "extensionDir": ".",
+  "palette": { "primary": "#19B4C4", "secondary": "#F59E1F" },
+  "locales": ["en", "ja", "zh_CN", "zh_TW", "ko", "es", "fr", "de", "pt_BR"],
+  "captures": [
+    {
+      "id": "popup-top",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "evidence-shot-settings": {
+          "format": "png",
+          "timestampEnabled": true,
+          "timestampStyle": "manuscript",
+          "timestampSize": "xs",
+          "timestampIncludeTimezone": true,
+          "footerText": "",
+          "captureMode": "fullPage",
+          "fileNamePrefix": "",
+          "copyToClipboard": true
+        }
+      }
+    },
+    {
+      "id": "popup-stamp",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "evidence-shot-settings": {
+          "format": "png",
+          "timestampEnabled": true,
+          "timestampStyle": "ledger",
+          "timestampSize": "md",
+          "timestampIncludeTimezone": true,
+          "footerText": "ACME-QA-0042",
+          "captureMode": "fullPage",
+          "fileNamePrefix": "",
+          "copyToClipboard": true
+        }
+      }
+    },
+    {
+      "id": "popup-save",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "evidence-shot-settings": {
+          "format": "png",
+          "timestampEnabled": true,
+          "timestampStyle": "manuscript",
+          "timestampSize": "xs",
+          "timestampIncludeTimezone": true,
+          "footerText": "",
+          "captureMode": "mainColumn",
+          "fileNamePrefix": "audit-2026",
+          "copyToClipboard": true
+        }
+      }
+    }
+  ],
+  "slides": [
+    {
+      "layout": "hero",
+      "capture": "popup-top",
+      "tagline": { "msg": "popupHeaderTagline" },
+      "chips": [
+        { "en": "3 capture areas", "ja": "3つの撮影範囲", "zh_CN": "3种截图范围", "zh_TW": "3種擷取範圍", "ko": "3가지 캡처 범위", "es": "3 áreas de captura", "fr": "3 zones de capture", "de": "3 Aufnahmebereiche", "pt_BR": "3 áreas de captura" },
+        { "en": "15 stamp designs", "ja": "15種類の日付デザイン", "zh_CN": "15种时间戳样式", "zh_TW": "15種時間戳記樣式", "ko": "스타일 15종", "es": "15 estilos de marca", "fr": "15 styles d’horodatage", "de": "15 Stempel-Designs", "pt_BR": "15 estilos de data e hora" },
+        "PNG, JPEG, WEBP"
+      ]
+    },
+    {
+      "layout": "feature",
+      "capture": "popup-stamp",
+      "kicker": { "msg": "popupSectionOptions" },
+      "title": {
+        "en": "Stamp date and time on every capture",
+        "ja": "撮影した日時を、画像に刻む",
+        "zh_CN": "为每张截图加盖日期时间",
+        "zh_TW": "為每張擷取畫面加上日期時間",
+        "ko": "촬영한 날짜와 시간을 이미지에 새깁니다",
+        "es": "Fecha y hora en cada captura",
+        "fr": "Horodatez chaque capture",
+        "de": "Datum und Uhrzeit in jeder Aufnahme",
+        "pt_BR": "Data e hora em cada captura"
+      },
+      "body": {
+        "en": "Pick from 15 designs and 5 text sizes, and preview them in the popup before you capture.",
+        "ja": "15種類のデザインと5段階の文字サイズから選べます。撮影前にポップアップでプレビューできます。",
+        "zh_CN": "可从15种样式和5种字号中选择，并在截图前于弹出窗口中预览效果。",
+        "zh_TW": "可從15種樣式與5種文字大小中選擇，擷取前就能在彈出視窗預覽。",
+        "ko": "15가지 디자인과 5단계 글자 크기 중에서 고를 수 있으며, 캡처하기 전에 팝업에서 미리 볼 수 있습니다.",
+        "es": "Elija entre 15 diseños y 5 tamaños de texto, y véalos en la ventana emergente antes de capturar.",
+        "fr": "Choisissez parmi 15 styles et 5 tailles de texte, et voyez le résultat dans la fenêtre de l’extension avant de capturer.",
+        "de": "Wählen Sie aus 15 Designs und 5 Textgrößen und sehen Sie die Vorschau im Popup, bevor Sie aufnehmen.",
+        "pt_BR": "Escolha entre 15 estilos e 5 tamanhos de texto e veja a prévia no pop-up antes de capturar."
+      },
+      "bullets": [
+        {
+          "en": "Optionally include the time zone (e.g. +09:00)",
+          "ja": "タイムゾーン（+09:00 など）を含めるか選択可",
+          "zh_CN": "可选择是否附带时区（如+09:00）",
+          "zh_TW": "可選擇是否附上時區（如+09:00）",
+          "ko": "시간대(예: +09:00) 포함 여부를 선택할 수 있습니다",
+          "es": "Zona horaria opcional (p. ej., +09:00)",
+          "fr": "Fuseau horaire en option (p. ex. +09:00)",
+          "de": "Zeitzone optional (z. B. +09:00)",
+          "pt_BR": "Fuso horário opcional (ex.: +09:00)"
+        },
+        {
+          "en": "Add fixed text in the bottom-left corner",
+          "ja": "左下に固定テキストを追加できます",
+          "zh_CN": "可在左下角添加固定文字",
+          "zh_TW": "可在左下角加入固定文字",
+          "ko": "왼쪽 아래에 고정 텍스트를 넣을 수 있습니다",
+          "es": "Texto fijo en la esquina inferior izquierda",
+          "fr": "Texte fixe en bas à gauche",
+          "de": "Fester Text unten links",
+          "pt_BR": "Texto fixo no canto inferior esquerdo"
+        },
+        {
+          "en": "Only the stamp and your text are added to the image",
+          "ja": "画像に加えるのは、日付と固定テキストだけ",
+          "zh_CN": "图片上只会添加时间戳和固定文字",
+          "zh_TW": "圖片上只會加入時間戳記與固定文字",
+          "ko": "이미지에는 타임스탬프와 고정 텍스트만 더해집니다",
+          "es": "Solo se añaden la marca de tiempo y su texto",
+          "fr": "Seuls l’horodatage et votre texte sont ajoutés",
+          "de": "Nur Zeitstempel und Ihr Text kommen ins Bild",
+          "pt_BR": "Só a data e hora e o seu texto entram na imagem"
+        }
+      ]
+    },
+    {
+      "layout": "feature",
+      "capture": "popup-save",
+      "kicker": { "msg": "popupSectionSave" },
+      "title": {
+        "en": "Capture what you need, save how you like",
+        "ja": "必要な範囲を撮って、好きな形式で保存",
+        "zh_CN": "按需截取，按喜好保存",
+        "zh_TW": "依需求擷取，依喜好儲存",
+        "ko": "필요한 범위를 캡처해 원하는 형식으로 저장",
+        "es": "Capture lo que necesite y guárdelo como prefiera",
+        "fr": "Capturez ce qu’il faut, enregistrez comme vous voulez",
+        "de": "Aufnehmen, was Sie brauchen, speichern, wie Sie möchten",
+        "pt_BR": "Capture o que precisa e salve do seu jeito"
+      },
+      "body": {
+        "en": "Choose the visible area, the full page or the main content only. Save as PNG, JPEG or WEBP.",
+        "ja": "表示中の範囲、ページ全体、本文のみから選べます。保存形式はPNG・JPEG・WEBPです。",
+        "zh_CN": "可选择仅可见区域、整页或仅主要内容，并保存为PNG、JPEG或WEBP。",
+        "zh_TW": "可選擇僅可見範圍、整頁或僅主要內容，並儲存為PNG、JPEG或WEBP。",
+        "ko": "표시 영역, 전체 페이지, 본문만 중에서 고르고 PNG, JPEG, WEBP로 저장합니다.",
+        "es": "Elija el área visible, la página completa o solo el contenido principal. Guarde en PNG, JPEG o WEBP.",
+        "fr": "Choisissez la zone visible, la page entière ou le contenu principal. Enregistrez en PNG, JPEG ou WEBP.",
+        "de": "Wählen Sie den sichtbaren Bereich, die ganze Seite oder nur den Hauptinhalt. Speichern Sie als PNG, JPEG oder WEBP.",
+        "pt_BR": "Escolha a área visível, a página inteira ou só o conteúdo principal. Salve em PNG, JPEG ou WEBP."
+      },
+      "bullets": [
+        {
+          "en": "Scrolling captures are stitched into one image",
+          "ja": "スクロール連結で1枚の画像に",
+          "zh_CN": "滚动截图会拼接为一张图片",
+          "zh_TW": "捲動擷取會拼接成一張圖片",
+          "ko": "스크롤 캡처를 한 장의 이미지로 이어 붙입니다",
+          "es": "Las capturas con desplazamiento se unen en una sola imagen",
+          "fr": "Les captures avec défilement sont assemblées en une image",
+          "de": "Scroll-Aufnahmen werden zu einem Bild zusammengesetzt",
+          "pt_BR": "Capturas com rolagem são unidas em uma só imagem"
+        },
+        {
+          "en": "Also copy to the clipboard to paste into Excel",
+          "ja": "クリップボードにもコピーして、Excelへ貼り付け",
+          "zh_CN": "还可复制到剪贴板，直接粘贴到Excel",
+          "zh_TW": "也可複製到剪貼簿，直接貼到Excel",
+          "ko": "클립보드에도 복사해 Excel에 바로 붙여넣기",
+          "es": "También se copia al portapapeles para pegar en Excel",
+          "fr": "Copie aussi dans le presse-papiers pour coller dans Excel",
+          "de": "Zusätzlich in die Zwischenablage, etwa für Excel",
+          "pt_BR": "Também copia para a área de transferência, para colar no Excel"
+        },
+        {
+          "en": "Start from the popup or with a shortcut",
+          "ja": "ポップアップでもショートカットでも撮影",
+          "zh_CN": "可从弹出窗口或快捷键开始截图",
+          "zh_TW": "可從彈出視窗或快速鍵開始擷取",
+          "ko": "팝업 또는 단축키로 시작합니다",
+          "es": "Inicie desde la ventana emergente o con un atajo",
+          "fr": "Lancez depuis la fenêtre de l’extension ou au raccourci",
+          "de": "Start über das Popup oder per Tastenkürzel",
+          "pt_BR": "Comece pelo pop-up ou com um atalho"
+        }
+      ]
+    },
+    {
+      "layout": "steps",
+      "title": {
+        "en": "Check whether a PNG has been edited",
+        "ja": "PNGが編集されていないか確認する",
+        "zh_CN": "检查PNG是否被编辑过",
+        "zh_TW": "檢查PNG是否被編輯過",
+        "ko": "PNG가 편집되었는지 확인하기",
+        "es": "Compruebe si un PNG ha sido editado",
+        "fr": "Vérifiez si un PNG a été modifié",
+        "de": "Prüfen, ob ein PNG bearbeitet wurde",
+        "pt_BR": "Verifique se um PNG foi editado"
+      },
+      "steps": [
+        {
+          "title": { "en": "Save as PNG", "ja": "PNGで保存", "zh_CN": "保存为PNG", "zh_TW": "儲存為PNG", "ko": "PNG로 저장", "es": "Guarde como PNG", "fr": "Enregistrez en PNG", "de": "Als PNG speichern", "pt_BR": "Salve em PNG" },
+          "body": {
+            "en": "Page URL (no query or hash), time, title and a SHA-256 hash of the image data are stored in the image.",
+            "ja": "ページURL（クエリ・ハッシュを除く）、時刻、タイトル、画像データのSHA-256ハッシュを画像内に記録します。",
+            "zh_CN": "页面URL（不含查询参数和[[哈希]]）、时间、标题以及图像数据的SHA-256[[哈希值]]会写入图片。",
+            "zh_TW": "頁面網址（不含查詢參數與[[雜湊]]）、時間、標題，以及影像資料的SHA-256[[雜湊值]]，都會寫入圖片。",
+            "ko": "페이지 URL(쿼리와 해시 제외), 시간, 제목, 이미지 데이터의 SHA-256 해시가 이미지 안에 기록됩니다.",
+            "es": "Dentro de la imagen se guardan la URL (sin parámetros ni fragmento), la hora, el título y un hash SHA-256 de los datos.",
+            "fr": "L’URL de la page (sans requête ni fragment), l’heure, le titre et un hachage SHA-256 des données sont stockés dans l’image.",
+            "de": "Seiten-URL (ohne Query und Hash), Zeit, Titel und ein SHA-256-Hash der Bilddaten werden im Bild gespeichert.",
+            "pt_BR": "URL da página (sem query nem hash), hora, título e um hash SHA-256 dos dados da imagem ficam gravados na imagem."
+          }
+        },
+        {
+          "title": { "en": "Run the check script", "ja": "検証スクリプトを実行", "zh_CN": "运行[[验证脚本]]", "zh_TW": "執行[[驗證指令碼]]", "ko": "검증 스크립트 실행", "es": "Ejecute el script de verificación", "fr": "Lancez le script de vérification", "de": "Prüfskript ausführen", "pt_BR": "Execute o script de verificação" },
+          "body": {
+            "en": "Run the verification script from the repository with Bun to recompute the hash from the image data.",
+            "ja": "リポジトリの検証スクリプトをBunで実行し、画像データからハッシュを再計算します。",
+            "zh_CN": "用Bun运行仓库中的[[验证脚本]]，根据图像数据重新计算[[哈希值]]。",
+            "zh_TW": "用Bun執行儲存庫中的[[驗證指令碼]]，依影像資料重新計算[[雜湊值]]。",
+            "ko": "저장소의 검증 스크립트를 Bun으로 실행해 이미지 데이터에서 해시를 다시 계산합니다.",
+            "es": "Ejecute con Bun el script del repositorio para recalcular el hash a partir de los datos de la imagen.",
+            "fr": "Exécutez avec Bun le script du dépôt pour recalculer le hachage à partir des données de l’image.",
+            "de": "Führen Sie das Skript aus dem Repository mit Bun aus, um den Hash aus den Bilddaten neu zu berechnen.",
+            "pt_BR": "Execute com o Bun o script do repositório para recalcular o hash a partir dos dados da imagem."
+          }
+        },
+        {
+          "title": { "en": "Compare the hashes", "ja": "ハッシュを照合", "zh_CN": "比对[[哈希值]]", "zh_TW": "比對[[雜湊值]]", "ko": "해시 비교", "es": "Compare los hashes", "fr": "Comparez les hachages", "de": "Hashes vergleichen", "pt_BR": "Compare os hashes" },
+          "body": {
+            "en": "A mismatch suggests the image was edited or re-saved. This is not a digital signature.",
+            "ja": "一致しなければ、編集や再保存の可能性があります。電子署名ではありません。",
+            "zh_CN": "不一致说明图片可能被编辑或重新保存过。这不是数字签名。",
+            "zh_TW": "若不一致，圖片可能已被編輯或重新儲存。這不是數位簽章。",
+            "ko": "일치하지 않으면 편집되었거나 다시 저장되었을 수 있습니다. 전자 서명이 아닙니다.",
+            "es": "Si no coinciden, la imagen pudo editarse o volver a guardarse. No es una firma digital.",
+            "fr": "Une différence indique que l’image a pu être modifiée ou réenregistrée. Ce n’est pas une signature numérique.",
+            "de": "Weicht er ab, wurde das Bild möglicherweise bearbeitet oder neu gespeichert. Es ist keine digitale Signatur.",
+            "pt_BR": "Se forem diferentes, a imagem pode ter sido editada ou salva novamente. Não é uma assinatura digital."
+          }
+        }
+      ]
+    }
+  ],
+  "tiles": { "tagline": "Timestamped evidence screenshots", "capture": "popup-top" }
+}

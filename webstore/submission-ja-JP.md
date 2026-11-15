@@ -13,14 +13,13 @@
   `webstore/store-listing.txt` を使用
 
 ## 3. スクリーンショット / プロモ素材
-- 1280x800:
-  - `webstore/images/01-feature-overview-1280x800.png`
-  - `webstore/images/02-how-to-use-1280x800.png`
-  - `webstore/images/03-hero-promo-1280x800.png`
+- `bun --bun run generate-screenshots`（vitrina キット、`webstore/store-assets.json`）で生成する。`webstore/vitrina/` は正本の逐語コピーのため、ここでは編集しない。
+- 1280x800（ストア言語ごと。ja は `webstore/images/ja/`、他言語は同じ構成のロケール名ディレクトリ）:
+  - `webstore/images/ja/screenshot-01.png` to `screenshot-04.png`
 - Small promo tile 440x280:
-  - `webstore/images/promo-small-440x280.png`
+  - `webstore/images/tile-small.png`
 - Marquee promo tile 1400x560:
-  - `webstore/images/promo-marquee-1400x560.png`
+  - `webstore/images/tile-marquee.png`
 
 ## 4. プライバシーポリシー
 - 日本語版: `docs/privacy-policy-ja.md`
