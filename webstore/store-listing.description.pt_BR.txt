@@ -1,0 +1,34 @@
+O EvidenceShot é uma extensão do Chrome para salvar rapidamente a página que você está vendo como uma captura de tela de evidência. Ela serve para registrar testes e documentar o seu trabalho.
+
+Recursos
+- Capture na hora pelo botão do pop-up ou por um atalho de teclado (por padrão Ctrl+Shift+Y; no Mac, Command+Shift+Y)
+- Escolha a área de captura: "Somente a área visível (1 tela)", "Página inteira (com layout)", incluindo as colunas laterais, ou "Somente o conteúdo principal" (coluna central)
+- As capturas de página inteira e de conteúdo principal rolam a página e unem o resultado na vertical em uma única imagem
+- Salve em PNG, JPEG ou WEBP
+- Grave a data e a hora da captura no canto inferior direito da imagem. Você pode escolher entre 15 estilos de data e hora (documento oficial, selo vermelhão, livro contábil, planta azul, terminal, neon e outros) e 5 tamanhos de texto, e definir se o fuso horário (por exemplo, +09:00) será incluído
+- Adicione no canto inferior esquerdo um texto fixo à sua escolha (por exemplo, "Confidencial" ou o nome da sua empresa), exibido com o mesmo estilo e tamanho de texto da data
+- Veja no pop-up uma prévia da aparência do que será gravado na imagem
+- Defina o início do nome do arquivo (se ficar em branco, será usado o nome do site; a data e a hora são acrescentadas automaticamente)
+- Após a captura, a imagem também é copiada para a área de transferência, para você colar diretamente no Excel ou em outros aplicativos
+- Ao salvar em PNG, a URL da página capturada (sem a consulta e o hash), a hora, o título e o hash (SHA-256) dos dados da imagem são registrados dentro da imagem. Isso ajuda a verificar se a imagem foi editada ou salva novamente (não é uma assinatura digital)
+- Uma fonte japonesa está incluída para que as capturas e o pop-up exibam os mesmos glifos
+- O pop-up alterna automaticamente entre tema claro e escuro, de acordo com o tema do navegador
+- Você pode entrar em contato com o Kagayoi Support pelo pop-up
+- As imagens são salvas na pasta de downloads padrão do navegador
+
+Como usar
+1. Clique no ícone da extensão na barra de ferramentas
+2. No pop-up, confira a área de captura, o formato do arquivo, a data e as demais opções
+3. Clique em "Capturar esta aba" ou use o atalho de teclado
+
+Observações
+- As capturas com rolagem abrangem a página até o ponto em que ela terminava quando a captura começou. O conteúdo carregado durante a captura não é incluído, de modo que o final não varia nem em páginas de rolagem infinita
+- Páginas muito longas são divididas em vários arquivos para respeitar o limite de tamanho da imagem, e um número de sequência como "-part1-of2" é acrescentado ao nome do arquivo. Quando a captura é dividida, ela não é copiada para a área de transferência
+- Se a página não conseguir rolar até a posição prevista (por exemplo, por causa de ancoragem de rolagem), a captura é interrompida em vez de salvar uma imagem imprecisa. Nesse caso, use "Somente a área visível (1 tela)"
+- Páginas em que o navegador não permite a execução de extensões, como a Chrome Web Store, não podem ser capturadas
+- Você pode conferir ou alterar o atalho realmente atribuído em "Configurar atalho", no pop-up
+
+Permissões e tratamento de dados
+- Nenhuma permissão de acesso permanente a todos os sites é usada. A captura é feita apenas na aba atual e somente quando você a inicia
+- As imagens capturadas são apenas salvas na pasta de downloads do dispositivo e não são enviadas para lugar nenhum
+- O que você digitar no formulário de contato só é enviado ao Kagayoi Support quando você o enviar

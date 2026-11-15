@@ -1,0 +1,34 @@
+EvidenceShot est une extension Chrome qui permet d’enregistrer rapidement la page que vous consultez sous forme de capture d’écran à valeur de preuve. Elle sert à consigner des tests ou à garder une trace de votre travail.
+
+Caractéristiques
+- Capturez immédiatement avec le bouton de la fenêtre contextuelle ou avec un raccourci clavier (par défaut Ctrl+Maj+Y ; sous Mac, Commande+Maj+Y)
+- Choisissez la zone de capture : « Zone visible uniquement (1 écran) », « Page entière (avec mise en page) », colonnes latérales comprises, ou « Contenu principal uniquement » (colonne centrale)
+- Les captures de page entière et de contenu principal font défiler la page et assemblent le résultat à la verticale en une seule image
+- Enregistrement en PNG, JPEG ou WEBP
+- Incrustez la date et l’heure de la capture en bas à droite de l’image. Vous pouvez choisir parmi 15 styles d’horodatage (document officiel, sceau vermillon, registre comptable, plan bleu, terminal, néon, etc.) et 5 tailles de texte, et décider d’inclure ou non le fuseau horaire (par exemple +09:00)
+- Ajoutez en bas à gauche un texte fixe de votre choix (par exemple « Confidentiel » ou le nom de votre société), affiché avec le même style et la même taille de texte que la date
+- Prévisualisez dans la fenêtre contextuelle l’aspect des éléments incrustés
+- Indiquez le début du nom de fichier (si vous le laissez vide, le nom du site est utilisé ; la date et l’heure sont ajoutées automatiquement)
+- Après la capture, l’image est aussi copiée dans le presse-papiers pour être collée directement dans Excel ou une autre application
+- Lors de l’enregistrement en PNG, l’URL de la page capturée (sans la requête ni le hash), l’heure, le titre et le hash (SHA-256) des données de l’image sont consignés dans l’image. Cela peut aider à vérifier si l’image a été modifiée ou réenregistrée (il ne s’agit pas d’une signature électronique)
+- Une police japonaise est incluse afin que les captures et la fenêtre contextuelle affichent les mêmes glyphes
+- La fenêtre contextuelle bascule automatiquement entre thème clair et thème sombre selon le thème du navigateur
+- Vous pouvez contacter Kagayoi Support depuis la fenêtre contextuelle
+- Les images sont enregistrées dans le dossier de téléchargement par défaut du navigateur
+
+Mode d’emploi
+1. Cliquez sur l’icône de l’extension dans la barre d’outils
+2. Dans la fenêtre contextuelle, vérifiez la zone de capture, le format de fichier, la date et les autres options
+3. Cliquez sur « Capturer cet onglet » ou utilisez le raccourci clavier
+
+Remarques
+- Les captures avec défilement couvrent la page jusqu’à l’endroit où elle se terminait au début de la capture. Le contenu chargé pendant la capture n’est pas inclus, de sorte que la fin reste stable même sur les pages à défilement infini
+- Les pages très longues sont réparties en plusieurs fichiers pour respecter la limite de taille d’image, et un numéro d’ordre tel que « -part1-of2 » est ajouté au nom de fichier. Lorsque la capture est fractionnée, elle n’est pas copiée dans le presse-papiers
+- Si la page ne peut pas défiler jusqu’à la position prévue (par exemple à cause d’un ancrage du défilement), la capture est interrompue au lieu d’enregistrer une image inexacte. Utilisez alors « Zone visible uniquement (1 écran) »
+- Les pages sur lesquelles le navigateur n’autorise pas l’exécution des extensions, comme le Chrome Web Store, ne peuvent pas être capturées
+- Vous pouvez vérifier ou modifier le raccourci réellement attribué avec « Configurer le raccourci », dans la fenêtre contextuelle
+
+Autorisations et traitement des données
+- Aucune autorisation d’accès permanent à tous les sites n’est utilisée. La capture n’a lieu que sur l’onglet actuel, et uniquement lorsque vous la lancez
+- Les images capturées sont simplement enregistrées dans le dossier de téléchargement de l’appareil et ne sont envoyées nulle part
+- Le contenu saisi dans le formulaire de contact n’est envoyé à Kagayoi Support que lorsque vous l’envoyez

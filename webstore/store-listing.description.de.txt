@@ -1,0 +1,34 @@
+EvidenceShot ist eine Chrome-Erweiterung, mit der Sie die aktuell angezeigte Seite schnell als Screenshot für Nachweiszwecke speichern können. Sie eignet sich für Testprotokolle und für Arbeitsnachweise.
+
+Funktionen
+- Sofort aufnehmen über die Schaltfläche im Popup oder per Tastenkürzel (standardmäßig Strg+Umschalt+Y, auf dem Mac Befehl+Umschalt+Y)
+- Aufnahmebereich wählen: „Nur sichtbarer Bereich (1 Bildschirm)“, „Ganze Seite (mit Layout)“ einschließlich der seitlichen Spalten oder „Nur Hauptinhalt“ (mittlere Spalte)
+- Aufnahmen der ganzen Seite und des Hauptinhalts werden beim Scrollen senkrecht zu einem einzigen Bild zusammengefügt
+- Speichern als PNG, JPEG oder WEBP
+- Aufnahmedatum und -uhrzeit werden unten rechts ins Bild eingebrannt. Sie können aus 15 Zeitstempel-Stilen (u. a. amtliches Dokument, zinnoberrotes Siegel, Buchhaltungsjournal, Blaupause, Terminal, Neon) und 5 Textgrößen wählen und festlegen, ob die Zeitzone (z. B. +09:00) enthalten sein soll
+- Unten links lässt sich ein beliebiger fester Text (z. B. „Vertraulich“ oder der Firmenname) einfügen, der im selben Stil und in derselben Textgröße wie das Datum angezeigt wird
+- Vorschau des eingebrannten Erscheinungsbilds im Popup
+- Dateinamenpräfix festlegen (bleibt das Feld leer, wird der Name der Website verwendet; Datum und Uhrzeit werden automatisch angehängt)
+- Nach der Aufnahme wird das Bild zusätzlich in die Zwischenablage kopiert, sodass es direkt in Excel oder andere Anwendungen eingefügt werden kann
+- Beim Speichern als PNG werden die URL der aufgenommenen Seite (ohne Query und Hash), die Zeit, der Titel und der Hash (SHA-256) der Bilddaten im Bild vermerkt. Das ist ein Anhaltspunkt dafür, ob das Bild bearbeitet oder erneut gespeichert wurde (es handelt sich nicht um eine digitale Signatur)
+- Eine japanische Schriftart ist enthalten, damit Aufnahmen und Popup dieselben Schriftzeichenformen zeigen
+- Das Popup wechselt automatisch zwischen hellem und dunklem Design, passend zum Browser-Design
+- Aus dem Popup können Sie Kagayoi Support kontaktieren
+- Gespeichert wird im Standard-Downloadordner des Browsers
+
+Verwendung
+1. Klicken Sie in der Symbolleiste auf das Erweiterungssymbol
+2. Prüfen Sie im Popup Aufnahmebereich, Dateiformat, Datum und weitere Optionen
+3. Klicken Sie auf „Diesen Tab aufnehmen“ oder verwenden Sie das Tastenkürzel
+
+Hinweise
+- Scroll-Aufnahmen umfassen die Seite bis zu der Stelle, an der sie beim Start der Aufnahme endete. Während der Aufnahme nachgeladene Inhalte werden nicht berücksichtigt, sodass das Ende selbst bei Seiten mit unendlichem Scrollen stabil bleibt
+- Sehr lange Seiten werden entsprechend der Bildgrößenbegrenzung auf mehrere Dateien aufgeteilt; an den Dateinamen wird eine laufende Nummer wie „-part1-of2“ angehängt. Bei geteilten Aufnahmen entfällt das Kopieren in die Zwischenablage
+- Kann die Seite wegen Scroll-Snapping oder Ähnlichem nicht an die vorgesehene Position scrollen, wird die Aufnahme abgebrochen, statt ein ungenaues Bild zu speichern. Verwenden Sie in diesem Fall „Nur sichtbarer Bereich (1 Bildschirm)“
+- Seiten, auf denen der Browser die Ausführung von Erweiterungen nicht zulässt, etwa der Chrome Web Store, können nicht aufgenommen werden
+- Die tatsächlich zugewiesene Tastenkombination können Sie im Popup unter „Tastenkürzel einrichten“ prüfen und ändern
+
+Berechtigungen und Datenverarbeitung
+- Es wird keine Berechtigung für den dauerhaften Zugriff auf alle Websites verwendet. Aufnahmen erfolgen nur für den aktuellen Tab und nur dann, wenn Sie sie auslösen
+- Aufgenommene Bilder werden lediglich im Downloadordner des Geräts gespeichert und nicht nach außen gesendet
+- Was Sie in das Kontaktformular eingeben, wird nur dann an Kagayoi Support gesendet, wenn Sie das Formular absenden

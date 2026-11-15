@@ -1,0 +1,34 @@
+EvidenceShot es una extensión de Chrome para guardar rápidamente la página que está viendo como una captura de pantalla de evidencia. Sirve para registrar pruebas y dejar constancia de su trabajo.
+
+Características
+- Capture al instante con el botón de la ventana emergente o con un atajo de teclado (por defecto Ctrl+Shift+Y; en Mac, Command+Shift+Y)
+- Elija el área de captura: "Solo el área visible (1 pantalla)", "Página completa (con diseño)", que incluye las columnas laterales, o "Solo el contenido principal" (columna central)
+- Las capturas de página completa y de contenido principal se desplazan por la página y se unen en vertical en una sola imagen
+- Guarde en PNG, JPEG o WEBP
+- Incorpore la fecha y la hora de la captura en la esquina inferior derecha de la imagen. Puede elegir entre 15 estilos de marca de tiempo (documento oficial, sello bermellón, libro contable, plano azul, terminal, neón y más) y 5 tamaños de texto, y decidir si se incluye la zona horaria (por ejemplo, +09:00)
+- Añada en la esquina inferior izquierda un texto fijo a su elección (por ejemplo, "Confidencial" o el nombre de su empresa), que se muestra con el mismo estilo y tamaño de texto que la fecha
+- Previsualice en la ventana emergente el aspecto de lo que se incorporará a la imagen
+- Indique el inicio del nombre de archivo (si lo deja en blanco, se usa el nombre del sitio; la fecha y la hora se añaden automáticamente)
+- Tras la captura, la imagen también se copia al portapapeles para pegarla directamente en Excel u otras aplicaciones
+- Al guardar en PNG, se registran dentro de la imagen la URL de la página capturada (sin la consulta ni el hash), la hora, el título y el hash (SHA-256) de los datos de la imagen. Sirve como indicio para comprobar si la imagen se ha editado o vuelto a guardar (no es una firma electrónica)
+- Incluye una fuente japonesa para que las capturas y la ventana emergente muestren los mismos glifos
+- La ventana emergente cambia automáticamente entre tema claro y oscuro según el tema del navegador
+- Puede contactar con Kagayoi Support desde la ventana emergente
+- Las imágenes se guardan en la carpeta de descargas predeterminada del navegador
+
+Cómo se usa
+1. Pulse el icono de la extensión en la barra de herramientas
+2. En la ventana emergente, compruebe el área de captura, el formato de archivo, la fecha y otras opciones
+3. Pulse "Capturar esta pestaña" o use el atajo de teclado
+
+Notas
+- Las capturas con desplazamiento abarcan la página hasta el punto en que terminaba cuando se inició la captura. El contenido que se cargue durante la captura no se incluye, de modo que el final no varía ni siquiera en páginas de desplazamiento infinito
+- Las páginas largas se dividen en varios archivos para respetar el límite de tamaño de imagen, y se añade al nombre de archivo un número de serie como "-part1-of2". Cuando la captura se divide, no se copia al portapapeles
+- Si no es posible desplazarse hasta la posición prevista (por ejemplo, por el ajuste de desplazamiento), la captura se cancela en lugar de guardar una imagen inexacta. En ese caso, utilice "Solo el área visible (1 pantalla)"
+- No se pueden capturar las páginas en las que el navegador no permite ejecutar extensiones, como la Chrome Web Store
+- Puede comprobar o cambiar el atajo realmente asignado en "Configurar atajo", en la ventana emergente
+
+Permisos y tratamiento de los datos
+- No se utiliza ningún permiso de acceso permanente a todos los sitios. La captura se realiza solo en la pestaña actual y únicamente cuando usted la inicia
+- Las imágenes capturadas solo se guardan en la carpeta de descargas del dispositivo y no se envían al exterior
+- El contenido que introduzca en el formulario de contacto solo se envía a Kagayoi Support cuando usted lo envía
