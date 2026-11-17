@@ -86,6 +86,20 @@ jobs:
           # bun.lock はプロジェクト version を保持しないため lockfile バージョン照合は行わない。
           # lockfile と package.json の整合性は上の bun run deps が担保する。
 
+      # 成果物の作成・アップロードより前に本体のテストと Firefox lint を通す。失敗したら公開しない。
+      # generate-screenshots（実 Chrome の撮影）は重いため dependency-validation.yml の build だけで行う。
+      - name: 同梱 UI の同期を検証
+        run: bun --bun run sync:support --check
+
+      - name: 撮影処理の回帰テスト
+        run: bun test tests/capture-regressions.test.js
+
+      - name: Firefox 用ビルドを検証
+        run: bun --bun run build:firefox
+
+      - name: web-ext lint（Firefox 成果物）
+        run: bun --bun run web-ext lint --source-dir firefox-build
+
       - name: アイコンを生成
         run: bun scripts/generate-icons.js
 
