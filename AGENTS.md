@@ -45,11 +45,11 @@ bun --bun run web-ext lint --source-dir firefox-build # Firefox 成果物を検�
 
 撮影処理を変更したら Bun の node:test 互換テストを実行し、長いページの分割保存と分割時のコピー省略も確認する。Firefox 成果物を変更したら `build:firefox` 後に `web-ext lint` を実行する。ブラウザ実機の挙動確認は手動で行う。
 
-- **Chrome を起動するスクリプトを足すときはシード必須**: puppeteer.launch・chrome-launcher・Chrome の直接起動は、起動前に user-data-dir の `Local State` へ `{"password_manager":{"os_password_blank":false,"os_password_last_changed":"9223372036854775000"}}` を書く。Windows の Chromium は新規プロファイルごとに空パスワードで LogonUser を呼び（`password_manager_util_win.cc` の `CheckBlankPasswordWithPrefs`）、ログオン失敗（Security 4625）として数えられるため、並列・連続起動で Windows アカウントがロックされる（2026-11-15 実害）。userDataDir 未指定の起動は作らず、`webstore/vitrina/lib/capture.mjs` の `seedChromeProfile`（および一時プロファイルは D:\tmp 配下）と同等の処理を先に呼ぶ。`webstore/vitrina/` は逐語コピーで対策済み。
+- **Chrome を起動するスクリプトを足すときはシード必須**: puppeteer.launch・chrome-launcher・Chrome の直接起動は、起動前に user-data-dir の `Local State` へ `{"password_manager":{"os_password_blank":false,"os_password_last_changed":"9223372036854775000"}}` を書く。Windows の Chromium は新規プロファイルごとに空パスワードで LogonUser を呼び（`password_manager_util_win.cc` の `CheckBlankPasswordWithPrefs`）、ログオン失敗（Security 4625）として数えられるため、並列・連続起動で Windows アカウントがロックされる（2026-11-15 実害）。userDataDir 未指定の起動は作らず、`webstore/vitrina/lib/capture.mjs` の `seedChromeProfile`（および一時プロファイルは %TEMP% 配下）と同等の処理を先に呼ぶ。`webstore/vitrina/` は逐語コピーで対策済み。
 
 ## ストア掲載画像
 
-`webstore/vitrina/` は Kagayoi.Support の `clients/chrome-extension/store-assets/` を `sync-kit.mjs` で逐語コピーしたもので、直接編集しない。設定は `webstore/store-assets.json`、撮影前の操作は `webstore/store-assets.steps.mjs`、呼び出しは `webstore/vitrina/vitrina.mjs generate`（`--work-dir` 省略時は Windows で `D:\tmp\vitrina-EvidenceShot`）。出力は `webstore/images/<locale>/screenshot-01..04.png` と `tile-small.png` / `tile-marquee.png` で、Git には含めない。掲載画像は実ポップアップの撮影と図解だけで作り、拡張が行わない加工（注釈・矢印・ハイライト等）を描かない。スタンプの見本はポップアップ内のプレビューをそのまま撮る。
+`webstore/vitrina/` は Kagayoi.Support の `clients/chrome-extension/store-assets/` を `sync-kit.mjs` で逐語コピーしたもので、直接編集しない。設定は `webstore/store-assets.json`、撮影前の操作は `webstore/store-assets.steps.mjs`、呼び出しは `webstore/vitrina/vitrina.mjs generate`（`--work-dir` 省略時は `%TEMP%\vitrina-EvidenceShot`）。出力は `webstore/images/<locale>/screenshot-01..04.png` と `tile-small.png` / `tile-marquee.png` で、Git には含めない。掲載画像は実ポップアップの撮影と図解だけで作り、拡張が行わない加工（注釈・矢印・ハイライト等）を描かない。スタンプの見本はポップアップ内のプレビューをそのまま撮る。
 
 ## 証跡画像の制約と検証
 
