@@ -1,7 +1,7 @@
 name: Dependency validation
 
 # main への push と全 PR（Dependabot 以外も）で本体のテストを走らせる。
-# release/** の公開 workflow は publish.yml が同じ検証を公開前に行う。
+# 版タグ v<x.y.z> の公開 workflow は publish.yml が同じ検証を公開前に行う。
 on:
   push:
     branches: [main]

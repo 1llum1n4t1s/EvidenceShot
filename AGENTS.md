@@ -62,9 +62,9 @@ PNG の検証は [README.md](README.md#撮影画像の改ざん検知) のコマ
 `/vava` スキルでバージョンアップ〜リリースまで一括処理する。手動でやる場合の必須手順:
 
 1. **バージョン同期 (3 ファイル)**: `manifest.json` / `package.json` / `README.md` を必ず揃える。これを揃え忘れると CI の検証ステップで `package.json` と `manifest.json` の不一致で弾かれる。依存の lockfile は Bun の正本 (`bun.lock`)。CI は `bun run deps --ignore-scripts` でインストールするため、`package.json` を変更したら `bun install` で `bun.lock` を更新してコミットする (lockfile 不整合だと frozen install が落ちる)
-2. **`release/x.y.z` ブランチ名 = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで一致を確認する
-3. main にコミット → push → `release/x.y.z` ブランチを作成して push
-4. **`release/**` への push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由の公開要求と Firefox AMO listed submission。AMO は `--approval-timeout 0` で承認待ちを省くため、CI 成功とストア承認・公開を区別して確認する
+2. **タグ `vx.y.z` = manifest バージョン**: CI (`.github/workflows/publish.yml`) の検証ステップで、タグの形・軽量タグ・`main` の祖先と manifest の版の一致を確認する
+3. main にコミット → push → 同じ commit に軽量タグ `vx.y.z` を付けて、そのタグだけを push（`git push origin vx.y.z`。`git push --tags` は使わない）
+4. **版タグ `v<x.y.z>` の push が CI トリガー**: ZIP ビルド → Chrome Web Store API 経由の公開要求と Firefox AMO listed submission。AMO は `--approval-timeout 0` で承認待ちを省くため、CI 成功とストア承認・公開を区別して確認する
 5. **新権限を追加した版は CWS Developer Dashboard の「Privacy practices」タブを再記入する**: 記入し忘れると `400 Publish condition not met` で公開拒否される
 
 CI で必要な GitHub Secrets:
@@ -100,11 +100,11 @@ CI で必要な GitHub Secrets:
 
 `publish.yml` は検証済みZIPを `-Stage Upload` で下書きとしてアップロードするだけで、審査へは申請しない。新ロケールの掲載画像欄はアップロード後でないと Dashboard に出ないため、申請は別workflow `.github/workflows/cws-submit.yml`（手動実行、`-Stage Publish`）で行う。
 
-1. `release/x.y.z` を push する（publish.yml がアップロードする）
+1. `main` を push してから、同じ commit に軽量タグ `vx.y.z` を付けて push する（publish.yml がアップロードする）
 2. Dashboard（Edictora）でロケール別の掲載画像などを整えて下書き保存する
-3. `gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z` で申請する
+3. `gh workflow run cws-submit.yml -f version=x.y.z --ref vx.y.z` で申請する
 
-- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が `release/<version>` で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit である。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
+- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が軽量タグ `v<version>`（`main` の祖先）で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit で、同じタグから起動している。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
 - 同版が申請済み・公開済み（PENDING_REVIEW / STAGED / PUBLISHED / PUBLISHED_TO_TESTERS）なら再送せず成功終了する。別版の審査中、より新しい版の存在、直近アップロードの進行中・失敗、状態不明は申請せず停止する。
 - Dashboard で手動アップロードした下書きなど、同じ commit のアップロード成功 run が無い場合は申請されない。その場合は Dashboard から手動で申請する。
 - 両workflowは同じ concurrency group で直列化する。申請中は Dashboard の操作を並行しない。
