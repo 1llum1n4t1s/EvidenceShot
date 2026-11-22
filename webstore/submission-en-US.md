@@ -25,7 +25,7 @@
 - English: `docs/privacy-policy.md`
 - Japanese: `docs/privacy-policy-ja.md`
 - Public URL for submission:
-  - `https://evidenceshot.kagayoi.com/privacy`
+  - `https://privacy.kagayoi.com/evidenceshot`
 
 ## 5. Permission Justifications (for CWS form)
 - Single-purpose description: A browser extension for web testing that saves viewport and scroll-stitched screenshots with a date and time stamp.

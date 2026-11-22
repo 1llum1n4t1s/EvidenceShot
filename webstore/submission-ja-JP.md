@@ -25,7 +25,7 @@
 - 日本語版: `docs/privacy-policy-ja.md`
 - 英語版: `docs/privacy-policy.md`
 - 申請時に入力する公開URL:
-  - `https://evidenceshot.kagayoi.com/privacy`
+  - `https://privacy.kagayoi.com/evidenceshot`
 
 ## 5. 「プライバシー」タブ
 - 単一の目的の説明・権限ごとの正当性・データ使用の開示・送信先と処理場所は `webstore/privacy-practices.ja.txt` が正本（Edictora の `privacy` 設定が区間で読む）。ここには複製しない。
